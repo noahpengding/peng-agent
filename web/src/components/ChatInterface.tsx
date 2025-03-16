@@ -401,7 +401,7 @@ const ChatbotUI = () => {
               <li><a href="/memory">Memory</a></li>
               <li><a href="/model">Model</a></li>
               <li><a href="/rag">RAG</a></li>
-              <li><a href="#" className="external-link">GitHub</a></li>
+              <li><a href="https://github.com/Noahdingpeng/peng-agent" className="external-link">GitHub</a></li>
               <li><a href="https://git.tenawalcott.com/peng-bot/peng-agent" className="external-link">GitLab</a></li>
             </ul>
           </nav>
