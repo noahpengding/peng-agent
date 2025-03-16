@@ -1,0 +1,15 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+body {
+  margin: 0;
+  padding: 0;
+  background-color: #2f3237; /* bg-gray-800 equivalent */
+  color: white;
+}
+
+#root {
+  height: 100vh;
+  width: 100vw;
+}

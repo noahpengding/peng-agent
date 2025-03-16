@@ -1,49 +1,85 @@
 stages:
+  - test
   - build
 
 variables:
-  IMAGE_NAME: $CI_REGISTRY/peng-bot/peng-agent
+  SERVER_IMAGE: $CI_REGISTRY/peng-bot/peng-agent/server
+  WEB_IMAGE: $CI_REGISTRY/peng-bot/peng-agent/front
   VERSION: v1.0.0
 
-test-build-x64:
+# Template for test builds (non-main branches)
+.test-build-template: &test-build
+  image: docker:23.0.6-dind
+  stage: test
+  before_script:
+    - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY
+
+# Template for production builds (main branch)
+.prod-build-template: &prod-build
   image: docker:23.0.6-dind
   stage: build
-  script:
-    - docker build --platform linux/amd64 -t $IMAGE_NAME:$CI_COMMIT_SHA .
+  before_script:
     - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY
-    - docker push $IMAGE_NAME:$CI_COMMIT_SHA
+  rules:
+    - if: $CI_COMMIT_BRANCH == "main"
+    - if: $CI_COMMIT_TAG =~ /^v\d+\.\d+\.\d+$/
+
+# Server test build (x86)
+test-server-x64:
+  <<: *test-build
+  script:
+    - docker build --platform linux/amd64 -t $SERVER_IMAGE:$VERSION-nightly -f server/Dockerfile server/
+    - docker push $SERVER_IMAGE:$VERSION-nightly
   tags:
     - docker
-  only:
-    variables:
-      - $CI_COMMIT_BRANCH != "main"
 
-build-x64:
-  image: docker:23.0.6-dind
-  stage: build
+# Web test build (x86)
+test-web-x64:
+  <<: *test-build
   script:
-    - docker build --platform linux/amd64 -t $IMAGE_NAME:$VERSION .
-    - docker tag $IMAGE_NAME:$VERSION $IMAGE_NAME:latest
-    - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY
-    - docker push $IMAGE_NAME:$VERSION
-    - docker push $IMAGE_NAME:latest
+    - docker build --platform linux/amd64 -t $WEB_IMAGE:$VERSION-nightly -f web/Dockerfile web/
+    - docker push $WEB_IMAGE:$VERSION-nightly
   tags:
     - docker
-  only:
-    variables:
-      - $CI_COMMIT_BRANCH == "main"
 
-build-arm:
-  image: docker:23.0.6-dind
-  stage: build
+# Server production builds
+server-x64:
+  <<: *prod-build
   script:
-    - docker build --platform linux/arm64 -t $IMAGE_NAME:$VERSION-arm .
-    - docker tag $IMAGE_NAME:$VERSION-arm $IMAGE_NAME:latest-arm
-    - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY
-    - docker push $IMAGE_NAME:$VERSION-arm
-    - docker push $IMAGE_NAME:latest-arm
+    - docker build --platform linux/amd64 -t $SERVER_IMAGE:$VERSION -f server/Dockerfile server/
+    - docker tag $SERVER_IMAGE:$VERSION $SERVER_IMAGE:latest
+    - docker push $SERVER_IMAGE:$VERSION
+    - docker push $SERVER_IMAGE:latest
+  tags:
+    - docker
+
+server-arm:
+  <<: *prod-build
+  script:
+    - docker build --platform linux/arm64 -t $SERVER_IMAGE:$VERSION-arm -f server/Dockerfile server/
+    - docker tag $SERVER_IMAGE:$VERSION-arm $SERVER_IMAGE:latest-arm
+    - docker push $SERVER_IMAGE:$VERSION-arm
+    - docker push $SERVER_IMAGE:latest-arm
   tags:
     - docker-arm
-  only:
-    variables:
-      - $CI_COMMIT_BRANCH == "main"
+
+# Web production builds
+web-x64:
+  <<: *prod-build
+  script:
+    - docker build --platform linux/amd64 -t $WEB_IMAGE:$VERSION -f web/Dockerfile web/
+    - docker tag $WEB_IMAGE:$VERSION $WEB_IMAGE:latest
+    - docker push $WEB_IMAGE:$VERSION
+    - docker push $WEB_IMAGE:latest
+  tags:
+    - docker
+
+web-arm:
+  <<: *prod-build
+  script:
+    - docker build --platform linux/arm64 -t $WEB_IMAGE:$VERSION-arm -f web/Dockerfile web/
+    - docker tag $WEB_IMAGE:$VERSION-arm $WEB_IMAGE:latest-arm
+    - docker push $WEB_IMAGE:$VERSION-arm
+    - docker push $WEB_IMAGE:latest-arm
+  tags:
+    - docker-arm
