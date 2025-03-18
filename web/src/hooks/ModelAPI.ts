@@ -1,8 +1,9 @@
 import { useState } from 'react';
-import { API_BASE_URL } from "../config/config";
+import { ModelService } from '../services/modelService';
 
+// Export the Model interface from the hook file for component use
 export interface Model {
-  id: number;
+  id: string;
   operator: string;
   type: string;
   model_name: string;
@@ -18,14 +19,7 @@ export const useModelApi = () => {
     setError(null);
     
     try {
-      const response = await fetch(`${API_BASE_URL}/model`);
-      
-      if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(`API error ${response.status}: ${errorText}`);
-      }
-
-      const data = await response.json();
+      const data = await ModelService.getAllModels();
       return data || [];
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Unknown error occurred';
@@ -41,25 +35,8 @@ export const useModelApi = () => {
     setError(null);
     
     try {
-      const payload = {
-        model_name: modelName
-      };
-      
-      const response = await fetch(`${API_BASE_URL}/model`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(payload),
-      });
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(`API error ${response.status}: ${errorText}`);
-      }
-
-      const data = await response.json();
-      return data.message || 'Model availability toggled successfully';
+      const message = await ModelService.toggleModelAvailability(modelName);
+      return message;
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Unknown error occurred';
       setError(errorMessage);
@@ -74,17 +51,8 @@ export const useModelApi = () => {
     setError(null);
     
     try {
-      const response = await fetch(`${API_BASE_URL}/model_refresh`, {
-        method: 'GET',
-      });
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(`API error ${response.status}: ${errorText}`);
-      }
-
-      const data = await response.json();
-      return data.message || 'Models refreshed successfully';
+      const message = await ModelService.refreshModels();
+      return message;
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Unknown error occurred';
       setError(errorMessage);

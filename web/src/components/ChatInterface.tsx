@@ -5,7 +5,7 @@ import { useRAGApi } from '../hooks/RAGAPI';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import './ChatInterface.css';
-import { API_BASE_URL } from "../config/config";
+import { apiCall } from '../utils/apiUtils';
 
 // Define interfaces for model objects
 interface ModelInfo {
@@ -92,19 +92,8 @@ const ChatbotUI = () => {
       // Fetch base models
       setBaseModelsLoading(true);
       try {
-        const response = await fetch(`${API_BASE_URL}/avaliable_model`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({ type: "base" }),
-        });
+        const data = await apiCall('POST', '/avaliable_model', { type: "base" });
         
-        if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`);
-        }
-        
-        const data = await response.json();
         if (Array.isArray(data) && data.length > 0) {
           setAvailableBaseModels(data);
           // Set default to first available model's model_name
@@ -126,19 +115,8 @@ const ChatbotUI = () => {
       // Fetch embedding models
       setEmbeddingModelsLoading(true);
       try {
-        const response = await fetch(`${API_BASE_URL}/avaliable_model`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({ type: "embedding" }),
-        });
+        const data = await apiCall('POST', '/avaliable_model', { type: "embedding" });
         
-        if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`);
-        }
-        
-        const data = await response.json();
         if (Array.isArray(data) && data.length > 0) {
           setAvailableEmbeddingModels(data);
           // Set default to first available model's model_name

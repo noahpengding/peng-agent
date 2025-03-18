@@ -1,0 +1,6 @@
+# .dockerignore
+test
+config/config.json
+*__pycache__*
+venv
+.env

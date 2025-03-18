@@ -45,5 +45,6 @@ RUN chmod +x /docker-entrypoint.sh
 
 # Expose port 80
 EXPOSE 80
-CMD ["sh", "/docker-entrypoint.sh"]
-# Start with our custom entrypointCMD ["/docker-entrypoint.sh"]
+
+# Start with our custom entrypoint
+CMD ["/docker-entrypoint.sh"]

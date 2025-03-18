@@ -1,5 +1,5 @@
 {
-  "name": "Peng Agent Web",
+  "name": "peng-agent-web",
   "private": true,
   "version": "0.0.0",
   "type": "module",
@@ -10,8 +10,8 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "ioredis": "^5.6.0",
-    "process": "^0.11.10",
+    "@vitejs/plugin-react": "^4.3.4",
+    "axios": "^1.8.3",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "react-markdown": "^10.1.0",
