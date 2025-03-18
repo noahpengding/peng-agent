@@ -18,7 +18,6 @@ origins = [
     "http://localhost:3000",  # React app
     "http://127.0.0.1:3000",  # React app via IP
     "http://127.0.0.1:5173",  # Vite default
-    "*"
 ]
 
 app.add_middleware(

@@ -1,13 +1,20 @@
 import { useState } from 'react';
-import { API_BASE_URL } from "../config/config";
+import { RAGService } from '../services/ragService';
 
+// Export interfaces for component use
 export interface RAGDocument {
-  id: number;
+  id: string;
   user_name: string;
   knowledge_base: string;
   title: string;
   type: string;
   path: string;
+}
+
+export interface IndexDocumentRequest {
+  user_name: string;
+  file_path: string;
+  collection_name: string;
 }
 
 export const useRAGApi = () => {
@@ -19,14 +26,7 @@ export const useRAGApi = () => {
     setError(null);
     
     try {
-      const response = await fetch(`${API_BASE_URL}/rag`);
-      
-      if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(`API error ${response.status}: ${errorText}`);
-      }
-
-      const data = await response.json();
+      const data = await RAGService.getAllRAGDocuments();
       return data || [];
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Unknown error occurred';
@@ -42,27 +42,14 @@ export const useRAGApi = () => {
     setError(null);
     
     try {
-      const payload = {
+      const request: IndexDocumentRequest = {
         user_name: username,
         file_path: filePath,
         collection_name: collectionName
       };
       
-      const response = await fetch(`${API_BASE_URL}/rag`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(payload),
-      });
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(`API error ${response.status}: ${errorText}`);
-      }
-
-      const data = await response.json();
-      return data.message || 'Document indexed successfully';
+      const message = await RAGService.indexDocument(request);
+      return message;
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Unknown error occurred';
       setError(errorMessage);

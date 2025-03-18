@@ -4,10 +4,6 @@ import ChatbotUI from './components/ChatInterface';
 import MemoryPage from './components/MemorySelection';
 import RAGInterface from './components/RAGInterface';
 import ModelInterface from './components/ModelInterface';
-import { API_BASE_URL, test } from "./config/config";
-
-console.log("Backend URL:", test);
-console.log("Backend URL:", API_BASE_URL);
 
 const App: React.FC = () => {
   return (
