@@ -1,13 +1,16 @@
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Depends
 from fastapi.responses import Response
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.security import OAuth2PasswordBearer
 from models.agent_request import ChatRequest
 from models.agent_response import ChatResponse
 from models.rag_requests import RagRequest
+from models.user_models import UserLogin, TokenResponse
 from handlers.chat_handlers import chat_handler
 from handlers.memory_handlers import get_memory
 from handlers.model_handlers import get_model, refresh_models, flip_avaliable, avaliable_models
 from handlers.rag_handlers import get_rag, index_all
+from handlers.auth_handlers import authenticate_user, create_access_token
 from utils.log import output_log
 
 app = FastAPI()
@@ -25,8 +28,11 @@ app.add_middleware(
     allow_origins=origins,
     allow_credentials=True,
     allow_methods=["GET", "POST", "OPTIONS"],
-    allow_headers=["Content-Type", "Accept"],
+    allow_headers=["Content-Type", "Accept", "Authorization"],
 )
+
+# OAuth2 scheme for token authentication
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="login")
 
 @app.get("/")
 async def read_root():
@@ -43,7 +49,7 @@ async def chat(request: ChatRequest):
     output_log(request, "DEBUG")
     if request.message.strip() == "":
         raise HTTPException(status_code=400, detail="Empty message")
-    return chat_handler(request.user_name, request.message, request.config)
+    return chat_handler(request.user_name, request.message, request.image, request.config)
 
 @app.options("/memory")
 async def options_memory():
@@ -96,3 +102,21 @@ async def options_rag():
     return Response(headers={
         "Allow": "POST, OPTIONS, GET"
     })
+
+@app.options("/login")
+async def options_login():
+    return Response(headers={
+        "Allow": "POST, OPTIONS"
+    })
+
+@app.post("/login", response_model=TokenResponse)
+async def login(user_data: UserLogin):
+    user = authenticate_user(user_data.username, user_data.password)
+    if not user:
+        raise HTTPException(
+            status_code=401,
+            detail="Incorrect username or password",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    access_token = create_access_token(data={"sub": user["user_name"]})
+    return {"access_token": access_token, "token_type": "bearer"}

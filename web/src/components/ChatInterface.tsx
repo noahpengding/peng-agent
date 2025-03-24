@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useChatApi } from '../hooks/ChatAPI';
 import { Memory } from '../hooks/MemoryAPI';
 import { useRAGApi } from '../hooks/RAGAPI';
+import { useAuth } from '../contexts/AuthContext'; // Add this import
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import './ChatInterface.css';
@@ -13,7 +14,7 @@ interface ModelInfo {
   operator: string;
   type: string;
   model_name: string;
-  available: boolean;
+  isAvailable: boolean;
 }
 
 // Main App Component
@@ -23,7 +24,7 @@ const ChatbotUI = () => {
   interface Message {
     role: string;
     content: string;
-    image: string | null;
+    image?: string;
   }
   
   const [messages, setMessages] = useState<Message[]>([]);
@@ -40,6 +41,8 @@ const ChatbotUI = () => {
   const { sendMessage, error: apiError } = useChatApi();
   // Initialize the RAG API hook
   const { getAllRAGDocuments, isLoading: ragLoading, error: ragError } = useRAGApi();
+  // Get authentication context
+  const { user } = useAuth();
   
   // State for available knowledge bases
   const [availableKnowledgeBases, setAvailableKnowledgeBases] = useState<string[]>(['default']);
@@ -54,13 +57,11 @@ const ChatbotUI = () => {
   // Map UI selections to backend config
   useEffect(() => {
     if (apiError) {
-      setError(apiError);
-      console.error('API Error:', apiError);
+      setError(`API Error: ${apiError}`);
     }
     
     if (ragError) {
-      setError(ragError);
-      console.error('RAG API Error:', ragError);
+      setError(`RAG API Error: ${ragError}`);
     }
   }, [apiError, ragError]);
 
@@ -79,7 +80,7 @@ const ChatbotUI = () => {
           setAvailableKnowledgeBases(['default', ...uniqueKnowledgeBases]);
         }
       } catch (err) {
-        console.error('Error fetching knowledge bases:', err);
+        setError(`Error fetching knowledge bases: ${err instanceof Error ? err.message : String(err)}`);
       }
     };
     
@@ -100,13 +101,13 @@ const ChatbotUI = () => {
           setbaseModel(data[0].model_name);
         }
       } catch (error) {
-        console.error("Failed to fetch base models:", error);
+        setError(`Failed to fetch base models: ${error instanceof Error ? error.message : String(error)}`);
         // Fallback to default models as simple strings to maintain compatibility
         setAvailableBaseModels([
-          { id: "1", operator: "openai", type: "base", model_name: "gpt-4", available: true },
-          { id: "2", operator: "openai", type: "base", model_name: "gpt-3.5-turbo", available: true },
-          { id: "3", operator: "anthropic", type: "base", model_name: "claude-3-opus", available: true },
-          { id: "4", operator: "anthropic", type: "base", model_name: "claude-3-sonnet", available: true }
+          { id: "1", operator: "openai", type: "base", model_name: "gpt-4", isAvailable: true },
+          { id: "2", operator: "openai", type: "base", model_name: "gpt-3.5-turbo", isAvailable: true },
+          { id: "3", operator: "anthropic", type: "base", model_name: "claude-3-opus", isAvailable: true },
+          { id: "4", operator: "anthropic", type: "base", model_name: "claude-3-sonnet", isAvailable: true }
         ]);
       } finally {
         setBaseModelsLoading(false);
@@ -127,12 +128,12 @@ const ChatbotUI = () => {
           setEmbeddingModel('');
         }
       } catch (error) {
-        console.error("Failed to fetch embedding models:", error);
+        setError(`Failed to fetch embedding models: ${error instanceof Error ? error.message : String(error)}`);
         // Fallback to default models
         setAvailableEmbeddingModels([
-          { id: "1", operator: "openai", type: "embedding", model_name: "text-embedding-3-large", available: true },
-          { id: "2", operator: "openai", type: "embedding", model_name: "text-embedding-3-small", available: true },
-          { id: "3", operator: "openai", type: "embedding", model_name: "text-embedding-ada-002", available: true }
+          { id: "1", operator: "openai", type: "embedding", model_name: "text-embedding-3-large", isAvailable: true },
+          { id: "2", operator: "openai", type: "embedding", model_name: "text-embedding-3-small", isAvailable: true },
+          { id: "3", operator: "openai", type: "embedding", model_name: "text-embedding-ada-002", isAvailable: true }
         ]);
       } finally {
         setEmbeddingModelsLoading(false);
@@ -143,19 +144,23 @@ const ChatbotUI = () => {
   }, []);
 
   // State for backend config
-  const [username] = useState('default_user');
+  const [username, setUsername] = useState('default_user');
   
+  // Update username from auth context when available
+  useEffect(() => {
+    if (user) {
+      setUsername(user);
+    }
+  }, [user]);
+
   // Legacy state for UI components
   const [baseModel, setbaseModel] = useState('gpt-4');
   const [knowledgeBase, setKnowledgeBase] = useState('default');
   const [embeddingModel, setEmbeddingModel] = useState('text-embedding-3-large');
   const [contextWindow, setContextWindow] = useState(8192);
   const [useWebSearch, setUseWebSearch] = useState(false);
-  const [shortTermMemory] = useState([]);
+  const [shortTermMemory, setShortTermMemory] = useState<string[]>([]);
   const [longTermMemory] = useState([]);
-
-  // State for selected memories
-  const [selectedMemories, setSelectedMemories] = useState<Memory[]>([]);
 
   // Load any selected memories from localStorage on component mount
   useEffect(() => {
@@ -163,12 +168,11 @@ const ChatbotUI = () => {
     if (savedMemories) {
       try {
         const parsedMemories: Memory[] = JSON.parse(savedMemories);
-        setSelectedMemories(parsedMemories);
-        
+        setShortTermMemory(parsedMemories.map(memory => memory.ai_response));
         // Optionally clear localStorage after loading
         localStorage.removeItem('selectedMemories');
       } catch (error) {
-        console.error('Error parsing saved memories:', error);
+        setError(`Error parsing saved memories: ${error instanceof Error ? error.message : String(error)}`);
       }
     }
   }, []);
@@ -211,7 +215,7 @@ const ChatbotUI = () => {
     // Ctrl+Enter to submit the form
     if (e.key === 'Enter' && e.ctrlKey) {
       e.preventDefault();
-      handleSubmit(e as any);
+      handleSubmit(e as React.FormEvent);
     }
   };
 
@@ -243,7 +247,7 @@ const ChatbotUI = () => {
     if (!input.trim() && !image) return;
     
     // Add user message to chat
-    const newMessages = [...messages, { role: 'user', content: input, image }];
+    const newMessages = [...messages, { role: 'user', content: input }];
     setMessages(newMessages);
     setIsLoading(true);
     setError(null);
@@ -251,27 +255,40 @@ const ChatbotUI = () => {
     try {
       // Configure the API request - only include fields expected by backend
       const config = {
-        operator: getOperatorForModel(baseModel), // Use the function to get operator
+        operator: getOperatorForModel(baseModel),
         base_model: baseModel,
         embedding_model: embeddingModel,
         collection_name: knowledgeBase,
         web_search: useWebSearch,
-        short_term_memory: shortTermMemory,
+        short_term_memory: shortTermMemory, // Now already includes selected memories
         long_term_memory: longTermMemory,
-        selected_memories: selectedMemories, // Pass the selected memories to the API
       };
 
       // Send the message to the API
       const botResponse = await sendMessage({
-        user_name: username, 
-        message: input, 
-        image: image || undefined, // Send image data if available
+        user_name: username,
+        message: input,
+        image: image || undefined,
         config: config
       });
 
-      setMessages([...newMessages, { role: 'assistant', content: botResponse.message, image: botResponse.image || null }]);
+      // Create the assistant message
+      const assistantMessage = { 
+        role: 'assistant', 
+        content: botResponse.message
+      };
+      
+      // Add assistant message to chat
+      setMessages([...newMessages, assistantMessage]);
+      
+      // Add both user and assistant messages to short-term memory
+      setShortTermMemory(prevMemory => [
+        ...prevMemory, 
+        botResponse.message
+      ]);
+      
     } catch (err) {
-      console.error('Error sending message:', err);
+      // Error is already being handled in the next blocks
       if (err instanceof Error) {
         setError(`Error: ${err.message}`);
       } else {
@@ -279,7 +296,7 @@ const ChatbotUI = () => {
       }
       
       // Add error message to chat
-      setMessages([...newMessages, { role: 'assistant', content: 'Sorry, I encountered an error.', image: null }]);
+      setMessages([...newMessages, { role: 'assistant', content: 'Sorry, I encountered an error.'}]);
     } finally {
       setIsLoading(false);
       setInput('');
@@ -417,7 +434,7 @@ const ChatbotUI = () => {
               step="1024"
               className="form-range" 
               value={contextWindow}
-              onChange={(e) => setContextWindow(parseInt(e.target.value))}
+              onChange={(e) => setContextWindow(parseInt(e.target.value, 10))}
             />
           </div>
           
@@ -442,9 +459,9 @@ const ChatbotUI = () => {
             >
               Memory Selection
             </a>
-            {selectedMemories.length > 0 && (
+            {shortTermMemory.length > 0 && (
               <div className="selected-memories-count">
-                {selectedMemories.length} memories selected
+                {shortTermMemory.length} short-term memories used
               </div>
             )}
           </div>

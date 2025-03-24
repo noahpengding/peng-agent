@@ -9,10 +9,11 @@ const MemoryPage: React.FC = () => {
     const [filteredMemories, setFilteredMemories] = useState<Memory[]>([]);
     const [searchTerm, setSearchTerm] = useState('');
     const [selectedMemoryIds, setSelectedMemoryIds] = useState<string[]>([]);
+    const [error, setError] = useState<string | null>(null);
     
     // Hooks
     const navigate = useNavigate();
-    const { fetchMemories, isLoading, error } = useMemoryApi();
+    const { fetchMemories, isLoading } = useMemoryApi();
 
     // Fetch memories on component mount
     useEffect(() => {
@@ -22,7 +23,7 @@ const MemoryPage: React.FC = () => {
                 setMemories(fetchedMemories);
                 setFilteredMemories(fetchedMemories);
             } catch (error) {
-                console.error("Failed to fetch memories:", error);
+                setError(`Failed to fetch memories: ${error}`);
             }
         };
         

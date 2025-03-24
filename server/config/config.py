@@ -24,16 +24,12 @@ class Config(BaseModel):
     mysql_user: str
     mysql_password: str
     mysql_database: str
+    jwt_secret_key: str = "your-secret-key-here"
+    azure_document_endpoint: str
+    azure_document_key: str
 
 try:
-    config_path = os.path.join(os.path.dirname(__file__), 'config.json')
-    config_sample = os.path.join(os.path.dirname(__file__), 'config_sample.json')
     config_data = {}
-    if os.path.exists(config_sample):
-        with open(config_sample) as f:
-            sample_data = json.load(f)
-        for key, value in sample_data.items():
-            config_data[key] = value
     env_vars = {
         "log_level": os.environ.get('log_level') or "INFO",
         "host": os.environ.get('host') or "0.0.0.0",
@@ -54,14 +50,14 @@ try:
         "mysql_host": os.environ.get('mysql_host') if os.environ.get('mysql_host') else "localhost",
         "mysql_user": os.environ.get('mysql_user') if os.environ.get('mysql_user') else "root",
         "mysql_password": os.environ.get('mysql_password') if os.environ.get('mysql_password') else "password",
-        "mysql_database": os.environ.get('mysql_database') if os.environ.get('mysql_database') else "test"
+        "mysql_database": os.environ.get('mysql_database') if os.environ.get('mysql_database') else "test",
+        "jwt_secret_key": os.environ.get('jwt_secret_key') if os.environ.get('jwt_secret_key') else "randome-secret-key",
+        "azure_document_endpoint": os.environ.get('azure_document_endpoint') if os.environ.get('azure_document_endpoint') else "https://test.cognitiveservices.azure.com/",
+        "azure_document_key": os.environ.get('azure_document_key') if os.environ.get('azure_document_key') else "asdadasdasd"
     }
     for key, value in env_vars.items():
         if value is not None:
             config_data[key] = value
-    if os.path.exists(config_path):
-        with open(config_path) as f:
-            config_data = json.load(f)
     config = Config(**config_data)
 except (json.JSONDecodeError, FileNotFoundError) as e:
     print(f"Error reading config file: {e}")

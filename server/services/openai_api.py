@@ -12,7 +12,6 @@ class OpenAIHandler:
             organization=config.openai_organization_id, 
             project=config.openai_project_id)
         self.start_prompt = config.start_prompt
-        self.conversation = [{"role": "user", "content": self.start_prompt}]
         self.model_id = "gpt-4o-mini"
         self.image_model_id = "dall-e-3"
         self.max_completion_tokens = 5000
@@ -39,40 +38,18 @@ class OpenAIHandler:
         elif name == "max_completion_tokens":
             self.max_completion_tokens = int(value)
             return f"Max completion tokens set to {self.max_completion_tokens}"
-        elif name == "prompt":
-            self.start_prompt = str(value)
-            self.conversation = [{"role": "user", "content": self.start_prompt}]
-            return f"Prompt set to {self.start_prompt}"
-        elif name == "conversation":
-            self.conversation = list(value)
-            return f"Conversation set to {self.conversation}"
         else:
             output_log(f"Invalid parameter: {name}", "error")
             return f"Invalid parameter: {name}, {value}"
 
-
-
-    def chat_completion(self, messages, base64_images=[]):
-        user_message = {
-            "role": "user",
-            "content": [{"type": "text", "text": messages}]
-        }
-        if base64_images != []:
-            if self.model_id.startswith("o1"):
-                self.model_id = "gpt-4o-mini"
-            for base64_image in base64_images:
-                user_message["content"].append({
-                    "type": "image_url",
-                    "image_url": {"url": f"data:image/jpeg;base64,{base64_image}"}
-                })
-        self.conversation.append(user_message)
+    def chat_completion(self, prompt, messages):
+        output_log(f"Chat completion request: {prompt}", "debug")
         response = self.client.chat.completions.create(
             model=self.model_id,
-            messages=self.conversation,
+            messages=prompt,
             max_completion_tokens=self.max_completion_tokens,
         )
         generate_message = response.choices[0].message.content
-        self.conversation.append({"role": "assistant", "content": generate_message})
         mysql = MysqlConnect()
         mysql.create_record(
             "chat",
@@ -97,10 +74,4 @@ class OpenAIHandler:
             n=1
         )
         return response.data[0].url
-    
-    def get_conversations(self):
-        output_log("Getting conversions", "debug")
-        return self.conversation
 
-    def end_conversation(self):
-        self.conversation = [{"role": "user", "content": self.start_prompt}]

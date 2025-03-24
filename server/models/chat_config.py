@@ -7,5 +7,5 @@ class ChatConfig(BaseModel):
     embedding_model: str = Field(default="gpt-3.5-turbo")
     collection_name: str = Field(default="")
     web_search: bool = Field(default=False)
-    short_term_memory: List[int] = Field(default=[])
-    long_term_memory: List[int] = Field(default=[])
+    short_term_memory: List[str] = Field(default=[])
+    long_term_memory: List[str] = Field(default=[])

@@ -5,7 +5,7 @@ import './ModelInterface.css';
 
 const ModelInterface: React.FC = () => {
   const navigate = useNavigate();
-  const { getAllModels, toggleModelAvailability, refreshModels, isLoading, error } = useModelApi();
+  const { getAllModels, toggleModelAvailability, refreshModels, isLoading } = useModelApi();
   
   const [models, setModels] = useState<Model[]>([]);
   const [filteredModels, setFilteredModels] = useState<Model[]>([]);
@@ -17,6 +17,8 @@ const ModelInterface: React.FC = () => {
   const [types, setTypes] = useState<string[]>([]);
   const [selectedType, setSelectedType] = useState<string>('');
   const [availabilityFilter, setAvailabilityFilter] = useState<string>('all');
+
+  const [error, setError] = useState<string>('');
   
   // Load models on initial render
   useEffect(() => {
@@ -44,7 +46,7 @@ const ModelInterface: React.FC = () => {
       const fetchedModels = await getAllModels();
       setModels(fetchedModels);
     } catch (error) {
-      console.error('Failed to fetch models:', error);
+      setError(`Failed to refresh models: ${error}`);
     }
   };
 
@@ -53,7 +55,7 @@ const ModelInterface: React.FC = () => {
       await refreshModels();
       await fetchModels(); // Refresh the model list after refresh call
     } catch (error) {
-      console.error('Failed to refresh models:', error);
+      setError(`Failed to refresh models: ${error}`);
     }
   };
 
@@ -64,12 +66,12 @@ const ModelInterface: React.FC = () => {
       setModels(prevModels => 
         prevModels.map(model => 
           model.model_name === modelName 
-            ? { ...model, available: !model.available } 
+            ? { ...model, isAvailable: !model.isAvailable } 
             : model
         )
       );
     } catch (error) {
-      console.error('Failed to toggle model availability:', error);
+      setError(`Failed to toggle availability for model ${modelName}: ${error}`);
     }
   };
 
@@ -96,7 +98,7 @@ const ModelInterface: React.FC = () => {
     // Apply availability filter
     if (availabilityFilter !== 'all') {
       const isAvailable = availabilityFilter === 'available';
-      result = result.filter(model => model.available === isAvailable);
+      result = result.filter(model => model.isAvailable === isAvailable);
     }
     
     setFilteredModels(result);
@@ -217,7 +219,7 @@ const ModelInterface: React.FC = () => {
                           <input
                             type="checkbox"
                             className="availability-checkbox"
-                            checked={model.available}
+                            checked={model.isAvailable}
                             onChange={() => handleAvailabilityToggle(model.model_name)}
                           />
                         </td>

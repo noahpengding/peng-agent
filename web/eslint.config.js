@@ -23,6 +23,7 @@ export default tseslint.config(
         'warn',
         { allowConstantExport: true },
       ],
+      'no-console': process.env.NODE_ENV === 'production' ? 'error' : 'warn', // Allow console in development, error in production
     },
   },
 )

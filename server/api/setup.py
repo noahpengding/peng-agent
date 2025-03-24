@@ -9,8 +9,8 @@ def set_up():
             "user_name": "VARCHAR(64)",
             "base_model": "TEXT",
             "embedding_model": "TEXT",
-            "human_input": "VARCHAR(512) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci", 
-            "ai_response": "VARCHAR(2048) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci", 
+            "human_input": "VARCHAR(4096) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci", 
+            "ai_response": "VARCHAR(8192) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci", 
             "knowledge_base": "TEXT",
             "created_at": "TIMESTAMP DEFAULT CURRENT_TIMESTAMP",
             "expire_at": "TIMESTAMP"})
@@ -34,7 +34,7 @@ def set_up():
             "operator": "VARCHAR(64)",
             "type": "VARCHAR(64)",
             "model_name": "TEXT",
-            "available": "BOOL DEFAULT FALSE"
+            "isAvailable": "BOOL DEFAULT FALSE"
         }
     )
     mysql.create_table(
@@ -44,6 +44,8 @@ def set_up():
             "user_name": "VARCHAR(64)",
             "password": "VARCHAR(64)",
             "email": "VARCHAR(64)",
+            "default_based_model": "TEXT",
+            "default_embedding_model": "TEXT",
             "created_at": "TIMESTAMP DEFAULT CURRENT_TIMESTAMP",
             "modified_at": "TIMESTAMP DEFAULT CURRENT_TIMESTAMP",
         }
