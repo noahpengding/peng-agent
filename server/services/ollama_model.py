@@ -27,7 +27,7 @@ class Ollama:
     def check_model_exists(self):
         try:
             self.client.show(self.model)
-        except:
+        except Exception as e:
             self.model_pull()
 
     def model_pull(self):

@@ -56,9 +56,8 @@ def _parse_ollama_models(soup: BeautifulSoup) -> list:
             if not param_element:
                 break
             param_text = param_element[0].text
-            if param_index == 1 and param_text in ("embedding", "tools", "vision"):
-                model_type = param_text
-                param_text = "latest"
+            model_type = param_text if param_text in ("embedding", "tools", "vision") else "chat"
+            param_text = param_text if param_text not in ("embedding", "tools", "vision") else "latest"
             results.append(ModelConfig(
                 operator="rag",
                 type=model_type,
@@ -103,14 +102,14 @@ def flip_avaliable(model_name: int):
     mysql = MysqlConnect()
     model = mysql.read_records("model", {"model_name": model_name})
     if model:
-        pre_available = model[0]["available"]
-        mysql.update_record("model", {"available": not pre_available}, {"model_name": model_name})
-        return f"Model {model_name} is now {'available' if not pre_available else 'unavailable'}"
+        pre_available = model[0]["isAvailable"]
+        mysql.update_record("model", {"isAvailable": not pre_available}, {"model_name": model_name})
+        return f"Model {model_name} is now {'isAvailable' if not pre_available else 'unavailable'}"
     mysql.close()
     return f"Model {model_name} not found"
 
 def avaliable_models(type: str):
     mysql = MysqlConnect()
     if type == "embedding":
-        return mysql.read_record_v2("model", {"type=": "embedding", "available=": 1})
-    return mysql.read_record_v2("model", {"type<>": "embedding", "available=": 1})
+        return mysql.read_record_v2("model", {"type=": "embedding", "isAvailable=": 1})
+    return mysql.read_record_v2("model", {"type<>": "embedding", "isAvailable=": 1})

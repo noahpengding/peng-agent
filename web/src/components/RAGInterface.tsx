@@ -9,6 +9,7 @@ const RAGInterface: React.FC = () => {
   const [filteredDocuments, setFilteredDocuments] = useState<RAGDocument[]>([]);
   const [knowledgeBases, setKnowledgeBases] = useState<string[]>([]);
   const [selectedKnowledgeBase, setSelectedKnowledgeBase] = useState<string>('');
+  const [error, setError] = useState<string | null>(null);
   
   // State for adding new documents
   const [filePath, setFilePath] = useState<string>('');
@@ -16,7 +17,7 @@ const RAGInterface: React.FC = () => {
   const [indexResult, setIndexResult] = useState<string>('');
   
   // Get API functions and state
-  const { getAllRAGDocuments, indexDocument, isLoading, error } = useRAGApi();
+  const { getAllRAGDocuments, indexDocument, isLoading } = useRAGApi();
   // Add navigate for routing
   const navigate = useNavigate();
 
@@ -53,7 +54,7 @@ const RAGInterface: React.FC = () => {
       setDocuments(docs);
       setFilteredDocuments(docs);
     } catch (err) {
-      console.error('Failed to load RAG documents:', err);
+      setError(`Failed to load RAG documents: ${err}`);
     }
   };
 

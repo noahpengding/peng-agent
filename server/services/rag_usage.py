@@ -25,11 +25,10 @@ class RagUsage:
         combine_docs_chain = create_stuff_documents_chain(self.llm, prompt)
         self.chain = create_retrieval_chain(retriever, combine_docs_chain)
 
-    def query(self, question):
+    def query(self, question, short_term_memory):
         chat_history = []
-        memories = self.get_memory(self.collection_name)
-        for memory in memories:
-            chat_history.extend(prompt_generator.memory_message_chain(memory["human_input"], memory["ai_response"]))
+        for memory in short_term_memory:
+            chat_history.extend(prompt_generator.memory_message_chain(memory))
         response = self.chain.invoke({"input": question, "chat_history": chat_history})
         answer = response["answer"].split("</think>")[1] if "</think>" in response["answer"] else response["answer"]
         self.store_memory(question, answer)
@@ -37,10 +36,10 @@ class RagUsage:
     
     def store_memory(self, question, answer):
         mysql = MysqlConnect()
-        if len(answer) > 2048:
-            answer = answer[:2048]
-        if len(question) > 512:
-            question = question[:512]
+        if len(answer) > 8192:
+            answer = answer[:8192]
+        if len(question) > 4096:
+            question = question[:4096]
         mysql.create_record(
             "chat",
             {
@@ -55,22 +54,3 @@ class RagUsage:
             }
         )
         mysql.close()
-
-    def get_memory(self, collection_name):
-        dt = datetime.now()
-        mysql = MysqlConnect()
-        records = []
-        records = mysql.read_records(
-            "chat",
-            {   
-                "user_name": self.user_name,
-                "knowledge_base": collection_name,
-            }
-        )
-        mysql.close()
-        records = filter(lambda x: x["expire_at"] > dt, records)
-        records = sorted(records, key=lambda x: x["created_at"], reverse=True)
-        records = records[:5]
-        return records
-
-

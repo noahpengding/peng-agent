@@ -1,10 +1,10 @@
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 from langchain_core.messages import AIMessage, HumanMessage
 
-def memory_message_chain(human_input, ai_response):
-    return [HumanMessage(content=human_input), AIMessage(content=ai_response)]
+def memory_message_chain(ai_response):
+    return [AIMessage(content=ai_response)]
 
-def humen_message_chain(human_input):
+def human_message_chain(human_input):
     return ("human", human_input)
 
 def rag_prompt_template():

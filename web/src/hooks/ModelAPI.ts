@@ -7,7 +7,7 @@ export interface Model {
   operator: string;
   type: string;
   model_name: string;
-  available: boolean;
+  isAvailable: boolean;
 }
 
 export const useModelApi = () => {

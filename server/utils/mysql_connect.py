@@ -62,8 +62,7 @@ class MysqlConnect:
                 if isinstance(value, str):
                     new_conditions[f"{key}="] = f"{value}"
             return self.read_record_v2(table, new_conditions)
-        else:
-            return self.read_record_v2(table, conditions)
+        return self.read_record_v2(table, conditions)
 
     def read_record_v2(self, table, conditions: dict):
         query = f"SELECT * FROM {table}"
