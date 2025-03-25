@@ -373,41 +373,107 @@
 }
 
 .markdown-content pre {
-  background-color: #262f3d;
-  border-radius: 0.25rem;
-  padding: 0.75rem;
+  background-color: #1e1e1e; /* Dark background for code blocks */
+  border-radius: 6px;
+  padding: 12px;
   overflow-x: auto;
-  margin: 1rem 0;
+  margin: 0.7em 0;
+  border: 1px solid #333;
 }
 
 .markdown-content code {
-  background-color: #262f3d;
-  padding: 0.125rem 0.25rem;
-  border-radius: 0.25rem;
-  font-family: monospace;
+  background-color: #2d2d2d; /* Darker background for inline code */
+  color: #e6e6e6; /* Light text for readability */
+  border-radius: 3px;
+  padding: 0.2em 0.4em;
+  font-family: SFMono-Regular, Consolas, 'Liberation Mono', Menlo, monospace;
 }
 
-.markdown-content blockquote {
-  border-left: 4px solid #4b5563;
-  padding-left: 1rem;
-  margin-left: 0;
-  color: #9ca3af;
+.markdown-content pre code {
+  background-color: transparent;
+  padding: 0;
+  color: #e6e6e6;
 }
 
+/* Syntax highlighting theme - VS Code dark-like theme */
+.markdown-content .token.comment,
+.markdown-content .token.prolog,
+.markdown-content .token.doctype,
+.markdown-content .token.cdata {
+  color: #608b4e;
+}
+
+.markdown-content .token.punctuation {
+  color: #d4d4d4;
+}
+
+.markdown-content .token.property,
+.markdown-content .token.tag,
+.markdown-content .token.boolean,
+.markdown-content .token.number,
+.markdown-content .token.constant,
+.markdown-content .token.symbol {
+  color: #b5cea8;
+}
+
+.markdown-content .token.selector,
+.markdown-content .token.attr-name,
+.markdown-content .token.string,
+.markdown-content .token.char,
+.markdown-content .token.builtin {
+  color: #ce9178;
+}
+
+.markdown-content .token.operator,
+.markdown-content .token.entity,
+.markdown-content .token.url,
+.markdown-content .language-css .token.string,
+.markdown-content .style .token.string {
+  color: #d4d4d4;
+}
+
+.markdown-content .token.atrule,
+.markdown-content .token.attr-value,
+.markdown-content .token.keyword {
+  color: #c586c0;
+}
+
+.markdown-content .token.function {
+  color: #dcdcaa;
+}
+
+.markdown-content .token.regex,
+.markdown-content .token.important,
+.markdown-content .token.variable {
+  color: #d16969;
+}
+
+.markdown-content .token.important,
+.markdown-content .token.bold {
+  font-weight: bold;
+}
+
+.markdown-content .token.italic {
+  font-style: italic;
+}
+
+/* Update table styling for dark theme */
 .markdown-content table {
   border-collapse: collapse;
-  margin: 1rem 0;
   width: 100%;
+  margin: 0.7em 0;
+  color: #e6e6e6;
 }
 
-.markdown-content table th,
-.markdown-content table td {
-  padding: 0.5rem;
+.markdown-content th,
+.markdown-content td {
   border: 1px solid #4b5563;
+  padding: 8px 12px;
+  text-align: left;
 }
 
-.markdown-content table th {
-  background-color: #374151;
+.markdown-content th {
+  background-color: #2d2d2d;
 }
 
 .markdown-content hr {
@@ -421,4 +487,51 @@
 .markdown-content img {
   max-width: 100%;
   height: auto;
+}
+
+/* Tighter spacing for markdown content */
+.markdown-content {
+  font-size: 15px;
+  line-height: 1.4;
+}
+
+.markdown-content p.tight-paragraph {
+  margin-top: 0.5em;
+  margin-bottom: 0.5em;
+}
+
+.markdown-content .tight-list-item {
+  margin-top: 0.25em;
+  margin-bottom: 0.25em;
+}
+
+/* Math formula styling */
+.katex-display {
+  margin: 0.7em 0;
+  overflow-x: auto;
+  overflow-y: hidden;
+}
+
+.katex {
+  font-size: 1.1em;
+}
+
+/* Blockquotes */
+.markdown-content blockquote {
+  border-left: 4px solid #dfe2e5;
+  padding-left: 1em;
+  color: #6a737d;
+  margin: 0.7em 0;
+}
+
+/* Heading spacing */
+.markdown-content h1, 
+.markdown-content h2, 
+.markdown-content h3, 
+.markdown-content h4, 
+.markdown-content h5, 
+.markdown-content h6 {
+  margin-top: 1em;
+  margin-bottom: 0.5em;
+  line-height: 1.25;
 }

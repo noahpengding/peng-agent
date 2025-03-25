@@ -4,6 +4,7 @@ from config.config import config
 import base64
 from io import BytesIO
 
+
 def file_downloader(message_file_path: str):
     m = MinioStorage()
     bucket_name = config.s3_bucket
@@ -11,15 +12,23 @@ def file_downloader(message_file_path: str):
         bucket_name = message_file_path.split("://")[0]
         message_file_path = message_file_path.split("://")[1]
     if not m.file_exists(message_file_path, bucket_name):
-        return [f"File {message_file_path} does not exist in bucket {bucket_name}", False]
+        return [
+            f"File {message_file_path} does not exist in bucket {bucket_name}",
+            False,
+        ]
     download_path = f"tmp/{message_file_path}"
     if not m.file_download(message_file_path, download_path, bucket_name):
-        return [f"Error downloading file {message_file_path} from bucket {bucket_name}", False]
+        return [
+            f"Error downloading file {message_file_path} from bucket {bucket_name}",
+            False,
+        ]
     return [download_path, True]
 
+
 def file_operator(local_file_path: str):
-    with open(local_file_path, 'r') as file:
+    with open(local_file_path, "r") as file:
         return file.read()
+
 
 def file_operator_image(local_file_path: str):
     if local_file_path.endswith(".pdf"):
@@ -33,9 +42,14 @@ def file_operator_image(local_file_path: str):
         return base64_images
     return [base64.b64encode(open(local_file_path, "rb").read())]
 
+
 def file_extention(local_file_path: str) -> bool:
     if local_file_path.endswith(".pdf"):
         return False
-    if local_file_path.endswith(".png") or local_file_path.endswith(".jpg") or local_file_path.endswith(".jpeg"):
+    if (
+        local_file_path.endswith(".png")
+        or local_file_path.endswith(".jpg")
+        or local_file_path.endswith(".jpeg")
+    ):
         return False
     return True

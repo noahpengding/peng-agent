@@ -2,9 +2,14 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useChatApi } from '../hooks/ChatAPI';
 import { Memory } from '../hooks/MemoryAPI';
 import { useRAGApi } from '../hooks/RAGAPI';
-import { useAuth } from '../contexts/AuthContext'; // Add this import
+import { useAuth } from '../contexts/AuthContext';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
+import remarkMath from 'remark-math';
+import rehypeKatex from 'rehype-katex';
+import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
+import { vscDarkPlus } from 'react-syntax-highlighter/dist/esm/styles/prism';
+import 'katex/dist/katex.min.css';
 import './ChatInterface.css';
 import { apiCall } from '../utils/apiUtils';
 
@@ -495,7 +500,35 @@ const ChatbotUI = () => {
                       <div className="message-text">
                         <div className="markdown-content">
                           <ReactMarkdown 
-                            remarkPlugins={[remarkGfm]}
+                            remarkPlugins={[remarkGfm, remarkMath]}
+                            rehypePlugins={[rehypeKatex]}
+                            components={{
+                              p: ({node, ...props}) => <p className="tight-paragraph" {...props} />,
+                              li: ({node, ...props}) => <li className="tight-list-item" {...props} />,
+                              code({node, inline, className, children, ...props}: {
+                                node?: any;
+                                inline?: boolean;
+                                className?: string;
+                                children?: React.ReactNode;
+                                [key: string]: any;
+                              }) {
+                                const match = /language-(\w+)/.exec(className || '');
+                                return !inline && match ? (
+                                  <SyntaxHighlighter
+                                    style={vscDarkPlus}
+                                    language={match[1]}
+                                    PreTag="div"
+                                    {...props}
+                                  >
+                                    {String(children).replace(/\n$/, '')}
+                                  </SyntaxHighlighter>
+                                ) : (
+                                  <code className={className} {...props}>
+                                    {children}
+                                  </code>
+                                );
+                              }
+                            }}
                           >
                             {msg.content}
                           </ReactMarkdown>

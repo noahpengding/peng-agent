@@ -4,13 +4,15 @@ from utils.log import output_log
 from utils.mysql_connect import MysqlConnect
 from datetime import datetime, timedelta
 
+
 class OpenAIHandler:
-    def __init__(self, user_id = "admin"):
+    def __init__(self, user_id="admin"):
         self.user_id = user_id
         self.client = OpenAI(
             api_key=config.openai_api_key,
-            organization=config.openai_organization_id, 
-            project=config.openai_project_id)
+            organization=config.openai_organization_id,
+            project=config.openai_project_id,
+        )
         self.start_prompt = config.start_prompt
         self.model_id = "gpt-4o-mini"
         self.image_model_id = "dall-e-3"
@@ -20,14 +22,14 @@ class OpenAIHandler:
         response = self.client.models.list()
         models = [model.id for model in response.data]
         return "\n".join(models)
-    
+
     def list_parameters(self):
-        return f'''
+        return f"""
         model_id: {self.model_id}
         image_model_id: {self.image_model_id}
         max_completion_tokens: {self.max_completion_tokens}
-        '''
-    
+        """
+
     def set_parameters(self, name, value) -> str:
         if name == "model_id" or name == "model":
             self.model_id = str(value)
@@ -58,20 +60,18 @@ class OpenAIHandler:
                 "base_model": self.model_id,
                 "embedding_model": "openai",
                 "human_input": messages,
-                "ai_response": generate_message[:2048] if len(generate_message) > 2048 else generate_message,
+                "ai_response": generate_message[:2048]
+                if len(generate_message) > 2048
+                else generate_message,
                 "knowledge_base": "openai",
                 "created_at": datetime.now(),
-                "expire_at": datetime.now() + timedelta(days=7)
-            }
+                "expire_at": datetime.now() + timedelta(days=7),
+            },
         )
         return generate_message.replace("\n\n", "\n")
-    
+
     def image_generation(self, messages, size="1024x1024"):
         response = self.client.images.generate(
-            model=self.image_model_id,
-            prompt=messages,
-            size=size,
-            n=1
+            model=self.image_model_id, prompt=messages, size=size, n=1
         )
         return response.data[0].url
-

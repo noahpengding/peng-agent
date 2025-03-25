@@ -3,13 +3,14 @@ from mysql.connector import Error
 from config.config import config
 from utils.log import output_log
 
+
 class MysqlConnect:
     def __init__(self):
         self.config = {
             "host": config.mysql_host,
             "user": config.mysql_user,
             "password": config.mysql_password,
-            "database": config.mysql_database
+            "database": config.mysql_database,
         }
         self.connection = self._connect()
 
@@ -20,7 +21,7 @@ class MysqlConnect:
             if conn.is_connected():
                 return conn
         except Error as e:
-            output_log(f"Connection to config {self.config} with error: {e}", 'error')
+            output_log(f"Connection to config {self.config} with error: {e}", "error")
             raise
 
     def close(self):
@@ -36,7 +37,7 @@ class MysqlConnect:
             return cursor
         except Error as e:
             self.connection.rollback()
-            output_log(f"Query {query} with error: {e}", 'error')
+            output_log(f"Query {query} with error: {e}", "error")
             raise
         finally:
             cursor.close()
@@ -77,7 +78,7 @@ class MysqlConnect:
             cursor.execute(query, params)
             return cursor.fetchall()
         except Error as e:
-            output_log(f"Query {query} with error: {e}", 'error')
+            output_log(f"Query {query} with error: {e}", "error")
             raise
         finally:
             cursor.close()
