@@ -22,6 +22,7 @@ export const apiCall = async (method: string, endpoint: string, data?: any) => {
         ...(token ? { 'Authorization': `Bearer ${token}` } : {})
       },
       withCredentials: true, // Equivalent to credentials: 'include'
+      timeout: 300000,
     });
     
     // Axios automatically throws errors for non-2xx status codes
