@@ -14,7 +14,7 @@ class Config(BaseModel):
     openai_api_key: str
     openai_organization_id: str
     openai_project_id: str
-    start_prompt: str
+    gemni_api_key: str
     qdrant_host: str
     qdrant_port: int
     ollama_url: str
@@ -58,9 +58,9 @@ try:
         "openai_project_id": os.environ.get("openai_project_id")
         if os.environ.get("openai_project_id")
         else "proj-1234567890",
-        "start_prompt": os.environ.get("start_prompt")
-        if os.environ.get("start_prompt")
-        else "The following is a conversation with an AI assistant. The assistant is helpful, creative, clever, and very friendly.",
+        "gemni_api_key": os.environ.get("gemni_api_key")
+        if os.environ.get("gemni_api_key")
+        else "sk-1234567890",
         "qdrant_host": os.environ.get("qdrant_host")
         if os.environ.get("qdrant_host")
         else "localhost",

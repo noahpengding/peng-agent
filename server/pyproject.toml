@@ -8,6 +8,7 @@ dependencies = [
     "azure-identity>=1.21.0",
     "bs4>=0.0.2",
     "fastapi>=0.115.11",
+    "google-genai>=1.8.0",
     "langchain>=0.3.20",
     "langchain-community>=0.3.19",
     "langchain-core>=0.3.45",
@@ -29,3 +30,10 @@ dependencies = [
     "uvicorn>=0.34.0",
 ]
 requires-python = ">=3.11"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["api", "config", "models", "handlers", "services"]

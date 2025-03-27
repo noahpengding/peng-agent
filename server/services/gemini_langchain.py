@@ -13,13 +13,14 @@ from langchain_core.messages import (
 from langchain_core.outputs import ChatGeneration, ChatResult
 from pydantic import Field
 from config.config import config
-from openai import OpenAI
+from google import genai
+from google.genai import types
 from utils.log import output_log
 import re
 import time
 
 
-class CustomOpenAI(BaseChatModel):
+class CustomGemini(BaseChatModel):
     model_name: str = Field(alias="model")
     temperature: Optional[float] = 1.0
     max_tokens: Optional[int] = config.output_max_length
@@ -34,19 +35,19 @@ class CustomOpenAI(BaseChatModel):
         now = time.time()
         prompt_translated = self._prompt_translate(prompt)
         output_log(f"Translated prompt: {prompt_translated}", "debug")
-        client = OpenAI(
-            api_key=config.openai_api_key,
-            organization=config.openai_organization_id,
-            project=config.openai_project_id,
+        client = genai.Client(
+            api_key=config.gemni_api_key,
+            http_options=types.HttpOptions(api_version='v1alpha')
         )
-        responses = client.responses.create(
+        responses = client.models.generate_content(
             model=self.model_name,
-            input=prompt_translated,
-            max_output_tokens=self.max_tokens,
+            contents=prompt_translated,
+            config=types.GenerateContentConfig(
+                max_output_tokens=self.max_tokens,
+                temperature=self.temperature
+            )
         )
-        for response in responses.output:
-            if re.match(r"^msg_", response.id):
-                message = response.content[0].text
+        message = responses.text
         generate_message = AIMessage(
             content=message,
             additional_kwargs={},
@@ -63,13 +64,11 @@ class CustomOpenAI(BaseChatModel):
         return ChatResult(generations=[generation])
     
     def list_models(self):
-        client = OpenAI(
-            api_key=config.openai_api_key,
-            organization=config.openai_organization_id,
-            project=config.openai_project_id,
+        client = genai.Client(
+            api_key=config.gemni_api_key,
+            http_options=types.HttpOptions(api_version='v1alpha')
         )
-        response = client.models.list()
-        models = [model.id for model in response.data]
+        models = [model.name.split("/")[1] for model in client.models.list()]
         return "\n".join(models)
 
     def list_parameters(self):
@@ -96,32 +95,25 @@ class CustomOpenAI(BaseChatModel):
     def _prompt_translate(self, prompt: List[BaseMessage]) -> str:
         prompt_text = []
         for message in prompt:
-            if isinstance(message, AIMessage):
+            if isinstance(message, SystemMessage) or isinstance(message, AIMessage):
                 prompt_text.append(
-                    {
-                        "role": "assistant",
-                        "content": [{"type": "input_text", "text": message.content}],
-                    }
-                )
-            elif isinstance(message, SystemMessage):
-                prompt_text.append(
-                    {
-                        "role": "system",
-                        "content": [{"type": "input_text", "text": message.content}],
-                    }
+                    types.Content(
+                        role="model",
+                        parts=[types.Part.from_text(text=message.content)]
+                    )
                 )
             elif isinstance(message, HumanMessage):
                 prompt_text.append(
-                    {
-                        "role": "user",
-                        "content": [{"type": "input_text", "text": message.content}],
-                    }
+                    types.Content(
+                        role="user",
+                        parts=[types.Part.from_text(text=message.content)]
+                    )
                 )
         return prompt_text
 
     @property
     def _llm_type(self) -> str:
-        return "OpenAI"
+        return "Google Gemini"
 
     @property
     def _identifying_params(self) -> Dict[str, Any]:

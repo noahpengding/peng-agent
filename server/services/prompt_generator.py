@@ -6,8 +6,8 @@ def prompt_template():
         [
             ("placeholder", "{document}"),
             ("system", "{context}"),
-            ("placeholder", "{long-term-memory}"),
-            ("placeholder", "{short-term-memory}"),
+            ("placeholder", "{long_term_memory}"),
+            ("placeholder", "{short_term_memory}"),
             ("human", "{input}"),
         ]
     )

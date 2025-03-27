@@ -1,15 +1,16 @@
-from services.openai_api import OpenAIHandler
+from services.openai_langchain import CustomOpenAI
 from utils.mysql_connect import MysqlConnect
 from models.model_config import ModelConfig
 from utils.log import output_log
 import requests
 from bs4 import BeautifulSoup
 import re
+from services.gemini_langchain import CustomGemini
 
 
 def _get_opeai_model():
     responses = []
-    o = OpenAIHandler()
+    o = CustomOpenAI(model="")
     models = o.list_models()
     for model in models.split("\n"):
         if re.search(r"^davinci", model) or re.search(r"^dall", model):
@@ -41,6 +42,36 @@ def _get_opeai_model():
     finally:
         mysql.close()
 
+def _get_gemini_model():
+    gemini = CustomGemini(model="")
+    models = gemini.list_models()
+    responses = []
+    for model in models.split("\n"):
+        if re.search(r".*embedding.*", model):
+            responses.append(
+                ModelConfig(
+                    operator="gemini", type="embedding", model_name=model, available=False
+                )
+            )
+        elif re.search(r".*vision.*", model) or re.search(r".*image.*", model):
+            responses.append(
+                ModelConfig(
+                    operator="gemini", type="image", model_name=model, available=False
+                )
+            )
+        elif re.search(r"^gemini", model):
+            responses.append(
+                ModelConfig(
+                    operator="gemini", type="chat", model_name=model, available=False
+                )
+            )
+    mysql = MysqlConnect()
+    mysql.delete_record("model", {"operator": "gemini"})
+    try:
+        for response in responses:
+            mysql.create_record("model", response.to_dict())
+    finally:
+        mysql.close()
 
 def _parse_ollama_models(soup: BeautifulSoup) -> list:
     results = []
@@ -104,12 +135,11 @@ def get_model():
     mysql = MysqlConnect()
     return mysql.read_records("model")
 
-
 def refresh_models():
     _get_opeai_model()
     _get_ollama_model()
+    _get_gemini_model()
     return get_model()
-
 
 def flip_avaliable(model_name: int):
     mysql = MysqlConnect()
