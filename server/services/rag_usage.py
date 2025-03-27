@@ -3,7 +3,7 @@ import services.prompt_generator as prompt_generator
 from config.config import config
 from langchain.chains.combine_documents import create_stuff_documents_chain
 from langchain.chains import create_retrieval_chain
-
+from utils.log import output_log
 
 class RagUsage:
     def __init__(
@@ -33,16 +33,15 @@ class RagUsage:
 
     def query(self, **kwargs):
         params = {}
-        print(kwargs)
         if "input" in kwargs and kwargs["input"] != "":
             params["input"] = kwargs["input"]
-        if "short-term-memory" in kwargs and kwargs["short-term-memory"] != []:
-            params["short-term-memory"] = [
-                ("system", i) for i in kwargs["short-term-memory"]
+        if "short_term_memory" in kwargs and kwargs["short_term_memory"] != []:
+            params["short_term_memory"] = [
+                ("system", i) for i in kwargs["short_term_memory"]
             ]
-        if "long-term-memory" in kwargs and kwargs["long-term-memory"] != []:
-            params["long-term-memory"] = [
-                ("system", i) for i in kwargs["long-term-memory"]
+        if "long_term_memory" in kwargs and kwargs["long_term_memory"] != []:
+            params["long_term_memory"] = [
+                ("system", i) for i in kwargs["long_term_memory"]
             ]
         if (
             self.collection_name != "default"
@@ -52,6 +51,7 @@ class RagUsage:
             params["document"] = [
                 ("system", "Answer any use questions based on the context below:")
             ]
+        output_log(f"Query params: {params}", "debug")
         response = self.chain.invoke(params)
         answer = (
             response["answer"].split("</think>")[1]

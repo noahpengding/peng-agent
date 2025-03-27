@@ -8,36 +8,40 @@ from utils.log import output_log
 from datetime import datetime, timedelta
 from services.ollama_model import Ollama
 from services.openai_langchain import CustomOpenAI
+from services.gemini_langchain import CustomGemini
 
 
 def chat_handler(
-    user_name: str, message: str, image: str, config: ChatConfig
+    user_name: str, message: str, image: str, chat_config: ChatConfig
 ) -> ChatResponse:
+    output_log(f"User: {user_name}, Message: {message}, Image: {image}, Config: {chat_config}", "debug")
     if image != "":
         az = AzureDocument()
         message += az.analyze_document(image)
-    if config.operator == "openai":
-        base_model_ins = CustomOpenAI(model=config.base_model)
-    elif config.operator == "rag":
-        base_model_ins = Ollama(model=config.base_model, model_type="chat").init()
+    if chat_config.operator == "openai":
+        base_model_ins = CustomOpenAI(model=chat_config.base_model)
+    elif chat_config.operator == "rag":
+        base_model_ins = Ollama(model=chat_config.base_model, model_type="chat").init()
+    elif chat_config.operator == "gemini":
+        base_model_ins = CustomGemini(model=chat_config.base_model)
     r = RagUsage(
         user_name=user_name,
         base_model=base_model_ins,
-        collection_name=config.collection_name,
-        embedding_model=config.embedding_model,
+        collection_name=chat_config.collection_name,
+        embedding_model=chat_config.embedding_model,
     )
     response = r.query(
         input=message,
-        short_term_memory=config.short_term_memory,
+        short_term_memory=chat_config.short_term_memory,
     )
     response = response.replace("\n\n", "\n").replace("\n*", "\n")
     _save_chat(
         user_name,
         message,
         response,
-        config.base_model,
-        config.embedding_model,
-        config.collection_name,
+        chat_config.base_model,
+        chat_config.embedding_model,
+        chat_config.collection_name,
     )
     return ChatResponse(
         user_name=user_name,
