@@ -68,9 +68,9 @@ server-arm:
 web-x64:
   <<: *prod-build
   script:
-    - docker build --platform linux/amd64 -t $WEB_IMAGE:$CI_COMMIT_TAG -f web/Dockerfile web/
-    - docker tag $WEB_IMAGE:$CI_COMMIT_TAG $WEB_IMAGE:latest
-    - docker push $WEB_IMAGE:$CI_COMMIT_TAG
+    - docker build --platform linux/amd64 -t $WEB_IMAGE:$VERSION -f web/Dockerfile web/
+    - docker tag $WEB_IMAGE:$VERSION $WEB_IMAGE:latest
+    - docker push $WEB_IMAGE:$VERSION
     - docker push $WEB_IMAGE:latest
   tags:
     - docker
@@ -78,9 +78,9 @@ web-x64:
 web-arm:
   <<: *prod-build
   script:
-    - docker build --platform linux/arm64 -t $WEB_IMAGE:$CI_COMMIT_TAG-arm -f web/Dockerfile web/
-    - docker tag $WEB_IMAGE:$CI_COMMIT_TAG-arm $WEB_IMAGE:latest-arm
-    - docker push $WEB_IMAGE:$CI_COMMIT_TAG-arm
+    - docker build --platform linux/arm64 -t $WEB_IMAGE:$VERSION-arm -f web/Dockerfile web/
+    - docker tag $WEB_IMAGE:$VERSION-arm $WEB_IMAGE:latest-arm
+    - docker push $WEB_IMAGE:$VERSION-arm
     - docker push $WEB_IMAGE:latest-arm
   tags:
     - docker-arm
