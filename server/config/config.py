@@ -14,6 +14,8 @@ class Config(BaseModel):
     openai_api_key: str
     openai_organization_id: str
     openai_project_id: str
+    azure_endpoint: str
+    azure_key: str
     gemni_api_key: str
     qdrant_host: str
     qdrant_port: int
@@ -58,6 +60,12 @@ try:
         "openai_project_id": os.environ.get("openai_project_id")
         if os.environ.get("openai_project_id")
         else "proj-1234567890",
+        "azure_endpoint": os.environ.get("azure_endpoint")
+        if os.environ.get("azure_endpoint")
+        else "https://test.cognitiveservices.azure.com/",
+        "azure_key": os.environ.get("azure_key")
+        if os.environ.get("azure_key")
+        else "asd",
         "gemni_api_key": os.environ.get("gemni_api_key")
         if os.environ.get("gemni_api_key")
         else "sk-1234567890",

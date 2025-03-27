@@ -9,6 +9,7 @@ from datetime import datetime, timedelta
 from services.ollama_model import Ollama
 from services.openai_langchain import CustomOpenAI
 from services.gemini_langchain import CustomGemini
+from langchain_azure_ai.chat_models import AzureAIChatCompletionsModel
 
 
 def chat_handler(
@@ -24,6 +25,12 @@ def chat_handler(
         base_model_ins = Ollama(model=chat_config.base_model, model_type="chat").init()
     elif chat_config.operator == "gemini":
         base_model_ins = CustomGemini(model=chat_config.base_model)
+    elif chat_config.operator == "azure":
+        base_model_ins = AzureAIChatCompletionsModel(
+            endpoint=config.azure_endpoint,
+            credential=config.azure_key,
+            model_name=chat_config.base_model,
+        )
     r = RagUsage(
         user_name=user_name,
         base_model=base_model_ins,

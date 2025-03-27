@@ -6,6 +6,7 @@ import requests
 from bs4 import BeautifulSoup
 import re
 from services.gemini_langchain import CustomGemini
+from utils.minio_connection import MinioStorage
 
 
 def _get_opeai_model():
@@ -130,15 +131,36 @@ def _get_ollama_model():
     except Exception as e:
         output_log(f"Error processing Ollama models: {e}", "ERROR")
 
+def _get_local_models():
+    m = MinioStorage()
+    m.file_download("peng-bot/models.xlsx", "models.xlsx")
+    import pandas as pd
+    models = pd.read_excel("models.xlsx")
+    for index, row in models.iterrows():
+        model = ModelConfig(
+            operator=row["operator"],
+            type=row["type"],
+            model_name=row["model_name"],
+            available=row["isAvailable"],
+        )
+        mysql = MysqlConnect()
+        try:
+            mysql.delete_record("model", {"model_name": model.model_name})
+            mysql.create_record("model", model.to_dict())
+        finally:
+            mysql.close()
+
+
 
 def get_model():
     mysql = MysqlConnect()
     return mysql.read_records("model")
 
 def refresh_models():
-    _get_opeai_model()
-    _get_ollama_model()
-    _get_gemini_model()
+    # _get_opeai_model()
+    # _get_ollama_model()
+    # _get_gemini_model()
+    _get_local_models()
     return get_model()
 
 def flip_avaliable(model_name: int):
