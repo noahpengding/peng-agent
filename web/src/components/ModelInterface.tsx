@@ -201,7 +201,6 @@ const ModelInterface: React.FC = () => {
                 <table className="models-table">
                   <thead>
                     <tr>
-                      <th>ID</th>
                       <th>Operator</th>
                       <th>Type</th>
                       <th>Model Name</th>
@@ -211,7 +210,6 @@ const ModelInterface: React.FC = () => {
                   <tbody>
                     {filteredModels.map((model) => (
                       <tr key={model.id}>
-                        <td>{model.id}</td>
                         <td>{model.operator}</td>
                         <td>{model.type}</td>
                         <td>{model.model_name}</td>

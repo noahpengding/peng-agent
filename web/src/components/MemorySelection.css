@@ -85,16 +85,16 @@
 }
 
 /* Column widths */
-.user-column, .model-column, .kb-column {
+.model-column, .kb-column {
     width: 100px;
 }
 
 .human-input-column {
-    width: 25%;
+    width: 35%;
 }
 
 .ai-response-column {
-    width: 40%;  /* Make AI response column wider */
+    width: 55%;  /* Make AI response column wider */
 }
 
 .memories-table tr {

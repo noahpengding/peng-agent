@@ -1,11 +1,6 @@
 import { useState } from 'react';
 import { ChatService } from '../services/chatService';
 
-interface ChatResponse {
-  message: string;
-  image?: string;
-}
-
 interface ChatRequest {
   user_name: string;
   message: string;
@@ -24,26 +19,51 @@ interface ChatRequest {
 export const useChatApi = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [isStreaming, setIsStreaming] = useState(false);
 
-  const sendMessage = async (request: ChatRequest): Promise<ChatResponse> => {
+  const sendMessage = async (
+    request: ChatRequest,
+    onChunk: (chunk: string) => void,
+    onComplete?: () => void
+  ): Promise<void> => {
     setIsLoading(true);
+    setIsStreaming(true);
     setError(null);
     
     try {
-      const response = await ChatService.sendMessage(request);
-      return response;
+      await ChatService.sendMessage(
+        request,
+        // On each chunk
+        (chunk: string) => {
+          onChunk(chunk);
+        },
+        // On complete
+        () => {
+          setIsLoading(false);
+          setIsStreaming(false);
+          if (onComplete) onComplete();
+        },
+        // On error
+        (err: Error) => {
+          setError(err.message);
+          setIsLoading(false);
+          setIsStreaming(false);
+          throw err;
+        }
+      );
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Unknown error occurred';
       setError(errorMessage);
-      throw err;
-    } finally {
       setIsLoading(false);
+      setIsStreaming(false);
+      throw err;
     }
   };
 
   return {
     sendMessage,
     isLoading,
+    isStreaming,
     error,
   };
 };

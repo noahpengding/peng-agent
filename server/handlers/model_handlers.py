@@ -1,4 +1,4 @@
-from services.openai_langchain import CustomOpenAI
+from services.openai_response import CustomOpenAIResponse
 from utils.mysql_connect import MysqlConnect
 from models.model_config import ModelConfig
 from utils.log import output_log
@@ -11,7 +11,7 @@ from utils.minio_connection import MinioStorage
 
 def _get_opeai_model():
     responses = []
-    o = CustomOpenAI(model="")
+    o = CustomOpenAIResponse(model="")
     models = o.list_models()
     for model in models.split("\n"):
         if re.search(r"^davinci", model) or re.search(r"^dall", model):
@@ -43,6 +43,7 @@ def _get_opeai_model():
     finally:
         mysql.close()
 
+
 def _get_gemini_model():
     gemini = CustomGemini(model="")
     models = gemini.list_models()
@@ -51,7 +52,10 @@ def _get_gemini_model():
         if re.search(r".*embedding.*", model):
             responses.append(
                 ModelConfig(
-                    operator="gemini", type="embedding", model_name=model, available=False
+                    operator="gemini",
+                    type="embedding",
+                    model_name=model,
+                    available=False,
                 )
             )
         elif re.search(r".*vision.*", model) or re.search(r".*image.*", model):
@@ -73,6 +77,7 @@ def _get_gemini_model():
             mysql.create_record("model", response.to_dict())
     finally:
         mysql.close()
+
 
 def _parse_ollama_models(soup: BeautifulSoup) -> list:
     results = []
@@ -131,10 +136,12 @@ def _get_ollama_model():
     except Exception as e:
         output_log(f"Error processing Ollama models: {e}", "ERROR")
 
+
 def _get_local_models():
     m = MinioStorage()
     m.file_download("peng-bot/models.xlsx", "models.xlsx")
     import pandas as pd
+
     models = pd.read_excel("models.xlsx")
     for index, row in models.iterrows():
         model = ModelConfig(
@@ -151,17 +158,18 @@ def _get_local_models():
             mysql.close()
 
 
-
 def get_model():
     mysql = MysqlConnect()
     return mysql.read_records("model")
 
+
 def refresh_models():
-    # _get_opeai_model()
-    # _get_ollama_model()
-    # _get_gemini_model()
+    _get_opeai_model()
+    _get_ollama_model()
+    _get_gemini_model()
     _get_local_models()
     return get_model()
+
 
 def flip_avaliable(model_name: int):
     mysql = MysqlConnect()

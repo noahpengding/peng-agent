@@ -5,7 +5,7 @@ stages:
 variables:
   SERVER_IMAGE: $CI_REGISTRY/peng-bot/peng-agent/server
   WEB_IMAGE: $CI_REGISTRY/peng-bot/peng-agent/front
-  VERSION: v1.4.3
+  VERSION: v1.5.0
 
 # Template for test builds (non-main branches)
 .test-build-template: &test-build
@@ -13,8 +13,6 @@ variables:
   stage: test
   before_script:
     - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY
-  rules:
-    - if: $CI_COMMIT_TAG =~ "/^v\d+\.\d+\.\d+-nightly$/"
 
 # Template for production builds (main branch)
 .prod-build-template: &prod-build
@@ -29,8 +27,8 @@ variables:
 test-server-x64:
   <<: *test-build
   script:
-    - docker build --platform linux/amd64 -t $SERVER_IMAGE:$CI_COMMIT_TAG -f server/Dockerfile server/
-    - docker push $SERVER_IMAGE:$CI_COMMIT_TAG
+    - docker build --platform linux/amd64 -t $SERVER_IMAGE:$VERSION-nightly -f server/Dockerfile server/
+    - docker push $SERVER_IMAGE:$VERSION-nightly
   tags:
     - docker
 
@@ -38,8 +36,8 @@ test-server-x64:
 test-web-x64:
   <<: *test-build
   script:
-    - docker build --platform linux/amd64 -t $WEB_IMAGE:$CI_COMMIT_TAG -f web/Dockerfile web/
-    - docker push $WEB_IMAGE:$CI_COMMIT_TAG
+    - docker build --platform linux/amd64 -t $WEB_IMAGE:$VERSION-nightly -f web/Dockerfile web/
+    - docker push $WEB_IMAGE:$VERSION-nightly
   tags:
     - docker
 

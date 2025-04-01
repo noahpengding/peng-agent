@@ -1,4 +1,4 @@
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Iterator
 
 from langchain_core.callbacks import (
     CallbackManagerForLLMRun,
@@ -6,11 +6,13 @@ from langchain_core.callbacks import (
 from langchain_core.language_models import BaseChatModel
 from langchain_core.messages import (
     AIMessage,
+    AIMessageChunk,
     SystemMessage,
     HumanMessage,
     BaseMessage,
 )
-from langchain_core.outputs import ChatGeneration, ChatResult
+from langchain_core.messages.ai import UsageMetadata
+from langchain_core.outputs import ChatGeneration, ChatGenerationChunk, ChatResult
 from pydantic import Field
 from config.config import config
 from openai import OpenAI
@@ -19,10 +21,27 @@ import re
 import time
 
 
-class CustomOpenAI(BaseChatModel):
+class CustomOpenAIResponse(BaseChatModel):
     model_name: str = Field(alias="model")
     temperature: Optional[float] = 1.0
     max_tokens: Optional[int] = config.output_max_length
+    base_url: Optional[str] = Field(
+        default="https://api.openai.com/v1/",
+        description="Base URL for OpenAI API.",
+    )
+    api_key: str = Field(
+        default=config.openai_api_key,
+        description="API key for OpenAI.",
+    )
+    organization_id: str = Field(
+        default=config.openai_organization_id,
+        description="Organization ID for OpenAI.",
+    )
+    project_id: str = Field(
+        default=config.openai_project_id,
+        description="Project ID for OpenAI.",
+    )
+    streaming: bool = True
 
     def _generate(
         self,
@@ -35,14 +54,16 @@ class CustomOpenAI(BaseChatModel):
         prompt_translated = self._prompt_translate(prompt)
         output_log(f"Translated prompt: {prompt_translated}", "debug")
         client = OpenAI(
-            api_key=config.openai_api_key,
-            organization=config.openai_organization_id,
-            project=config.openai_project_id,
+            api_key=self.api_key,
+            organization=self.organization_id,
+            project=self.project_id,
+            base_url=self.base_url,
         )
         responses = client.responses.create(
             model=self.model_name,
             input=prompt_translated,
             max_output_tokens=self.max_tokens,
+            stream=False,
         )
         for response in responses.output:
             if re.match(r"^msg_", response.id):
@@ -61,7 +82,72 @@ class CustomOpenAI(BaseChatModel):
         )
         generation = ChatGeneration(message=generate_message)
         return ChatResult(generations=[generation])
-    
+
+    def _stream(
+        self,
+        prompt: List[BaseMessage],
+        stop: Optional[List[str]] = None,
+        run_manager: Optional[CallbackManagerForLLMRun] = None,
+    ) -> Iterator[ChatGenerationChunk]:
+        output_log(f"Streaming chat completion request{prompt}", "debug")
+        start_time = time.time()
+        prompt_translated = self._prompt_translate(prompt)
+        output_log(f"Translated prompt for streaming{prompt_translated}", "debug")
+        client = OpenAI(
+            api_key=self.api_key,
+            organization=self.organization_id,
+            project=self.project_id,
+            base_url=self.base_url,
+        )
+        output_log(
+            f"Requesting streaming response from model: {self.model_name}", "debug"
+        )
+        stream = client.responses.create(
+            model=self.model_name,
+            input=prompt_translated,
+            max_output_tokens=self.max_tokens,
+            stream=True,
+        )
+        token_count = len(prompt)
+        full_message = ""
+        for event in stream:
+            output_log(f"Received event: {event}", "debug")
+            if event.type == "response.output_text.delta":
+                token = event.delta
+                if token:
+                    token_count += 1
+                    full_message += token
+                    message_chunk = AIMessageChunk(
+                        content=token,
+                        additional_kwargs={},
+                        usage_metadata=UsageMetadata(
+                            {
+                                "input_tokens": len(prompt),
+                                "output_tokens": 1,
+                                "total_tokens": token_count,
+                            }
+                        ),
+                    )
+                    chunk = ChatGenerationChunk(message=message_chunk)
+                    if run_manager:
+                        run_manager.on_llm_new_token(token, chunk=chunk)
+                    yield chunk
+        final_message = ChatGenerationChunk(
+            message=AIMessageChunk(
+                content=full_message,
+                additional_kwargs={},
+                response_metadata={
+                    "time_in_seconds": time.time() - start_time,
+                },
+                metadata={
+                    "input_tokens": len(prompt),
+                    "output_tokens": token_count,
+                    "total_tokens": len(prompt) + token_count,
+                },
+            )
+        )
+        yield final_message
+
     def list_models(self):
         client = OpenAI(
             api_key=config.openai_api_key,
@@ -128,5 +214,5 @@ class CustomOpenAI(BaseChatModel):
         return {
             "model_name": self.model_name,
             "temperature": self.temperature,
-            "max_tokens": self.max_tokens
+            "max_tokens": self.max_tokens,
         }

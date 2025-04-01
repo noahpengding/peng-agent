@@ -3,10 +3,9 @@ from fastapi.responses import Response
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import OAuth2PasswordBearer
 from models.agent_request import ChatRequest
-from models.agent_response import ChatResponse
 from models.rag_requests import RagRequest
 from models.user_models import UserLogin, TokenResponse
-from handlers.chat_handlers import chat_handler
+from handlers.chat_handlers import create_streaming_response
 from handlers.memory_handlers import get_memory
 from handlers.model_handlers import (
     get_model,
@@ -50,12 +49,12 @@ async def options_chat():
     return Response(headers={"Allow": "POST, OPTIONS"})
 
 
-@app.post("/chat", response_model=ChatResponse)
+@app.post("/chat")
 async def chat(request: ChatRequest):
     output_log(request, "DEBUG")
     if request.message.strip() == "":
         raise HTTPException(status_code=400, detail="Empty message")
-    return chat_handler(
+    return create_streaming_response(
         request.user_name, request.message, request.image, request.config
     )
 
