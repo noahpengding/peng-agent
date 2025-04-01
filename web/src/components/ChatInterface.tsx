@@ -257,6 +257,10 @@ const ChatbotUI = () => {
     setIsLoading(true);
     setError(null);
     
+    // Add an empty assistant message that will be updated with streaming content
+    const assistantMessageIndex = newMessages.length;
+    setMessages([...newMessages, { role: 'assistant', content: '' }]);
+    
     try {
       // Configure the API request - only include fields expected by backend
       const config = {
@@ -269,28 +273,42 @@ const ChatbotUI = () => {
         long_term_memory: longTermMemory,
       };
 
-      // Send the message to the API
-      const botResponse = await sendMessage({
+      // Prepare the request
+      const request = {
         user_name: username,
         message: input,
         image: image || undefined,
         config: config
-      });
-
-      // Create the assistant message
-      const assistantMessage = { 
-        role: 'assistant', 
-        content: botResponse.message
       };
       
-      // Add assistant message to chat
-      setMessages([...newMessages, assistantMessage]);
+      // Keep track of the full response for memory
+      let fullResponse = '';
       
-      // Add both user and assistant messages to short-term memory
-      setShortTermMemory(prevMemory => [
-        ...prevMemory, 
-        botResponse.message
-      ]);
+      // Stream the message to get chunks
+      await sendMessage(
+        request,
+        // Handle each chunk
+        (chunk: string) => {
+          // Update the assistant message with the accumulated content
+          fullResponse += chunk;
+          setMessages(currentMessages => {
+            const updatedMessages = [...currentMessages];
+            if (updatedMessages[assistantMessageIndex]) {
+              updatedMessages[assistantMessageIndex] = {
+                role: 'assistant',
+                content: fullResponse // Use the full response so far
+              };
+            }
+            return updatedMessages;
+          });
+        },
+        // Handle completion
+        () => {
+          // Add the full response to short-term memory
+          setShortTermMemory(prevMemory => [...prevMemory, fullResponse]);
+          setIsLoading(false); // Ensure loading state is cleared
+        }
+      );
       
     } catch (err) {
       // Error is already being handled in the next blocks
@@ -300,10 +318,21 @@ const ChatbotUI = () => {
         setError('An unknown error occurred.');
       }
       
-      // Add error message to chat
-      setMessages([...newMessages, { role: 'assistant', content: 'Sorry, I encountered an error.'}]);
-    } finally {
+      // Update the assistant message to show an error
+      setMessages(currentMessages => {
+        const updatedMessages = [...currentMessages];
+        if (updatedMessages[assistantMessageIndex]) {
+          updatedMessages[assistantMessageIndex] = {
+            role: 'assistant',
+            content: 'Sorry, I encountered an error.'
+          };
+        }
+        return updatedMessages;
+      });
+      
+      // Ensure loading state is cleared
       setIsLoading(false);
+    } finally {
       setInput('');
       setImage(null);
       // Reset file input
@@ -530,7 +559,7 @@ const ChatbotUI = () => {
                               }
                             }}
                           >
-                            {msg.content}
+                            {msg.content || (isLoading && index === messages.length - 1 ? "AI is thinking..." : "")}
                           </ReactMarkdown>
                         </div>
                       </div>
@@ -539,11 +568,6 @@ const ChatbotUI = () => {
                     )}
                   </div>
                 ))}
-                {isLoading && (
-                  <div className="thinking-indicator">
-                    <p>AI is thinking...</p>
-                  </div>
-                )}
               </div>
             )}
           </div>

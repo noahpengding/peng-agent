@@ -113,7 +113,6 @@ const MemoryPage: React.FC = () => {
                         <thead>
                             <tr>
                                 <th className="select-column">Select</th>
-                                <th className="user-column">User</th>
                                 <th className="model-column">Model</th>
                                 <th className="kb-column">Knowledge Base</th>
                                 <th className="human-input-column">Human Input</th>
@@ -131,7 +130,6 @@ const MemoryPage: React.FC = () => {
                                                 onChange={() => handleCheckboxChange(memory.id)}
                                             />
                                         </td>
-                                        <td>{memory.user_name}</td>
                                         <td>{memory.base_model}</td>
                                         <td>{memory.knowledge_base}</td>
                                         <td title={memory.human_input}>
@@ -144,7 +142,7 @@ const MemoryPage: React.FC = () => {
                                 ))
                             ) : (
                                 <tr>
-                                    <td colSpan={6} className="no-memories">
+                                    <td colSpan={5} className="no-memories">
                                         {searchTerm ? 'No memories match your search' : 'No memories available'}
                                     </td>
                                 </tr>

@@ -1,26 +1,31 @@
+from fastapi.responses import StreamingResponse
 from models.chat_config import ChatConfig
-from models.agent_response import ChatResponse
 from services.rag_usage import RagUsage
 from config.config import config
-from services.azure_document import AzureDocument
 from utils.mysql_connect import MysqlConnect
 from utils.log import output_log
 from datetime import datetime, timedelta
 from services.ollama_model import Ollama
-from services.openai_langchain import CustomOpenAI
+from services.openai_response import CustomOpenAIResponse
+from services.openai_completion import CustomOpenAICompletion
 from services.gemini_langchain import CustomGemini
 from langchain_azure_ai.chat_models import AzureAIChatCompletionsModel
+import json
+from typing import AsyncIterator
 
 
-def chat_handler(
+async def chat_handler(
     user_name: str, message: str, image: str, chat_config: ChatConfig
-) -> ChatResponse:
-    output_log(f"User: {user_name}, Message: {message}, Image: {image}, Config: {chat_config}", "debug")
-    if image != "":
-        az = AzureDocument()
-        message += az.analyze_document(image)
+) -> AsyncIterator[str]:
+    output_log(
+        f"Streaming chat for User: {user_name}, Message: {message}, Image: {image}, Config: {chat_config}",
+        "debug",
+    )
+
     if chat_config.operator == "openai":
-        base_model_ins = CustomOpenAI(model=chat_config.base_model)
+        base_model_ins = CustomOpenAIResponse(
+            model=chat_config.base_model, streaming=True
+        )
     elif chat_config.operator == "rag":
         base_model_ins = Ollama(model=chat_config.base_model, model_type="chat").init()
     elif chat_config.operator == "gemini":
@@ -31,28 +36,47 @@ def chat_handler(
             credential=config.azure_key,
             model_name=chat_config.base_model,
         )
-    r = RagUsage(
+    elif chat_config.operator == "deepseek":
+        base_model_ins = CustomOpenAICompletion(
+            model=chat_config.base_model,
+            base_url="https://api.deepseek.com",
+            api_key=config.deepseek_api_key,
+        )
+    rag = RagUsage(
         user_name=user_name,
         base_model=base_model_ins,
         collection_name=chat_config.collection_name,
         embedding_model=chat_config.embedding_model,
     )
-    response = r.query(
+
+    full_response = ""
+    async for chunk in rag.aquery(
         input=message,
         short_term_memory=chat_config.short_term_memory,
-    )
-    response = response.replace("\n\n", "\n").replace("\n*", "\n")
+        image=image,
+    ):
+        if chunk:
+            chunk = chunk.replace("\n\n", "\n").replace("\n*", "\n")
+            full_response += chunk
+            yield json.dumps({"chunk": chunk, "done": False}) + "\n"
+
     _save_chat(
         user_name,
         message,
-        response,
+        full_response,
         chat_config.base_model,
         chat_config.embedding_model,
         chat_config.collection_name,
     )
-    return ChatResponse(
-        user_name=user_name,
-        message=response,
+    yield json.dumps({"chunk": "", "done": True}) + "\n"
+
+
+def create_streaming_response(
+    user_name: str, message: str, image: str, chat_config: ChatConfig
+) -> StreamingResponse:
+    return StreamingResponse(
+        chat_handler(user_name, message, image, chat_config),
+        media_type="text/event-stream",
     )
 
 

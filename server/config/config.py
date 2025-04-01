@@ -17,6 +17,7 @@ class Config(BaseModel):
     azure_endpoint: str
     azure_key: str
     gemni_api_key: str
+    deepseek_api_key: str
     qdrant_host: str
     qdrant_port: int
     ollama_url: str
@@ -68,6 +69,9 @@ try:
         else "asd",
         "gemni_api_key": os.environ.get("gemni_api_key")
         if os.environ.get("gemni_api_key")
+        else "sk-1234567890",
+        "deepseek_api_key": os.environ.get("deepseek_api_key")
+        if os.environ.get("deepseek_api_key")
         else "sk-1234567890",
         "qdrant_host": os.environ.get("qdrant_host")
         if os.environ.get("qdrant_host")

@@ -3,7 +3,10 @@ import services.prompt_generator as prompt_generator
 from config.config import config
 from langchain.chains.combine_documents import create_stuff_documents_chain
 from langchain.chains import create_retrieval_chain
+from typing import AsyncIterator
 from utils.log import output_log
+from services.azure_document import AzureDocument
+
 
 class RagUsage:
     def __init__(
@@ -31,10 +34,13 @@ class RagUsage:
         combine_docs_chain = create_stuff_documents_chain(self.llm, prompt)
         self.chain = create_retrieval_chain(retriever, combine_docs_chain)
 
-    def query(self, **kwargs):
+    def _prompt_prepare(self, **kwargs):
         params = {}
         if "input" in kwargs and kwargs["input"] != "":
             params["input"] = kwargs["input"]
+        if "image" in kwargs and kwargs["image"] != "":
+            az = AzureDocument()
+            params["input"] += az.analyze_document(kwargs["image"])
         if "short_term_memory" in kwargs and kwargs["short_term_memory"] != []:
             params["short_term_memory"] = [
                 ("system", i) for i in kwargs["short_term_memory"]
@@ -51,11 +57,14 @@ class RagUsage:
             params["document"] = [
                 ("system", "Answer any use questions based on the context below:")
             ]
-        output_log(f"Query params: {params}", "debug")
-        response = self.chain.invoke(params)
-        answer = (
-            response["answer"].split("</think>")[1]
-            if "</think>" in response["answer"]
-            else response["answer"]
-        )
-        return answer
+        return params
+
+    async def aquery(self, **kwargs) -> AsyncIterator[str]:
+        """Async query that returns a streaming iterator for the response"""
+        params = self._prompt_prepare(**kwargs)
+        output_log(f"Streaming query params: {params}", "debug")
+
+        async for chunk in self.chain.astream(params):
+            if "answer" in chunk:
+                chunk_text = chunk["answer"]
+                yield chunk_text

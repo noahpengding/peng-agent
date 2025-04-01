@@ -184,7 +184,6 @@ const RAGInterface: React.FC = () => {
               <table className="documents-table">
                 <thead>
                   <tr>
-                    <th>ID</th>
                     <th>User</th>
                     <th>Knowledge Base</th>
                     <th>Title</th>
@@ -196,7 +195,6 @@ const RAGInterface: React.FC = () => {
                   {filteredDocuments.length > 0 ? (
                     filteredDocuments.map((doc) => (
                       <tr key={doc.id}>
-                        <td>{doc.id}</td>
                         <td>{doc.user_name}</td>
                         <td>{doc.knowledge_base}</td>
                         <td>{doc.title}</td>

@@ -15,16 +15,31 @@ from langchain_core.messages.ai import UsageMetadata
 from langchain_core.outputs import ChatGeneration, ChatGenerationChunk, ChatResult
 from pydantic import Field
 from config.config import config
-from google import genai
-from google.genai import types
+from openai import OpenAI
 from utils.log import output_log
 import time
 
 
-class CustomGemini(BaseChatModel):
+class CustomOpenAICompletion(BaseChatModel):
     model_name: str = Field(alias="model")
     temperature: Optional[float] = 1.0
     max_tokens: Optional[int] = config.output_max_length
+    base_url: Optional[str] = Field(
+        default="https://api.openai.com/v1/",
+        description="Base URL for OpenAI API.",
+    )
+    api_key: str = Field(
+        default=config.openai_api_key,
+        description="API key for OpenAI.",
+    )
+    organization_id: str = Field(
+        default=config.openai_organization_id,
+        description="Organization ID for OpenAI.",
+    )
+    project_id: str = Field(
+        default=config.openai_project_id,
+        description="Project ID for OpenAI.",
+    )
 
     def _generate(
         self,
@@ -36,18 +51,20 @@ class CustomGemini(BaseChatModel):
         now = time.time()
         prompt_translated = self._prompt_translate(prompt)
         output_log(f"Translated prompt: {prompt_translated}", "debug")
-        client = genai.Client(
-            api_key=config.gemni_api_key,
-            http_options=types.HttpOptions(api_version="v1alpha"),
+        client = OpenAI(
+            api_key=self.api_key,
+            organization=self.organization_id,
+            project=self.project_id,
+            base_url=self.base_url,
         )
-        responses = client.models.generate_content(
+        responses = client.chat.completions.create(
             model=self.model_name,
-            contents=prompt_translated,
-            config=types.GenerateContentConfig(
-                max_output_tokens=self.max_tokens, temperature=self.temperature
-            ),
+            messages=prompt_translated,
+            max_completion_tokens=self.max_tokens,
+            temperature=self.temperature,
+            stream=False,
         )
-        message = responses.text
+        message = responses.choices[0].message.content
         generate_message = AIMessage(
             content=message,
             additional_kwargs={},
@@ -73,41 +90,47 @@ class CustomGemini(BaseChatModel):
         start_time = time.time()
         prompt_translated = self._prompt_translate(prompt)
         output_log(f"Translated prompt for streaming{prompt_translated}", "debug")
-        client = genai.Client(
-            api_key=config.gemni_api_key,
-            http_options=types.HttpOptions(api_version="v1alpha"),
+        client = OpenAI(
+            api_key=self.api_key,
+            organization=self.organization_id,
+            project=self.project_id,
+            base_url=self.base_url,
         )
         output_log(
             f"Requesting streaming response from model: {self.model_name}", "debug"
         )
-        stream = client.models.generate_content_stream(
+        stream = client.chat.completions.create(
             model=self.model_name,
-            contents=prompt_translated,
-            config=types.GenerateContentConfig(
-                max_output_tokens=self.max_tokens, temperature=self.temperature
-            ),
+            messages=prompt_translated,
+            max_completion_tokens=self.max_tokens,
+            temperature=self.temperature,
+            stream=True,
         )
         token_count = len(prompt)
         full_message = ""
         for event in stream:
             output_log(f"Received event: {event}", "debug")
-            token = event.text
-            if token:
-                message_chunk = AIMessageChunk(
-                    content=token,
-                    additional_kwargs={},
-                    usage_metadata=UsageMetadata(
-                        {
-                            "input_tokens": len(prompt),
-                            "output_tokens": 1,
-                            "total_tokens": token_count,
-                        }
-                    ),
-                )
-                chunk = ChatGenerationChunk(message=message_chunk)
-                if run_manager:
-                    run_manager.on_llm_new_token(token, chunk=chunk)
-                yield chunk
+            choice = event.choices[0]
+            if choice.finish_reason is None:
+                token = choice.delta.content
+                if token:
+                    token_count += 1
+                    full_message += token
+                    message_chunk = AIMessageChunk(
+                        content=token,
+                        additional_kwargs={},
+                        usage_metadata=UsageMetadata(
+                            {
+                                "input_tokens": len(prompt),
+                                "output_tokens": 1,
+                                "total_tokens": token_count,
+                            }
+                        ),
+                    )
+                    chunk = ChatGenerationChunk(message=message_chunk)
+                    if run_manager:
+                        run_manager.on_llm_new_token(token, chunk=chunk)
+                    yield chunk
         final_message = ChatGenerationChunk(
             message=AIMessageChunk(
                 content=full_message,
@@ -125,11 +148,14 @@ class CustomGemini(BaseChatModel):
         yield final_message
 
     def list_models(self):
-        client = genai.Client(
-            api_key=config.gemni_api_key,
-            http_options=types.HttpOptions(api_version="v1alpha"),
+        client = OpenAI(
+            api_key=self.api_key,
+            organization=self.organization_id,
+            project=self.project_id,
+            base_url=self.base_url,
         )
-        models = [model.name.split("/")[1] for model in client.models.list()]
+        response = client.models.list()
+        models = [model.id for model in response.data]
         return "\n".join(models)
 
     def list_parameters(self):
@@ -156,23 +182,32 @@ class CustomGemini(BaseChatModel):
     def _prompt_translate(self, prompt: List[BaseMessage]) -> str:
         prompt_text = []
         for message in prompt:
-            if isinstance(message, SystemMessage) or isinstance(message, AIMessage):
+            if isinstance(message, AIMessage):
                 prompt_text.append(
-                    types.Content(
-                        role="model", parts=[types.Part.from_text(text=message.content)]
-                    )
+                    {
+                        "role": "assistant",
+                        "content": message.content,
+                    }
+                )
+            elif isinstance(message, SystemMessage):
+                prompt_text.append(
+                    {
+                        "role": "system",
+                        "content": message.content,
+                    }
                 )
             elif isinstance(message, HumanMessage):
                 prompt_text.append(
-                    types.Content(
-                        role="user", parts=[types.Part.from_text(text=message.content)]
-                    )
+                    {
+                        "role": "user",
+                        "content": message.content,
+                    }
                 )
         return prompt_text
 
     @property
     def _llm_type(self) -> str:
-        return "Google Gemini"
+        return "OpenAI"
 
     @property
     def _identifying_params(self) -> Dict[str, Any]:
