@@ -24,7 +24,7 @@ export const ChatService = {
       const apiUrl = `/proxy/chat`;
       
       // Get auth token from localStorage
-      const token = localStorage.getItem('jwt_token');
+      const token = localStorage.getItem('access_token');
       
       const response = await fetch(apiUrl, {
         method: 'POST',
