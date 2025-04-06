@@ -50,6 +50,7 @@ def set_up():
             "user_name": "VARCHAR(64)",
             "password": "VARCHAR(64)",
             "email": "VARCHAR(64)",
+            "api_token": "VARCHAR(256)",
             "default_based_model": "TEXT",
             "default_embedding_model": "TEXT",
             "created_at": "TIMESTAMP DEFAULT CURRENT_TIMESTAMP",

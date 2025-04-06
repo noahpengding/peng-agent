@@ -8,7 +8,7 @@ export const apiCall = async (method: string, endpoint: string, data?: any) => {
   const url = `/proxy${endpoint}`;
   
   // Get token from localStorage for authenticated requests
-  const token = localStorage.getItem('jwt_token');
+  const token = localStorage.getItem('access_token');
   
   try {
     const response = await axios({
@@ -19,7 +19,10 @@ export const apiCall = async (method: string, endpoint: string, data?: any) => {
       headers: {
         'Content-Type': 'application/json',
         // Add Authorization header if token exists
-        ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+        ...(token ? { 
+          'Authorization': `Bearer ${token}`,
+          'Authentication': token
+        } : {})
       },
       withCredentials: true, // Equivalent to credentials: 'include'
       timeout: 300000,
@@ -40,7 +43,7 @@ export const apiCall = async (method: string, endpoint: string, data?: any) => {
       // Handle authentication errors (401 Unauthorized)
       if (error.response?.status === 401) {
         // Clear the token
-        localStorage.removeItem('jwt_token');
+        localStorage.removeItem('access_token');
         // Redirect to login page if we're in a browser environment
         if (typeof window !== 'undefined') {
           window.location.href = '/login';

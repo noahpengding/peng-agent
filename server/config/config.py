@@ -4,6 +4,7 @@ from pydantic import BaseModel
 
 
 class Config(BaseModel):
+    app_name: str
     log_level: str
     host: str
     port: int
@@ -27,7 +28,8 @@ class Config(BaseModel):
     mysql_user: str
     mysql_password: str
     mysql_database: str
-    jwt_secret_key: str = "your-secret-key-here"
+    jwt_secret_key: str
+    admin_password: str
     azure_document_endpoint: str
     azure_document_key: str
     input_max_length: int
@@ -37,6 +39,7 @@ class Config(BaseModel):
 try:
     config_data = {}
     env_vars = {
+        "app_name": os.environ.get("app_name") or "peng-chat",
         "log_level": os.environ.get("log_level") or "INFO",
         "host": os.environ.get("host") or "0.0.0.0",
         "port": int(os.environ.get("port")) if os.environ.get("port") else 8000,
@@ -103,6 +106,9 @@ try:
         "jwt_secret_key": os.environ.get("jwt_secret_key")
         if os.environ.get("jwt_secret_key")
         else "randome-secret-key",
+        "admin_password": os.environ.get("admin_password")
+        if os.environ.get("admin_password")
+        else "admin",
         "azure_document_endpoint": os.environ.get("azure_document_endpoint")
         if os.environ.get("azure_document_endpoint")
         else "https://test.cognitiveservices.azure.com/",

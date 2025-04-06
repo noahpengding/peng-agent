@@ -1,10 +1,9 @@
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Depends
 from fastapi.responses import Response
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.security import OAuth2PasswordBearer
 from models.agent_request import ChatRequest
 from models.rag_requests import RagRequest
-from models.user_models import UserLogin, TokenResponse
+from models.user_models import UserLogin, TokenResponse, UserCreate
 from handlers.chat_handlers import create_streaming_response
 from handlers.memory_handlers import get_memory
 from handlers.model_handlers import (
@@ -14,17 +13,28 @@ from handlers.model_handlers import (
     avaliable_models,
 )
 from handlers.rag_handlers import get_rag, index_all
-from handlers.auth_handlers import authenticate_user, create_access_token
+from handlers.auth_handlers import (
+    authenticate_user,
+    create_access_token,
+    create_user,
+    authenticate_request,
+)
 from utils.log import output_log
+import secrets
+from config.config import config
+import importlib.metadata
 
-app = FastAPI()
+__version__ = importlib.metadata.version("Peng-Agent")
+__author__ = importlib.metadata.metadata("Peng-Agent")["Author-email"]
 
-# Configure CORS - Update to include all necessary origins
+app = FastAPI(
+    title=f"{config.app_name} API",
+    root_path="/api",
+    version=__version__,
+)
+
 origins = [
-    "http://localhost",
-    "http://localhost:3000",  # React app
-    "http://127.0.0.1:3000",  # React app via IP
-    "http://127.0.0.1:5173",  # Vite default
+    "*",
 ]
 
 app.add_middleware(
@@ -35,13 +45,14 @@ app.add_middleware(
     allow_headers=["Content-Type", "Accept", "Authorization"],
 )
 
-# OAuth2 scheme for token authentication
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="login")
-
 
 @app.get("/")
 async def read_root():
-    return {"Hello": "World"}
+    return {
+        "message": f"{config.app_name} API",
+        "version": __version__,
+        "author": __author__,
+    }
 
 
 @app.options("/chat")
@@ -50,7 +61,7 @@ async def options_chat():
 
 
 @app.post("/chat")
-async def chat(request: ChatRequest):
+async def chat(request: ChatRequest, auth: dict = Depends(authenticate_request)):
     output_log(request, "DEBUG")
     if request.message.strip() == "":
         raise HTTPException(status_code=400, detail="Empty message")
@@ -65,7 +76,7 @@ async def options_memory():
 
 
 @app.get("/memory")
-async def memory():
+async def memory(auth: dict = Depends(authenticate_request)):
     return get_memory()
 
 
@@ -75,17 +86,17 @@ async def options_model():
 
 
 @app.get("/model")
-async def model():
+async def model(auth: dict = Depends(authenticate_request)):
     return get_model()
 
 
 @app.post("/model")
-async def flip_model(request: dict):
+async def flip_model(request: dict, auth: dict = Depends(authenticate_request)):
     return flip_avaliable(request["model_name"])
 
 
 @app.get("/model_refresh")
-async def model_refresh():
+async def model_refresh(auth: dict = Depends(authenticate_request)):
     return refresh_models()
 
 
@@ -95,17 +106,21 @@ async def options_model_refresh():
 
 
 @app.post("/avaliable_model")
-async def avaliable_model(request: dict):
+async def avaliable_model(request: dict, auth: dict = Depends(authenticate_request)):
     return avaliable_models(request["type"])
 
 
 @app.get("/rag")
-async def rag():
+async def rag(auth: dict = Depends(authenticate_request)):
     return get_rag()
 
 
 @app.post("/rag")
-async def index_file_api(request: RagRequest):
+async def index_file_api(
+    request: RagRequest, auth: dict = Depends(authenticate_request)
+):
+    if request.user_name == "":
+        request.user_name = auth["username"]
     return index_all(request.user_name, request.file_path, request.collection_name)
 
 
@@ -119,6 +134,8 @@ async def options_login():
     return Response(headers={"Allow": "POST, OPTIONS"})
 
 
+# Login with Username and Password
+# Mainly used by the web UI
 @app.post("/login", response_model=TokenResponse)
 async def login(user_data: UserLogin):
     user = authenticate_user(user_data.username, user_data.password)
@@ -128,5 +145,27 @@ async def login(user_data: UserLogin):
             detail="Incorrect username or password",
             headers={"WWW-Authenticate": "Bearer"},
         )
-    access_token = create_access_token(data={"sub": user["user_name"]})
+    access_token = create_access_token(
+        data={"sub": user["user_name"]}, expiration_days=7
+    )
     return {"access_token": access_token, "token_type": "bearer"}
+
+
+@app.post("/signup")
+async def signup(user_data: UserCreate):
+    if user_data.admin_password != config.admin_password:
+        raise HTTPException(status_code=401, detail="Incorrect admin password")
+    if user_data.username == "":
+        raise HTTPException(status_code=422, detail="Empty username")
+    if user_data.password == "":
+        user_data.password = str(secrets.token_urlsafe(16))
+    if user_data.email == "":
+        user_data.email = user_data.username + "@example.com"
+    if user_data.default_based_model == "":
+        user_data.default_based_model = config.default_base_model
+    if user_data.default_embedding_model == "":
+        user_data.default_embedding_model = config.default_embedding_model
+    response = create_user(user_data)
+    if not response:
+        raise HTTPException(status_code=400, detail="User Creation Failed")
+    return response

@@ -87,7 +87,6 @@ class CustomOpenAICompletion(BaseChatModel):
         run_manager: Optional[CallbackManagerForLLMRun] = None,
     ) -> Iterator[ChatGenerationChunk]:
         output_log(f"Streaming chat completion request{prompt}", "debug")
-        start_time = time.time()
         prompt_translated = self._prompt_translate(prompt)
         output_log(f"Translated prompt for streaming{prompt_translated}", "debug")
         client = OpenAI(
@@ -107,7 +106,6 @@ class CustomOpenAICompletion(BaseChatModel):
             stream=True,
         )
         token_count = len(prompt)
-        full_message = ""
         for event in stream:
             output_log(f"Received event: {event}", "debug")
             choice = event.choices[0]
@@ -115,7 +113,6 @@ class CustomOpenAICompletion(BaseChatModel):
                 token = choice.delta.content
                 if token:
                     token_count += 1
-                    full_message += token
                     message_chunk = AIMessageChunk(
                         content=token,
                         additional_kwargs={},
@@ -131,21 +128,6 @@ class CustomOpenAICompletion(BaseChatModel):
                     if run_manager:
                         run_manager.on_llm_new_token(token, chunk=chunk)
                     yield chunk
-        final_message = ChatGenerationChunk(
-            message=AIMessageChunk(
-                content=full_message,
-                additional_kwargs={},
-                response_metadata={
-                    "time_in_seconds": time.time() - start_time,
-                },
-                metadata={
-                    "input_tokens": len(prompt),
-                    "output_tokens": token_count,
-                    "total_tokens": len(prompt) + token_count,
-                },
-            )
-        )
-        yield final_message
 
     def list_models(self):
         client = OpenAI(

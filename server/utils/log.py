@@ -1,7 +1,7 @@
 import logging
 from config.config import config
 
-logger = logging.getLogger("peng-chat")
+logger = logging.getLogger(config.app_name)
 logger.setLevel(config.log_level)
 handler = logging.StreamHandler()
 formatter = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
