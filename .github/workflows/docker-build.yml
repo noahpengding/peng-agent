@@ -32,9 +32,8 @@ jobs:
       - name: Install Python dependencies with uv
         run: |
           cd server
-          uv pip install -r requirements.txt
+          uv pip install -e .
           uv pip install pylint pytest pytest-cov
-          if [ -f pyproject.toml ]; then uv pip install -e .; fi
         
       - name: Analyze Python code with Pylint
         run: |
