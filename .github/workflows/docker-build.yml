@@ -32,18 +32,25 @@ jobs:
       - name: Install Python dependencies with uv
         run: |
           cd server
-          uv pip install -e .
+          # Create a virtual environment first
+          uv venv
+          # Install project dependencies
+          uv pip install --no-deps -e .
           uv pip install pylint pytest pytest-cov
         
       - name: Analyze Python code with Pylint
         run: |
           cd server
+          # Use the virtual environment
+          source .venv/bin/activate
           pylint --disable=all --enable=E,F,W --max-line-length=120 $(find . -type f -name "*.py" | grep -v "__pycache__")
       
       - name: Test Python code with pytest
         run: |
           cd server
-          uv run pytest --cov=. --cov-report=xml
+          # Use the virtual environment
+          source .venv/bin/activate
+          python -m pytest --cov=. --cov-report=xml
           
       # TypeScript/React code analysis with bun
       - name: Setup Bun
