@@ -59,8 +59,7 @@ class RagUsage:
             ]
         return params
 
-    async def aquery(self, **kwargs) -> AsyncIterator[str]:
-        """Async query that returns a streaming iterator for the response"""
+    async def aquery_stream(self, **kwargs) -> AsyncIterator[str]:
         params = self._prompt_prepare(**kwargs)
         output_log(f"Streaming query params: {params}", "debug")
 
@@ -68,3 +67,9 @@ class RagUsage:
             if "answer" in chunk:
                 chunk_text = chunk["answer"]
                 yield chunk_text
+
+    async def aquery(self, **kwargs) -> str:
+        params = self._prompt_prepare(**kwargs)
+        output_log(f"Query params: {params}", "debug")
+        result = await self.chain.ainvoke(params)
+        return result

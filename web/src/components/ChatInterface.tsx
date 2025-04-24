@@ -424,7 +424,7 @@ const ChatbotUI = () => {
       {/* Header */}
       <header className="header">
         <div className="header-content">
-          <h1 className="header-title">AI Chatbot Interface</h1>
+          <h1 className="header-title">Peng's Agent</h1>
           <nav className="navigation">
             <ul className="nav-links">
               <li><a href="/memory">Memory</a></li>

@@ -15,24 +15,22 @@ from langchain_core.messages.ai import UsageMetadata
 from langchain_core.outputs import ChatGeneration, ChatGenerationChunk, ChatResult
 from pydantic import Field
 from config.config import config
-from google import genai
-from google.genai import types
+from anthropic import Anthropic
 from utils.log import output_log
 import time
 
 
-class CustomGemini(BaseChatModel):
+class CustomClaude(BaseChatModel):
     model_name: str = Field(alias="model")
     temperature: Optional[float] = 1.0
     max_tokens: Optional[int] = config.output_max_length
     api_key: str
-    client: Optional[genai.Client] = None
+    client: Optional[Anthropic] = None
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        self.client = genai.Client(
+        self.client = Anthropic(
             api_key=self.api_key,
-            http_options=types.HttpOptions(api_version="v1alpha"),
         )
 
     def _generate(
@@ -45,14 +43,16 @@ class CustomGemini(BaseChatModel):
         now = time.time()
         prompt_translated = self._prompt_translate(prompt)
         output_log(f"Translated prompt: {prompt_translated}", "debug")
-        responses = self.client.models.generate_content(
+
+        # Place Need to Change for other Provider
+        responses = self.client.messages.create(
             model=self.model_name,
-            contents=prompt_translated,
-            config=types.GenerateContentConfig(
-                max_output_tokens=self.max_tokens, temperature=self.temperature
-            ),
+            messages=prompt_translated,
+            max_tokens=self.max_tokens,
+            temperature=self.temperature,
         )
-        message = responses.text
+        message = responses.content
+
         generate_message = AIMessage(
             content=message,
             additional_kwargs={},
@@ -80,36 +80,36 @@ class CustomGemini(BaseChatModel):
         output_log(
             f"Requesting streaming response from model: {self.model_name}", "debug"
         )
-        stream = self.client.models.generate_content_stream(
-            model=self.model_name,
-            contents=prompt_translated,
-            config=types.GenerateContentConfig(
-                max_output_tokens=self.max_tokens, temperature=self.temperature
-            ),
-        )
+        # Place Need to Change for other Provider
         token_count = len(prompt)
-        for event in stream:
-            output_log(f"Received event: {event}", "debug")
-            token = event.text
-            if token:
-                message_chunk = AIMessageChunk(
-                    content=token,
-                    additional_kwargs={},
-                    usage_metadata=UsageMetadata(
-                        {
-                            "input_tokens": len(prompt),
-                            "output_tokens": len(token),
-                            "total_tokens": token_count,
-                        }
-                    ),
-                )
-                chunk = ChatGenerationChunk(message=message_chunk)
-                if run_manager:
-                    run_manager.on_llm_new_token(token, chunk=chunk)
-                yield chunk
+        with self.client.messages.stream(
+            model=self.model_name,
+            messages=prompt_translated,
+            max_tokens=self.max_tokens,
+            temperature=self.temperature,
+        ) as stream:
+            for text in stream.text_stream:
+                output_log(f"Received event: {text}", "debug")
+                if text:
+                    message_chunk = AIMessageChunk(
+                        content=text,
+                        additional_kwargs={},
+                        usage_metadata=UsageMetadata(
+                            {
+                                "input_tokens": len(prompt),
+                                "output_tokens": len(text),
+                                "total_tokens": token_count,
+                            }
+                        ),
+                    )
+                    chunk = ChatGenerationChunk(message=message_chunk)
+                    if run_manager:
+                        run_manager.on_llm_new_token(text, chunk=chunk)
+                    yield chunk
 
     def list_models(self):
-        models = [model.name.split("/")[1] for model in self.client.models.list()]
+        # Place Need to Change for other Provider
+        models = [model.id for model in self.client.models.list().data]
         return "\n".join(models)
 
     def list_parameters(self):
@@ -133,20 +133,32 @@ class CustomGemini(BaseChatModel):
             output_log(f"Invalid parameter: {name}", "error")
             return f"Invalid parameter: {name}, {value}"
 
+    # Place Need to Change for other Provider
     def _prompt_translate(self, prompt: List[BaseMessage]) -> str:
         prompt_text = []
         for message in prompt:
-            if isinstance(message, SystemMessage) or isinstance(message, AIMessage):
+            if message.content == "":
+                continue
+            if isinstance(message, AIMessage):
                 prompt_text.append(
-                    types.Content(
-                        role="model", parts=[types.Part.from_text(text=message.content)]
-                    )
+                    {
+                        "role": "assistant",
+                        "content": message.content,
+                    }
+                )
+            elif isinstance(message, SystemMessage):
+                prompt_text.append(
+                    {
+                        "role": "system",
+                        "content": message.content,
+                    }
                 )
             elif isinstance(message, HumanMessage):
                 prompt_text.append(
-                    types.Content(
-                        role="user", parts=[types.Part.from_text(text=message.content)]
-                    )
+                    {
+                        "role": "user",
+                        "content": message.content,
+                    }
                 )
         return prompt_text
 

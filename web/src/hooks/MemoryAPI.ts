@@ -16,12 +16,12 @@ export const useMemoryApi = () => {
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
     
-    const fetchMemories = async (): Promise<Memory[]> => {
+    const fetchMemories = async (username: string): Promise<Memory[]> => {
         setIsLoading(true);
         setError(null);
         
         try {
-            const data = await MemoryService.fetchMemories();
+            const data = await MemoryService.fetchMemories(username);
             return data;
         } catch (err) {
             const errorMessage = err instanceof Error ? err.message : 'Unknown error occurred';
