@@ -20,6 +20,13 @@ class MinioStorage:
             secure=True,
         )
 
+    # @file_path: Local file path
+    # @file_name: File name to be saved in Minio
+    # @content_type: Content type of the file:
+    #   - application/json
+    #   - application/pdf
+    #   - image/jpeg
+    #   - application/vnd.openxmlformats-officedocument.spreadsheetml.sheet
     def file_upload(
         self, file_path, file_name, content_type, bucket_name=config.s3_bucket
     ):

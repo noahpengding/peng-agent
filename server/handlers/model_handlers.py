@@ -1,82 +1,13 @@
-from services.openai_response import CustomOpenAIResponse
 from utils.mysql_connect import MysqlConnect
 from models.model_config import ModelConfig
 from utils.log import output_log
-import requests
 from bs4 import BeautifulSoup
-import re
-from services.gemini_langchain import CustomGemini
 from utils.minio_connection import MinioStorage
-
-
-def _get_opeai_model():
-    responses = []
-    o = CustomOpenAIResponse(model="")
-    models = o.list_models()
-    for model in models.split("\n"):
-        if re.search(r"^davinci", model) or re.search(r"^dall", model):
-            responses.append(
-                ModelConfig(
-                    operator="openai", type="image", model_name=model, available=False
-                )
-            )
-        elif re.search(r"^text-embedding", model):
-            responses.append(
-                ModelConfig(
-                    operator="openai",
-                    type="embedding",
-                    model_name=model,
-                    available=False,
-                )
-            )
-        elif re.search(r"^gpt", model) or re.search(r"^o", model):
-            responses.append(
-                ModelConfig(
-                    operator="openai", type="chat", model_name=model, available=False
-                )
-            )
-    mysql = MysqlConnect()
-    mysql.delete_record("model", {"operator": "openai"})
-    try:
-        for response in responses:
-            mysql.create_record("model", response.to_dict())
-    finally:
-        mysql.close()
-
-
-def _get_gemini_model():
-    gemini = CustomGemini(model="")
-    models = gemini.list_models()
-    responses = []
-    for model in models.split("\n"):
-        if re.search(r".*embedding.*", model):
-            responses.append(
-                ModelConfig(
-                    operator="gemini",
-                    type="embedding",
-                    model_name=model,
-                    available=False,
-                )
-            )
-        elif re.search(r".*vision.*", model) or re.search(r".*image.*", model):
-            responses.append(
-                ModelConfig(
-                    operator="gemini", type="image", model_name=model, available=False
-                )
-            )
-        elif re.search(r"^gemini", model):
-            responses.append(
-                ModelConfig(
-                    operator="gemini", type="chat", model_name=model, available=False
-                )
-            )
-    mysql = MysqlConnect()
-    mysql.delete_record("model", {"operator": "gemini"})
-    try:
-        for response in responses:
-            mysql.create_record("model", response.to_dict())
-    finally:
-        mysql.close()
+from handlers.chat_handlers import get_model_instance_by_operator
+from handlers.operator_handlers import get_all_operators, update_operator
+import re
+import requests
+import pandas as pd
 
 
 def _parse_ollama_models(soup: BeautifulSoup) -> list:
@@ -108,7 +39,7 @@ def _parse_ollama_models(soup: BeautifulSoup) -> list:
                     operator="rag",
                     type=model_type,
                     model_name=f"{model_name_element[0].text}:{param_text}",
-                    available=False,
+                    isAvailable=False,
                 )
             )
             param_index += 1
@@ -116,7 +47,7 @@ def _parse_ollama_models(soup: BeautifulSoup) -> list:
     return results
 
 
-def _get_ollama_model():
+def _get_ollama_model() -> list[ModelConfig]:
     OLLAMA_SEARCH_URL = "https://ollama.com/search"
     try:
         response = requests.get(OLLAMA_SEARCH_URL, timeout=10)
@@ -129,6 +60,8 @@ def _get_ollama_model():
                 mysql.delete_record("model", {"operator": "rag"})
                 for model_config in model_configs:
                     mysql.create_record("model", model_config.to_dict())
+                print(model_configs)
+                return model_configs
             finally:
                 mysql.close()
     except requests.RequestException as e:
@@ -137,25 +70,26 @@ def _get_ollama_model():
         output_log(f"Error processing Ollama models: {e}", "ERROR")
 
 
-def _get_local_models():
+def _get_local_models() -> list[ModelConfig]:
     m = MinioStorage()
-    m.file_download("peng-bot/models.xlsx", "models.xlsx")
-    import pandas as pd
-
+    m.file_download("peng-bot/peng-agent/models.xlsx", "models.xlsx")
     models = pd.read_excel("models.xlsx")
+    result = []
     for index, row in models.iterrows():
-        model = ModelConfig(
+        result.append(ModelConfig(
             operator=row["operator"],
             type=row["type"],
             model_name=row["model_name"],
-            available=row["isAvailable"],
-        )
-        mysql = MysqlConnect()
-        try:
-            mysql.delete_record("model", {"model_name": model.model_name})
-            mysql.create_record("model", model.to_dict())
-        finally:
-            mysql.close()
+            isAvailable=row["isAvailable"],
+        ))
+    return result
+
+
+def _save_local_models(models: list[ModelConfig]):
+    df = pd.DataFrame([model.to_dict() for model in models])
+    df.to_excel("models.xlsx", index=False)
+    m = MinioStorage()
+    m.file_upload("models.xlsx", "peng-bot/peng-agent/models.xlsx", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
 
 
 def get_model():
@@ -163,11 +97,63 @@ def get_model():
     return mysql.read_records("model")
 
 
+def _check_new_model(operator: str, model_name: str, patterns, model_type: str) -> ModelConfig:
+    if not patterns:
+        return None
+    if any(re.search(str(pattern), model_name) for pattern in patterns.split(";")):
+        return ModelConfig(
+            operator=operator,
+            type=model_type,
+            model_name=model_name,
+            isAvailable=False,
+        )
+    return None
+
+# Refersh will check all operators and sync local model changes
 def refresh_models():
-    _get_opeai_model()
-    _get_ollama_model()
-    _get_gemini_model()
-    _get_local_models()
+    update_operator()
+    avaliable_models = get_all_available_models()
+    local_models = _get_local_models()
+    responses = local_models.copy()
+    if responses is None:
+        responses = []
+    responses += _get_ollama_model()
+    for operator in get_all_operators():
+        try:
+            model_ins = get_model_instance_by_operator(operator.operator)
+            if model_ins is None:
+                continue
+            models = model_ins.list_models()
+        except Exception as e:
+            output_log(f"Error getting models for operator {operator.operator}: {e}", "Warning")
+            continue
+        for model in models.split("\n"):
+            local_match = next((local_model for local_model in local_models if local_model.model_name == model), None)
+            # no-dd-sa:python-best-practices/nested-blocks
+            if local_match:
+                continue
+            ## Order Matters: Embedding > Image > Audio > Video > Chatdock
+            elif _check_new_model(operator.operator, model, operator.embedding_pattern, "embedding"):
+                responses.append(_check_new_model(operator.operator, model, operator.embedding_pattern, "embedding"))
+            elif _check_new_model(operator.operator, model, operator.image_pattern, "image"):
+                responses.append(_check_new_model(operator.operator, model, operator.image_pattern, "image"))
+            elif _check_new_model(operator.operator, model, operator.audio_pattern, "audio"):
+                responses.append(_check_new_model(operator.operator, model, operator.audio_pattern, "audio"))
+            elif _check_new_model(operator.operator, model, operator.video_pattern, "video"):
+                responses.append(_check_new_model(operator.operator, model, operator.video_pattern, "video"))
+            elif _check_new_model(operator.operator, model, operator.chat_pattern, "chat"):
+                responses.append(_check_new_model(operator.operator, model, operator.chat_pattern, "chat"))
+    for response in responses:
+        if response.model_name in [model["model_name"] for model in avaliable_models]:
+            response.isAvailable = True
+    _save_local_models(responses)
+    mysql = MysqlConnect()
+    try:
+        for response in responses:
+            mysql.delete_record("model", {"model_name": response.model_name})
+            mysql.create_record("model", response.to_dict())
+    finally:
+        mysql.close()
     return get_model()
 
 
@@ -189,3 +175,7 @@ def avaliable_models(type: str):
     if type == "embedding":
         return mysql.read_record_v2("model", {"type=": "embedding", "isAvailable=": 1})
     return mysql.read_record_v2("model", {"type<>": "embedding", "isAvailable=": 1})
+
+def get_all_available_models():
+    mysql = MysqlConnect()
+    return mysql.read_record_v2("model", {"isAvailable=": 1})

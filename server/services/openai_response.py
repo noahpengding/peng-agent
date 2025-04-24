@@ -25,23 +25,20 @@ class CustomOpenAIResponse(BaseChatModel):
     model_name: str = Field(alias="model")
     temperature: Optional[float] = 1.0
     max_tokens: Optional[int] = config.output_max_length
-    base_url: Optional[str] = Field(
-        default="https://api.openai.com/v1/",
-        description="Base URL for OpenAI API.",
-    )
-    api_key: str = Field(
-        default=config.openai_api_key,
-        description="API key for OpenAI.",
-    )
-    organization_id: str = Field(
-        default=config.openai_organization_id,
-        description="Organization ID for OpenAI.",
-    )
-    project_id: str = Field(
-        default=config.openai_project_id,
-        description="Project ID for OpenAI.",
-    )
-    streaming: bool = True
+    base_url: Optional[str]
+    api_key: str
+    organization_id: str
+    project_id: str
+    client: Optional[OpenAI] = None
+    
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.client = OpenAI(
+            api_key=self.api_key,
+            organization=self.organization_id,
+            project=self.project_id,
+            base_url=self.base_url,
+        )
 
     def _generate(
         self,
@@ -53,13 +50,7 @@ class CustomOpenAIResponse(BaseChatModel):
         now = time.time()
         prompt_translated = self._prompt_translate(prompt)
         output_log(f"Translated prompt: {prompt_translated}", "debug")
-        client = OpenAI(
-            api_key=self.api_key,
-            organization=self.organization_id,
-            project=self.project_id,
-            base_url=self.base_url,
-        )
-        responses = client.responses.create(
+        responses = self.client.responses.create(
             model=self.model_name,
             input=prompt_translated,
             max_output_tokens=self.max_tokens,
@@ -92,16 +83,10 @@ class CustomOpenAIResponse(BaseChatModel):
         output_log(f"Streaming chat completion request{prompt}", "debug")
         prompt_translated = self._prompt_translate(prompt)
         output_log(f"Translated prompt for streaming{prompt_translated}", "debug")
-        client = OpenAI(
-            api_key=self.api_key,
-            organization=self.organization_id,
-            project=self.project_id,
-            base_url=self.base_url,
-        )
         output_log(
             f"Requesting streaming response from model: {self.model_name}", "debug"
         )
-        stream = client.responses.create(
+        stream = self.client.responses.create(
             model=self.model_name,
             input=prompt_translated,
             max_output_tokens=self.max_tokens,
@@ -120,7 +105,7 @@ class CustomOpenAIResponse(BaseChatModel):
                         usage_metadata=UsageMetadata(
                             {
                                 "input_tokens": len(prompt),
-                                "output_tokens": 1,
+                                "output_tokens": len(token),
                                 "total_tokens": token_count,
                             }
                         ),
@@ -131,12 +116,7 @@ class CustomOpenAIResponse(BaseChatModel):
                     yield chunk
 
     def list_models(self):
-        client = OpenAI(
-            api_key=config.openai_api_key,
-            organization=config.openai_organization_id,
-            project=config.openai_project_id,
-        )
-        response = client.models.list()
+        response = self.client.models.list()
         models = [model.id for model in response.data]
         return "\n".join(models)
 
