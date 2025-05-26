@@ -2,11 +2,13 @@ from utils.mysql_connect import MysqlConnect
 from utils.minio_connection import MinioStorage
 from models.operator_config import OperatorConfig
 
+
 def get_operator(operator_name: str) -> OperatorConfig:
     mysql = MysqlConnect()
     operator = mysql.read_records("operator", {"operator": operator_name})
     mysql.close()
     return OperatorConfig(**operator[0]) if operator else None
+
 
 def update_operator() -> None:
     minio = MinioStorage()
@@ -35,7 +37,8 @@ def update_operator() -> None:
             mysql.create_record("operator", operator.to_dict())
         finally:
             mysql.close()
-    
+
+
 def get_all_operators() -> list[OperatorConfig]:
     mysql = MysqlConnect()
     operators = mysql.read_records("operator")

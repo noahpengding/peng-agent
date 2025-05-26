@@ -14,9 +14,12 @@ class Config(BaseModel):
     s3_secret_key: str
     qdrant_host: str
     qdrant_port: int
-    ollama_url: str
+    default_operator: str
     default_base_model: str
-    default_embedding_model: str
+    huggingface_cache_dir: str
+    embedding_operator: str
+    embedding_model: str
+    embedding_size: int
     mysql_host: str
     mysql_user: str
     mysql_password: str
@@ -25,6 +28,8 @@ class Config(BaseModel):
     admin_password: str
     azure_document_endpoint: str
     azure_document_key: str
+    tavily_api_key: str
+    web_search_max_results: int
     input_max_length: int
     output_max_length: int
 
@@ -54,15 +59,24 @@ try:
         "qdrant_port": int(os.environ.get("qdrant_port"))
         if os.environ.get("qdrant_port")
         else 6333,
-        "ollama_url": os.environ.get("ollama_url")
-        if os.environ.get("ollama_url")
-        else "http://localhost:11434",
+        "default_operator": os.environ.get("default_operator")
+        if os.environ.get("default_operator")
+        else "openai_response",
         "default_base_model": os.environ.get("default_base_model")
         if os.environ.get("default_base_model")
         else "gpt-3.5-turbo",
-        "default_embedding_model": os.environ.get("default_embedding_model")
-        if os.environ.get("default_embedding_model")
-        else "nomic-embed-text",
+        "huggingface_cache_dir": os.environ.get("huggingface_cache_dir")
+        if os.environ.get("huggingface_cache_dir")
+        else os.path.join(os.path.expanduser("~"), ".cache", "huggingface"),
+        "embedding_operator": os.environ.get("embedding_operator")
+        if os.environ.get("embedding_operator")
+        else "openai_response",
+        "embedding_model": os.environ.get("embedding_model")
+        if os.environ.get("embedding_model")
+        else "text-embedding-ada-002",
+        "embedding_size": int(os.environ.get("embedding_size"))
+        if os.environ.get("embedding_size")
+        else 1536,
         "mysql_host": os.environ.get("mysql_host")
         if os.environ.get("mysql_host")
         else "localhost",
@@ -87,6 +101,12 @@ try:
         "azure_document_key": os.environ.get("azure_document_key")
         if os.environ.get("azure_document_key")
         else "asdadasdasd",
+        "tavily_api_key": os.environ.get("tavily_api_key")
+        if os.environ.get("tavily_api_key")
+        else "tavily_api_key",
+        "web_search_max_results": int(os.environ.get("web_search_max_results"))
+        if os.environ.get("web_search_max_results")
+        else 5,
         "input_max_length": int(os.environ.get("input_max_length"))
         if os.environ.get("input_max_length")
         else 4096,

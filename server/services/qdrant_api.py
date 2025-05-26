@@ -1,7 +1,7 @@
 from qdrant_client import QdrantClient, models
-from qdrant_client.models import VectorParams, Distance
-from langchain_qdrant import QdrantVectorStore
-from services.ollama_model import Ollama
+from qdrant_client.models import VectorParams, Distance, SparseVectorParams
+from langchain_qdrant import QdrantVectorStore, FastEmbedSparse, RetrievalMode
+from handlers.model_utils import get_embedding_instance_by_operator
 from utils.log import output_log
 from config.config import config
 
@@ -12,11 +12,13 @@ class Qdrant:
         host=config.qdrant_host,
         port=config.qdrant_port,
         collection_name="default",
-        embedding="nomic-embed-text",
     ):
         self.client = QdrantClient(host=host, port=port)
         self.collection_name = collection_name
-        self.embedding = Ollama(model=embedding, model_type="embeddings").init()
+        self.embedding = get_embedding_instance_by_operator(
+            operator_name=config.embedding_operator,
+            model_name=config.embedding_model,
+        )
         if not self.client.collection_exists(collection_name):
             output_log(
                 f"Collection {collection_name} does not exist. Creating collection...",
@@ -24,12 +26,13 @@ class Qdrant:
             )
             self.client.create_collection(
                 collection_name=collection_name,
-                vectors_config=VectorParams(size=768, distance=Distance.COSINE),
+                vectors_config=VectorParams(size=config.embedding_size, distance=Distance.COSINE),
             )
         self.qdrant_vector = QdrantVectorStore(
             client=self.client,
             embedding=self.embedding,
             collection_name=self.collection_name,
+            retrieval_mode=RetrievalMode.DENSE,
         )
 
     def add_alias(self, collection_name, alias_name):
@@ -48,6 +51,10 @@ class Qdrant:
         self._remove_document(local_path)
         self.qdrant_vector.add_documents(chunks)
 
+    def add_texts(self, local_path, texts):
+        self._remove_document(local_path)
+        self.qdrant_vector.add_texts(texts)
+
     def _remove_document(self, source):
         output_log(f"Removing document with source {source}...", "info")
         point_filter = models.Filter(
@@ -62,5 +69,16 @@ class Qdrant:
             collection_name=self.collection_name, points_selector=point_filter
         )
 
-    def as_retriever(self, search_kwargs):
-        return self.qdrant_vector.as_retriever(search_kwargs=search_kwargs)
+    def as_retriever(self, search_type,  search_kwargs):
+        return self.qdrant_vector.as_retriever(
+            search_type=search_type,
+            search_kwargs=search_kwargs
+        )
+
+    def similarity_search(self,query,k=5,score_threshold=0.65):
+        results = self.qdrant_vector.similarity_search(
+            query=query,
+            k=k,
+            score_threshold=score_threshold,
+        )
+        return results

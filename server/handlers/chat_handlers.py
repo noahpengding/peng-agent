@@ -1,60 +1,14 @@
-from fastapi.responses import StreamingResponse, JSONResponse
 from models.chat_config import ChatConfig
-from services.rag_usage import RagUsage
 from config.config import config
 from utils.mysql_connect import MysqlConnect
 from utils.log import output_log
-from datetime import datetime, timedelta
-from services.ollama_model import Ollama
-from services.openai_response import CustomOpenAIResponse
-from services.openai_completion import CustomOpenAICompletion
-from services.gemini_langchain import CustomGemini
-from services.claude_langchain import CustomClaude
 from services.response_formatter import response_formatter_main
-from handlers.operator_handlers import get_operator
+import services.prompt_generator as prompt_generator
+from handlers.model_utils import get_model_instance_by_operator
+from fastapi.responses import StreamingResponse, JSONResponse
+from datetime import datetime, timedelta
 import json
 from typing import AsyncIterator
-
-
-def get_model_instance_by_operator(operator_name, model_name: str = ""):
-    operator = get_operator(operator_name)
-    if operator is None:
-        output_log(
-            f"Operator {operator_name} not found in the database.",
-            "error",
-        )
-        return None
-    if operator.runtime == "openai_response":
-        base_model_ins = CustomOpenAIResponse(
-            base_url=operator.endpoint,
-            api_key=operator.api_key,
-            organization_id=operator.org_id,
-            project_id=operator.project_id,
-            model=model_name, 
-        )
-    elif operator.runtime == "openai_completion":
-        base_model_ins = CustomOpenAICompletion(
-            base_url=operator.endpoint,
-            api_key=operator.api_key,
-            organization_id=operator.org_id,
-            project_id=operator.project_id,
-            model=model_name, 
-        )
-    elif operator.runtime == "gemini":
-        base_model_ins = CustomGemini(
-            api_key=operator.api_key,
-            model=model_name, 
-        )
-    elif operator.runtime == "ollama":
-        base_model_ins = Ollama(
-            model=model_name, model_type="chat"
-        ).init()
-    elif operator.runtime == "claude":
-        base_model_ins = CustomClaude(
-            api_key=operator.api_key,
-            model=model_name, 
-        )
-    return base_model_ins
 
 
 async def chat_handler(
@@ -70,23 +24,41 @@ async def chat_handler(
         chat_config.base_model,
     )
     if base_model_ins is None:
-        yield json.dumps({"chunk": "Error: Model instance not found.", "done": True}) + "\n"
+        yield (
+            json.dumps({"chunk": "Error: Model instance not found.", "done": True})
+            + "\n"
+        )
         return
-    rag = RagUsage(
-        user_name=user_name,
-        base_model=base_model_ins,
-        collection_name=chat_config.collection_name,
-        embedding_model=chat_config.embedding_model,
+    prompt = prompt_generator.prompt_template(
+        model_name=chat_config.base_model,
+        has_document=chat_config.collection_name != "default",
+        has_websearch=chat_config.web_search,
     )
-
-    full_response = ""
-    async for chunk in rag.aquery_stream(
-        input=message,
+    params = prompt_generator.base_prompt_generate(
+        message=message,
         short_term_memory=chat_config.short_term_memory,
+        long_term_memory=chat_config.long_term_memory,
+    )
+    params = prompt_generator.add_image_to_prompt(
+        model_name=chat_config.base_model,
+        params=params,
         image=image,
-    ):
+    )
+    if chat_config.web_search:
+        params = prompt_generator.add_websearch_to_prompt(
+            params=params,
+            query=message,
+        )
+    if chat_config.collection_name != "default":
+        params = prompt_generator.add_document_to_prompt(
+            params=params,
+            query=message,
+            collection_name=chat_config.collection_name,
+        )
+    full_response = ""
+    async for chunk in base_model_ins.astream(prompt.invoke(params)):
         if chunk:
-            chunk = response_formatter_main(chat_config.operator, chunk)
+            chunk = response_formatter_main(chat_config.operator, chunk.content)
             full_response += chunk
             yield json.dumps({"chunk": chunk, "done": False}) + "\n"
 
@@ -95,7 +67,7 @@ async def chat_handler(
         message,
         full_response,
         chat_config.base_model,
-        chat_config.embedding_model,
+        config.embedding_model,
         chat_config.collection_name,
     )
     yield json.dumps({"chunk": "", "done": True}) + "\n"
@@ -122,30 +94,51 @@ async def chat_completions_handler(
     )
     if base_model_ins is None:
         return "Error: Model instance not found."
-    rag = RagUsage(
-        user_name=user_name,
-        base_model=base_model_ins,
-        collection_name=chat_config.collection_name,
-        embedding_model=chat_config.embedding_model,
+    prompt = prompt_generator.prompt_template(
+        model_name=chat_config.base_model,
+        has_document=chat_config.collection_name != "default",
+        has_websearch=chat_config.web_search,
     )
-    full_response = await rag.aquery(
-        input=message,
+    params = prompt_generator.base_prompt_generate(
+        message=message,
         short_term_memory=chat_config.short_term_memory,
+        long_term_memory=chat_config.long_term_memory,
+    )
+    params = prompt_generator.add_image_to_prompt(
+        model_name=chat_config.base_model,
+        params=params,
         image=image,
     )
-    full_response = response_formatter_main(chat_config.operator, full_response["answer"])
+    if chat_config.web_search:
+        params = prompt_generator.add_websearch_to_prompt(
+            params=params,
+            query=message,
+        )
+    if chat_config.collection_name != "default":
+        params = prompt_generator.add_document_to_prompt(
+            params=params,
+            query=message,
+            collection_name=chat_config.collection_name,
+        )
+    full_response = await base_model_ins.ainvoke(prompt.invoke(params))
+    full_response = response_formatter_main(
+        chat_config.operator, full_response.content
+    )
     _save_chat(
         user_name,
         message,
         full_response,
         chat_config.base_model,
-        chat_config.embedding_model,
+        config.embedding_model,
         chat_config.collection_name,
     )
 
     return full_response
 
-async def create_completion_response(user_name: str, message: str, image: str, chat_config: ChatConfig) -> JSONResponse:
+
+async def create_completion_response(
+    user_name: str, message: str, image: str, chat_config: ChatConfig
+) -> JSONResponse:
     result = await chat_completions_handler(user_name, message, image, chat_config)
     return JSONResponse(
         content=result,

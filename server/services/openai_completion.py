@@ -44,6 +44,7 @@ class CustomOpenAICompletion(BaseChatModel):
         prompt: List[BaseMessage],
         stop: Optional[List[str]] = None,
         run_manager: Optional[CallbackManagerForLLMRun] = None,
+        **kwargs: Any,
     ) -> ChatResult:
         output_log(f"Chat completion request: {prompt}", "debug")
         now = time.time()
@@ -77,6 +78,7 @@ class CustomOpenAICompletion(BaseChatModel):
         prompt: List[BaseMessage],
         stop: Optional[List[str]] = None,
         run_manager: Optional[CallbackManagerForLLMRun] = None,
+        **kwargs: Any,
     ) -> Iterator[ChatGenerationChunk]:
         output_log(f"Streaming chat completion request{prompt}", "debug")
         prompt_translated = self._prompt_translate(prompt)

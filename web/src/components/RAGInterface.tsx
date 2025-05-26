@@ -14,6 +14,7 @@ const RAGInterface: React.FC = () => {
   // State for adding new documents
   const [filePath, setFilePath] = useState<string>('');
   const [collectionName, setCollectionName] = useState<string>('');
+  const [typeOfFile, setTypeOfFile] = useState<'standard' | 'handwriting'>('standard');
   const [indexResult, setIndexResult] = useState<string>('');
   
   // Get API functions and state
@@ -69,7 +70,7 @@ const RAGInterface: React.FC = () => {
     setIndexResult('Loading...');
     
     try {
-      const result = await indexDocument("peng", filePath, collectionName);
+      const result = await indexDocument("peng", filePath, collectionName, typeOfFile);
       setIndexResult(result);
       
       // Reload the documents to show the newly added one
@@ -78,6 +79,7 @@ const RAGInterface: React.FC = () => {
       // Clear form fields
       setFilePath('');
       setCollectionName('');
+      setTypeOfFile('standard');
     } catch (err) {
       setIndexResult(err instanceof Error ? err.message : 'Failed to index document');
     }
@@ -125,6 +127,34 @@ const RAGInterface: React.FC = () => {
                 onChange={(e) => setCollectionName(e.target.value)}
                 placeholder="Enter knowledge base name"
               />
+            </div>
+            
+            <div className="form-group">
+              <label className="form-label">File Type</label>
+              <div className="radio-group">
+                <label className="radio-label">
+                  <input
+                    type="radio"
+                    name="typeOfFile"
+                    value="standard"
+                    checked={typeOfFile === 'standard'}
+                    onChange={(e) => setTypeOfFile(e.target.value as 'standard' | 'handwriting')}
+                    className="radio-input"
+                  />
+                  Standard
+                </label>
+                <label className="radio-label">
+                  <input
+                    type="radio"
+                    name="typeOfFile"
+                    value="handwriting"
+                    checked={typeOfFile === 'handwriting'}
+                    onChange={(e) => setTypeOfFile(e.target.value as 'standard' | 'handwriting')}
+                    className="radio-input"
+                  />
+                  Handwriting
+                </label>
+              </div>
             </div>
             
             <button 

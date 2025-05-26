@@ -5,7 +5,7 @@ stages:
 variables:
   SERVER_IMAGE: $CI_REGISTRY/peng-bot/peng-agent/server
   WEB_IMAGE: $CI_REGISTRY/peng-bot/peng-agent/front
-  VERSION: v1.8.0
+  VERSION: v2.0.2
 
 # Template for test builds (non-main branches)
 .test-build-template: &test-build
@@ -27,7 +27,7 @@ variables:
 test-server-x64:
   <<: *test-build
   script:
-    - docker build --platform linux/amd64 -t $SERVER_IMAGE:$VERSION-nightly -f server/Dockerfile server/
+    - docker build --platform linux/amd64 -t $SERVER_IMAGE:$VERSION-nightly -f server/Dockerfile_slim server/
     - docker push $SERVER_IMAGE:$VERSION-nightly
   tags:
     - docker
@@ -45,7 +45,7 @@ test-web-x64:
 server-x64:
   <<: *prod-build
   script:
-    - docker build --platform linux/amd64 -t $SERVER_IMAGE:$VERSION -f server/Dockerfile server/
+    - docker build --platform linux/amd64 -t $SERVER_IMAGE:$VERSION -f server/Dockerfile_slim server/
     - docker tag $SERVER_IMAGE:$VERSION $SERVER_IMAGE:latest
     - docker push $SERVER_IMAGE:$VERSION
     - docker push $SERVER_IMAGE:latest
@@ -55,7 +55,7 @@ server-x64:
 server-arm:
   <<: *prod-build
   script:
-    - docker build --platform linux/arm64 -t $SERVER_IMAGE:$VERSION-arm -f server/Dockerfile server/
+    - docker build --platform linux/arm64 -t $SERVER_IMAGE:$VERSION-arm -f server/Dockerfile_slim server/
     - docker tag $SERVER_IMAGE:$VERSION-arm $SERVER_IMAGE:latest-arm
     - docker push $SERVER_IMAGE:$VERSION-arm
     - docker push $SERVER_IMAGE:latest-arm
