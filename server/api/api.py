@@ -11,6 +11,7 @@ from handlers.model_handlers import (
     get_model,
     refresh_models,
     flip_avaliable,
+    flip_multimodal,
     avaliable_models,
 )
 from handlers.rag_handlers import get_rag, index_all
@@ -79,6 +80,18 @@ async def chat_completions(request: ChatRequest, auth: dict = Depends(authentica
         request.user_name, request.message, request.image, request.config
     )
 
+@app.post("/chat_completions")
+async def chat_completions(
+    request: ChatRequest, auth: dict = Depends(authenticate_request)
+):
+    output_log(request, "DEBUG")
+    if request.message.strip() == "":
+        raise HTTPException(status_code=400, detail="Empty message")
+    return await create_completion_response(
+        request.user_name, request.message, request.image, request.config
+    )
+
+
 @app.options("/memory")
 async def options_memory():
     return Response(headers={"Allow": "POST, OPTIONS"})
@@ -112,9 +125,29 @@ async def operator_update(auth: dict = Depends(authenticate_request)):
     update_operator()
     return {"message": "Operator updated successfully"}
 
-@app.post("/model")
+@app.post("/model_avaliable")
 async def flip_model(request: dict, auth: dict = Depends(authenticate_request)):
     return flip_avaliable(request["model_name"])
+
+@app.post("/model_multimodal")
+async def flip_model_multimodal(request: dict, auth: dict = Depends(authenticate_request)):
+    return flip_multimodal(request["model_name"])
+
+
+@app.options("/operator")
+async def options_operator():
+    return Response(headers={"Allow": "GET, OPTIONS, POST"})
+
+
+@app.get("/operator")
+async def operator(auth: dict = Depends(authenticate_request)):
+    return get_all_operators()
+
+
+@app.post("/operator")
+async def operator_update(auth: dict = Depends(authenticate_request)):
+    update_operator()
+    return {"message": "Operator updated successfully"}
 
 
 @app.get("/model_refresh")
@@ -123,14 +156,13 @@ async def model_refresh(auth: dict = Depends(authenticate_request)):
 
 
 @app.options("/model_refresh")
-async def options_model_refresh():
+async def options_model_refresh(auth: dict = Depends(authenticate_request)):
     return Response(headers={"Allow": "POST, OPTIONS"})
 
 
 @app.post("/avaliable_model")
 async def avaliable_model(request: dict, auth: dict = Depends(authenticate_request)):
     return avaliable_models(request["type"])
-
 
 @app.get("/rag")
 async def rag(auth: dict = Depends(authenticate_request)):
@@ -143,7 +175,7 @@ async def index_file_api(
 ):
     if request.user_name == "":
         request.user_name = auth["username"]
-    return index_all(request.user_name, request.file_path, request.collection_name)
+    return index_all(request.user_name, request.file_path, request.type_of_file,request.collection_name)
 
 
 @app.options("/rag")
@@ -185,8 +217,7 @@ async def signup(user_data: UserCreate):
         user_data.email = user_data.username + "@example.com"
     if user_data.default_based_model == "":
         user_data.default_based_model = config.default_base_model
-    if user_data.default_embedding_model == "":
-        user_data.default_embedding_model = config.default_embedding_model
+    user_data.default_embedding_model = config.embedding_model
     response = create_user(user_data)
     if not response:
         raise HTTPException(status_code=400, detail="User Creation Failed")

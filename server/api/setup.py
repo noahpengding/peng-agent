@@ -62,7 +62,7 @@ def set_up():
             "audio_pattern": "TEXT",
             "video_pattern": "TEXT",
             "chat_pattern": "TEXT",
-        }
+        },
     )
     mysql.create_table(
         "model",

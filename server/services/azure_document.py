@@ -6,6 +6,7 @@ from azure.ai.documentintelligence.models import (
     AnalyzeResult,
 )
 from config.config import config
+from utils.log import output_log
 
 
 class AzureDocument:
@@ -17,6 +18,8 @@ class AzureDocument:
         )
 
     def analyze_document(self, document: bytes) -> str:
+        output_log(f"Azure Analyzing document: {document}", "debug")
+
         if len(document.split(",")) > 1:
             document = document.split(",")[1]
 

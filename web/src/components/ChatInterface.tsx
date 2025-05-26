@@ -53,11 +53,8 @@ const ChatbotUI = () => {
   const [availableKnowledgeBases, setAvailableKnowledgeBases] = useState<string[]>(['default']);
   // State for available base models
   const [availableBaseModels, setAvailableBaseModels] = useState<ModelInfo[]>([]);
-  // State for available embedding models
-  const [availableEmbeddingModels, setAvailableEmbeddingModels] = useState<ModelInfo[]>([]);
   // Loading states for model lists
   const [baseModelsLoading, setBaseModelsLoading] = useState(false);
-  const [embeddingModelsLoading, setEmbeddingModelsLoading] = useState(false);
   
   // Map UI selections to backend config
   useEffect(() => {
@@ -92,7 +89,7 @@ const ChatbotUI = () => {
     fetchKnowledgeBases();
   }, []);
 
-  // Fetch available base models and embedding models on component mount
+  // Fetch available base models on component mount
   useEffect(() => {
     const fetchAvailableModels = async () => {
       // Fetch base models
@@ -117,32 +114,6 @@ const ChatbotUI = () => {
       } finally {
         setBaseModelsLoading(false);
       }
-      
-      // Fetch embedding models
-      setEmbeddingModelsLoading(true);
-      try {
-        const data = await apiCall('POST', '/avaliable_model', { type: "embedding" });
-        
-        if (Array.isArray(data) && data.length > 0) {
-          setAvailableEmbeddingModels(data);
-          // Set default to first available model's model_name
-          setEmbeddingModel(data[0].model_name);
-        } else {
-          // Clear embedding models if empty list is returned
-          setAvailableEmbeddingModels([]);
-          setEmbeddingModel('');
-        }
-      } catch (error) {
-        setError(`Failed to fetch embedding models: ${error instanceof Error ? error.message : String(error)}`);
-        // Fallback to default models
-        setAvailableEmbeddingModels([
-          { id: "1", operator: "openai", type: "embedding", model_name: "text-embedding-3-large", isAvailable: true },
-          { id: "2", operator: "openai", type: "embedding", model_name: "text-embedding-3-small", isAvailable: true },
-          { id: "3", operator: "openai", type: "embedding", model_name: "text-embedding-ada-002", isAvailable: true }
-        ]);
-      } finally {
-        setEmbeddingModelsLoading(false);
-      }
     };
     
     fetchAvailableModels();
@@ -161,7 +132,6 @@ const ChatbotUI = () => {
   // Legacy state for UI components
   const [baseModel, setbaseModel] = useState('gpt-4');
   const [knowledgeBase, setKnowledgeBase] = useState('default');
-  const [embeddingModel, setEmbeddingModel] = useState('text-embedding-3-large');
   const [contextWindow, setContextWindow] = useState(8192);
   const [useWebSearch, setUseWebSearch] = useState(false);
   const [shortTermMemory, setShortTermMemory] = useState<string[]>([]);
@@ -266,7 +236,6 @@ const ChatbotUI = () => {
       const config = {
         operator: getOperatorForModel(baseModel),
         base_model: baseModel,
-        embedding_model: embeddingModel,
         collection_name: knowledgeBase,
         web_search: useWebSearch,
         short_term_memory: shortTermMemory, // Now already includes selected memories
@@ -388,37 +357,6 @@ const ChatbotUI = () => {
     );
   };
   
-  // Embedding Model Selection
-  const renderEmbeddingModelSelection = () => {
-    if (availableEmbeddingModels.length === 0 && !embeddingModelsLoading) {
-      return (
-        <div className="form-group">
-          <label className="form-label">Embedding Model</label>
-          <div className="empty-selection-message">No embedding models available</div>
-        </div>
-      );
-    }
-    
-    return (
-      <div className="form-group">
-        <label className="form-label">Embedding Model</label>
-        <select 
-          className="form-select"
-          value={embeddingModel}
-          onChange={(e) => setEmbeddingModel(e.target.value)}
-          disabled={embeddingModelsLoading || availableEmbeddingModels.length === 0}
-        >
-          {availableEmbeddingModels.map(model => (
-            <option key={model.id || model.model_name} value={model.model_name}>
-              {model.model_name}
-            </option>
-          ))}
-        </select>
-        {embeddingModelsLoading && <div className="loading-indicator">Loading embedding models...</div>}
-      </div>
-    );
-  };
-  
   return (
     <div className="chat-container">
       {/* Header */}
@@ -430,6 +368,7 @@ const ChatbotUI = () => {
               <li><a href="/memory">Memory</a></li>
               <li><a href="/model">Model</a></li>
               <li><a href="/rag">RAG</a></li>
+              <li><a href="https://smith.langchain.com/o/a2c79940-6495-4c24-ab6b-10d0bb8534ee/projects/p/01304a5e-b6f3-4662-8b3e-0befd8886a5a?timeModel=%7B%22duration%22%3A%227d%22%7D" className="external-link">LangSmith</a></li>
               <li><a href="https://github.com/Noahdingpeng/peng-agent" className="external-link">GitHub</a></li>
               <li><a href="https://git.tenawalcott.com/peng-bot/peng-agent" className="external-link">GitLab</a></li>
             </ul>
@@ -452,9 +391,6 @@ const ChatbotUI = () => {
           
           {/* Knowledge Base Selection - replaced with dynamic version */}
           {renderKnowledgeBaseSelection()}
-          
-          {/* Embedding Model - replaced with dynamic version */}
-          {renderEmbeddingModelSelection()}
           
           {/* Context Window Slider */}
           <div className="form-group">

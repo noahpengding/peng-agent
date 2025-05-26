@@ -40,6 +40,7 @@ class CustomGemini(BaseChatModel):
         prompt: List[BaseMessage],
         stop: Optional[List[str]] = None,
         run_manager: Optional[CallbackManagerForLLMRun] = None,
+        **kwargs: Any,
     ) -> ChatResult:
         output_log(f"Chat completion request: {prompt}", "debug")
         now = time.time()
@@ -73,6 +74,7 @@ class CustomGemini(BaseChatModel):
         prompt: List[BaseMessage],
         stop: Optional[List[str]] = None,
         run_manager: Optional[CallbackManagerForLLMRun] = None,
+        **kwargs: Any,
     ) -> Iterator[ChatGenerationChunk]:
         output_log(f"Streaming chat completion request{prompt}", "debug")
         prompt_translated = self._prompt_translate(prompt)
@@ -149,6 +151,23 @@ class CustomGemini(BaseChatModel):
                     )
                 )
         return prompt_text
+    
+    def embed_documents(self, texts: List[str]) -> List[List[float]]:
+        texts = list(map(lambda x: x.replace("\n", " "), texts))
+        embeddings = self.client.models.embed_content(
+            model=self.model_name,
+            contents=texts,
+            config=types.EmbedContentConfig(task_type="SEMANTIC_SIMILARITY"),
+        )
+        if isinstance(embeddings, list):
+            raise TypeError(
+                "Expected embeddings to be a Tensor or a numpy array, "
+                "got a list instead."
+            )
+        return embeddings.tolist()
+    
+    def embed_query(self, text: str) -> List[float]:
+        return self.embed_documents([text])[0]
 
     @property
     def _llm_type(self) -> str:

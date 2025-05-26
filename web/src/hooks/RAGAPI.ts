@@ -15,6 +15,7 @@ export interface IndexDocumentRequest {
   user_name: string;
   file_path: string;
   collection_name: string;
+  type_of_file: 'standard' | 'handwriting';
 }
 
 export const useRAGApi = () => {
@@ -37,7 +38,7 @@ export const useRAGApi = () => {
     }
   };
 
-  const indexDocument = async (username: string, filePath: string, collectionName: string): Promise<string> => {
+  const indexDocument = async (username: string, filePath: string, collectionName: string, typeOfFile: 'standard' | 'handwriting'): Promise<string> => {
     setIsLoading(true);
     setError(null);
     
@@ -45,7 +46,8 @@ export const useRAGApi = () => {
       const request: IndexDocumentRequest = {
         user_name: username,
         file_path: filePath,
-        collection_name: collectionName
+        collection_name: collectionName,
+        type_of_file: typeOfFile
       };
       
       const message = await RAGService.indexDocument(request);

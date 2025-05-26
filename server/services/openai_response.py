@@ -13,10 +13,18 @@ from langchain_core.messages import (
 )
 from langchain_core.messages.ai import UsageMetadata
 from langchain_core.outputs import ChatGeneration, ChatGenerationChunk, ChatResult
+from langchain_core.utils.function_calling import convert_to_openai_tool
 from pydantic import Field
 from config.config import config
 from openai import OpenAI
 from utils.log import output_log
+
+from collections.abc import Sequence
+from typing import Any, Callable, Dict, Literal, Optional, Union
+from langchain_core.tools import BaseTool
+from langchain_core.runnables import Runnable
+from langchain_core.language_models import LanguageModelInput
+
 import re
 import time
 
@@ -30,7 +38,7 @@ class CustomOpenAIResponse(BaseChatModel):
     organization_id: str
     project_id: str
     client: Optional[OpenAI] = None
-    
+
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.client = OpenAI(
@@ -45,6 +53,7 @@ class CustomOpenAIResponse(BaseChatModel):
         prompt: List[BaseMessage],
         stop: Optional[List[str]] = None,
         run_manager: Optional[CallbackManagerForLLMRun] = None,
+        **kwargs: Any,
     ) -> ChatResult:
         output_log(f"Chat completion request: {prompt}", "debug")
         now = time.time()
@@ -79,6 +88,7 @@ class CustomOpenAIResponse(BaseChatModel):
         prompt: List[BaseMessage],
         stop: Optional[List[str]] = None,
         run_manager: Optional[CallbackManagerForLLMRun] = None,
+        **kwargs: Any,
     ) -> Iterator[ChatGenerationChunk]:
         output_log(f"Streaming chat completion request{prompt}", "debug")
         prompt_translated = self._prompt_translate(prompt)
@@ -114,6 +124,62 @@ class CustomOpenAIResponse(BaseChatModel):
                     if run_manager:
                         run_manager.on_llm_new_token(token, chunk=chunk)
                     yield chunk
+
+    def bind_tools(
+        self,
+        tools: Sequence[Union[dict[str, Any], type, Callable, BaseTool]],
+        *,
+        tool_choice: Optional[
+            Union[dict, str, Literal["auto", "none", "required", "any"], bool]
+        ] = None,
+        strict: Optional[bool] = None,
+        parallel_tool_calls: Optional[bool] = None,
+        **kwargs: Any,
+    ) -> Runnable[LanguageModelInput, BaseMessage]:
+        if parallel_tool_calls is not None:
+            kwargs["parallel_tool_calls"] = parallel_tool_calls
+        formatted_tools = [
+            convert_to_openai_tool(tool, strict=strict) for tool in tools
+        ]
+        tool_names = []
+        for tool in formatted_tools:
+            if "function" in tool:
+                tool_names.append(tool["function"]["name"])
+            elif "name" in tool:
+                tool_names.append(tool["name"])
+            else:
+                pass
+        if tool_choice:
+            if isinstance(tool_choice, str):
+                # tool_choice is a tool/function name
+                if tool_choice in tool_names:
+                    tool_choice = {
+                        "type": "function",
+                        "function": {"name": tool_choice},
+                    }
+                elif tool_choice in (
+                    "file_search",
+                    "web_search_preview",
+                    "computer_use_preview",
+                ):
+                    tool_choice = {"type": tool_choice}
+                # 'any' is not natively supported by OpenAI API.
+                # We support 'any' since other models use this instead of 'required'.
+                elif tool_choice == "any":
+                    tool_choice = "required"
+                else:
+                    pass
+            elif isinstance(tool_choice, bool):
+                tool_choice = "required"
+            elif isinstance(tool_choice, dict):
+                pass
+            else:
+                raise ValueError(
+                    f"Unrecognized tool_choice type. Expected str, bool or dict. "
+                    f"Received: {tool_choice}"
+                )
+            kwargs["tool_choice"] = tool_choice
+        return super().bind(tools=formatted_tools, **kwargs)
 
     def list_models(self):
         response = self.client.models.list()
@@ -159,12 +225,25 @@ class CustomOpenAIResponse(BaseChatModel):
                     }
                 )
             elif isinstance(message, HumanMessage):
-                prompt_text.append(
-                    {
-                        "role": "user",
-                        "content": [{"type": "input_text", "text": message.content}],
-                    }
-                )
+                if message.content.startswith("data:image"):
+                    prompt_text.append(
+                        {
+                            "role": "user",
+                            "content": [
+                                {
+                                    "type": "input_image",
+                                    "image_url": f"data:image/jpeg;base64,{message.content.split(',')[1]}",
+                                }
+                            ],
+                        }
+                    )
+                else:
+                    prompt_text.append(
+                        {
+                            "role": "user",
+                            "content": [{"type": "input_text", "text": message.content}],
+                        }
+                    )
         return prompt_text
 
     @property

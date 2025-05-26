@@ -1,12 +1,12 @@
 from datetime import datetime, timedelta, timezone
 from typing import Optional, Dict
-import jwt
 from passlib.context import CryptContext
 from utils.mysql_connect import MysqlConnect
 from utils.log import output_log
 from config.config import config
 from fastapi import HTTPException, Request
 from models.user_models import UserCreate
+import jwt
 
 # Configure password hashing
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
@@ -91,9 +91,7 @@ async def authenticate_request(request: Request):
     try:
         token = request.headers.get("Authorization")
         if not token:
-            raise HTTPException(
-                status_code=401, detail="Invalid authentication credentials"
-            )
+            raise HTTPException(status_code=401, detail="Invalid authentication Token")
         if token.startswith("Bearer "):
             token = token[7:]
         payload = jwt.decode(token, config.jwt_secret_key, algorithms=["HS256"])

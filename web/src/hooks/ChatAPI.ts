@@ -8,7 +8,6 @@ interface ChatRequest {
   config: {
     operator: string;
     base_model: string;
-    embedding_model: string;
     collection_name: string;
     web_search: boolean;
     short_term_memory: string[];

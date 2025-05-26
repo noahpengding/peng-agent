@@ -1,12 +1,15 @@
-FROM python:3.12.8-slim-bullseye
+FROM python:3.11.11-slim-bookworm
 
 WORKDIR /app
 
+RUN pip install --no-cache-dir uv>=0.6.6
+
 COPY pyproject.toml uv.lock ./
 
-RUN pip install --no-cache-dir uv>=0.6.6
-RUN uv venv .venv && uv pip install .
+RUN uv sync --locked
 
 COPY . .
 
-CMD ["uv", "run", "/app/main.py"]
+ENV PATH="/app/.venv/bin:$PATH"
+
+CMD ["uv", "run", "--active", "/app/main.py"]
