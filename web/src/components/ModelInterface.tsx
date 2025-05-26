@@ -5,7 +5,7 @@ import './ModelInterface.css';
 
 const ModelInterface: React.FC = () => {
   const navigate = useNavigate();
-  const { getAllModels, toggleModelAvailability, refreshModels, isLoading } = useModelApi();
+  const { getAllModels, toggleModelAvailability, toggleModelMultimodal, refreshModels, isLoading } = useModelApi();
   
   const [models, setModels] = useState<Model[]>([]);
   const [filteredModels, setFilteredModels] = useState<Model[]>([]);
@@ -72,6 +72,22 @@ const ModelInterface: React.FC = () => {
       );
     } catch (error) {
       setError(`Failed to toggle availability for model ${modelName}: ${error}`);
+    }
+  };
+
+  const handleModelMultimodal = async (modelName: string) => {
+    try {
+      await toggleModelMultimodal(modelName);
+      // Update the local state to reflect the change
+      setModels(prevModels => 
+        prevModels.map(model => 
+          model.model_name === modelName 
+            ? { ...model, isMultimodal: !model.isMultimodal } 
+            : model
+        )
+      );
+    } catch (error) {
+      setError(`Failed to toggle multimodal for model ${modelName}: ${error}`);
     }
   };
 
@@ -205,6 +221,7 @@ const ModelInterface: React.FC = () => {
                       <th>Type</th>
                       <th>Model Name</th>
                       <th>Available</th>
+                      <th>Multimodal</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -219,6 +236,14 @@ const ModelInterface: React.FC = () => {
                             className="availability-checkbox"
                             checked={model.isAvailable}
                             onChange={() => handleAvailabilityToggle(model.model_name)}
+                          />
+                        </td>
+                        <td>
+                          <input
+                            type="checkbox"
+                            className="multimodal-checkbox"
+                            checked={model.isMultimodal}
+                            onChange={() => handleModelMultimodal(model.model_name)}
                           />
                         </td>
                       </tr>

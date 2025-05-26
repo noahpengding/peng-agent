@@ -13,10 +13,18 @@ from langchain_core.messages import (
 )
 from langchain_core.messages.ai import UsageMetadata
 from langchain_core.outputs import ChatGeneration, ChatGenerationChunk, ChatResult
+from langchain_core.utils.function_calling import convert_to_openai_tool
 from pydantic import Field
 from config.config import config
 from openai import OpenAI
 from utils.log import output_log
+
+from collections.abc import Sequence
+from typing import Any, Callable, Dict, Literal, Optional, Union
+from langchain_core.tools import BaseTool
+from langchain_core.runnables import Runnable
+from langchain_core.language_models import LanguageModelInput
+
 import re
 import time
 
@@ -25,41 +33,33 @@ class CustomOpenAIResponse(BaseChatModel):
     model_name: str = Field(alias="model")
     temperature: Optional[float] = 1.0
     max_tokens: Optional[int] = config.output_max_length
-    base_url: Optional[str] = Field(
-        default="https://api.openai.com/v1/",
-        description="Base URL for OpenAI API.",
-    )
-    api_key: str = Field(
-        default=config.openai_api_key,
-        description="API key for OpenAI.",
-    )
-    organization_id: str = Field(
-        default=config.openai_organization_id,
-        description="Organization ID for OpenAI.",
-    )
-    project_id: str = Field(
-        default=config.openai_project_id,
-        description="Project ID for OpenAI.",
-    )
-    streaming: bool = True
+    base_url: Optional[str]
+    api_key: str
+    organization_id: str
+    project_id: str
+    client: Optional[OpenAI] = None
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.client = OpenAI(
+            api_key=self.api_key,
+            organization=self.organization_id,
+            project=self.project_id,
+            base_url=self.base_url,
+        )
 
     def _generate(
         self,
         prompt: List[BaseMessage],
         stop: Optional[List[str]] = None,
         run_manager: Optional[CallbackManagerForLLMRun] = None,
+        **kwargs: Any,
     ) -> ChatResult:
         output_log(f"Chat completion request: {prompt}", "debug")
         now = time.time()
         prompt_translated = self._prompt_translate(prompt)
         output_log(f"Translated prompt: {prompt_translated}", "debug")
-        client = OpenAI(
-            api_key=self.api_key,
-            organization=self.organization_id,
-            project=self.project_id,
-            base_url=self.base_url,
-        )
-        responses = client.responses.create(
+        responses = self.client.responses.create(
             model=self.model_name,
             input=prompt_translated,
             max_output_tokens=self.max_tokens,
@@ -88,20 +88,15 @@ class CustomOpenAIResponse(BaseChatModel):
         prompt: List[BaseMessage],
         stop: Optional[List[str]] = None,
         run_manager: Optional[CallbackManagerForLLMRun] = None,
+        **kwargs: Any,
     ) -> Iterator[ChatGenerationChunk]:
         output_log(f"Streaming chat completion request{prompt}", "debug")
         prompt_translated = self._prompt_translate(prompt)
         output_log(f"Translated prompt for streaming{prompt_translated}", "debug")
-        client = OpenAI(
-            api_key=self.api_key,
-            organization=self.organization_id,
-            project=self.project_id,
-            base_url=self.base_url,
-        )
         output_log(
             f"Requesting streaming response from model: {self.model_name}", "debug"
         )
-        stream = client.responses.create(
+        stream = self.client.responses.create(
             model=self.model_name,
             input=prompt_translated,
             max_output_tokens=self.max_tokens,
@@ -120,7 +115,7 @@ class CustomOpenAIResponse(BaseChatModel):
                         usage_metadata=UsageMetadata(
                             {
                                 "input_tokens": len(prompt),
-                                "output_tokens": 1,
+                                "output_tokens": len(token),
                                 "total_tokens": token_count,
                             }
                         ),
@@ -130,13 +125,64 @@ class CustomOpenAIResponse(BaseChatModel):
                         run_manager.on_llm_new_token(token, chunk=chunk)
                     yield chunk
 
+    def bind_tools(
+        self,
+        tools: Sequence[Union[dict[str, Any], type, Callable, BaseTool]],
+        *,
+        tool_choice: Optional[
+            Union[dict, str, Literal["auto", "none", "required", "any"], bool]
+        ] = None,
+        strict: Optional[bool] = None,
+        parallel_tool_calls: Optional[bool] = None,
+        **kwargs: Any,
+    ) -> Runnable[LanguageModelInput, BaseMessage]:
+        if parallel_tool_calls is not None:
+            kwargs["parallel_tool_calls"] = parallel_tool_calls
+        formatted_tools = [
+            convert_to_openai_tool(tool, strict=strict) for tool in tools
+        ]
+        tool_names = []
+        for tool in formatted_tools:
+            if "function" in tool:
+                tool_names.append(tool["function"]["name"])
+            elif "name" in tool:
+                tool_names.append(tool["name"])
+            else:
+                pass
+        if tool_choice:
+            if isinstance(tool_choice, str):
+                # tool_choice is a tool/function name
+                if tool_choice in tool_names:
+                    tool_choice = {
+                        "type": "function",
+                        "function": {"name": tool_choice},
+                    }
+                elif tool_choice in (
+                    "file_search",
+                    "web_search_preview",
+                    "computer_use_preview",
+                ):
+                    tool_choice = {"type": tool_choice}
+                # 'any' is not natively supported by OpenAI API.
+                # We support 'any' since other models use this instead of 'required'.
+                elif tool_choice == "any":
+                    tool_choice = "required"
+                else:
+                    pass
+            elif isinstance(tool_choice, bool):
+                tool_choice = "required"
+            elif isinstance(tool_choice, dict):
+                pass
+            else:
+                raise ValueError(
+                    f"Unrecognized tool_choice type. Expected str, bool or dict. "
+                    f"Received: {tool_choice}"
+                )
+            kwargs["tool_choice"] = tool_choice
+        return super().bind(tools=formatted_tools, **kwargs)
+
     def list_models(self):
-        client = OpenAI(
-            api_key=config.openai_api_key,
-            organization=config.openai_organization_id,
-            project=config.openai_project_id,
-        )
-        response = client.models.list()
+        response = self.client.models.list()
         models = [model.id for model in response.data]
         return "\n".join(models)
 
@@ -179,12 +225,25 @@ class CustomOpenAIResponse(BaseChatModel):
                     }
                 )
             elif isinstance(message, HumanMessage):
-                prompt_text.append(
-                    {
-                        "role": "user",
-                        "content": [{"type": "input_text", "text": message.content}],
-                    }
-                )
+                if message.content.startswith("data:image"):
+                    prompt_text.append(
+                        {
+                            "role": "user",
+                            "content": [
+                                {
+                                    "type": "input_image",
+                                    "image_url": f"data:image/jpeg;base64,{message.content.split(',')[1]}",
+                                }
+                            ],
+                        }
+                    )
+                else:
+                    prompt_text.append(
+                        {
+                            "role": "user",
+                            "content": [{"type": "input_text", "text": message.content}],
+                        }
+                    )
         return prompt_text
 
     @property

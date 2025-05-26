@@ -22,7 +22,16 @@ export const ModelService = {
 
   async toggleModelAvailability(modelName: string): Promise<string> {
     try {
-      const response = await apiCall('POST', '/model', { model_name: modelName });
+      const response = await apiCall('POST', '/model_avaliable', { model_name: modelName });
+      return response.message;
+    } catch (error) {
+      throw error;
+    }
+  },
+
+  async toggleModelMultimodal(modelName: string): Promise<string> {
+    try {
+      const response = await apiCall('POST', '/model_multimodal', { model_name: modelName });
       return response.message;
     } catch (error) {
       throw error;

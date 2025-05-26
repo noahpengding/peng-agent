@@ -34,16 +34,6 @@ def set_up():
         },
     )
     mysql.create_table(
-        "model",
-        {
-            "id": "INT AUTO_INCREMENT PRIMARY KEY",
-            "operator": "VARCHAR(64)",
-            "type": "VARCHAR(64)",
-            "model_name": "TEXT",
-            "isAvailable": "BOOL DEFAULT FALSE",
-        },
-    )
-    mysql.create_table(
         "user",
         {
             "id": "INT AUTO_INCREMENT PRIMARY KEY",
@@ -55,6 +45,34 @@ def set_up():
             "default_embedding_model": "TEXT",
             "created_at": "TIMESTAMP DEFAULT CURRENT_TIMESTAMP",
             "modified_at": "TIMESTAMP DEFAULT CURRENT_TIMESTAMP",
+        },
+    )
+    mysql.create_table(
+        "operator",
+        {
+            "id": "INT AUTO_INCREMENT PRIMARY KEY",
+            "operator": "VARCHAR(64)",
+            "runtime": "VARCHAR(64)",
+            "endpoint": "TEXT",
+            "api_key": "TEXT",
+            "org_id": "TEXT",
+            "project_id": "TEXT",
+            "embedding_pattern": "TEXT",
+            "image_pattern": "TEXT",
+            "audio_pattern": "TEXT",
+            "video_pattern": "TEXT",
+            "chat_pattern": "TEXT",
+        },
+    )
+    mysql.create_table(
+        "model",
+        {
+            "id": "INT AUTO_INCREMENT PRIMARY KEY",
+            "operator": "VARCHAR(64)",
+            "type": "VARCHAR(64)",
+            "model_name": "TEXT",
+            "isAvailable": "BOOL DEFAULT FALSE",
+            "isMultimodal": "BOOL DEFAULT FALSE",
         },
     )
     mysql.close()

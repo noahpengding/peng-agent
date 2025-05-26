@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useMemoryApi, Memory } from '../hooks/MemoryAPI';
+import { useAuth } from '../contexts/AuthContext';
 import './MemorySelection.css';
 
 const MemoryPage: React.FC = () => {
@@ -10,25 +11,28 @@ const MemoryPage: React.FC = () => {
     const [searchTerm, setSearchTerm] = useState('');
     const [selectedMemoryIds, setSelectedMemoryIds] = useState<string[]>([]);
     const [error, setError] = useState<string | null>(null);
-    
+
     // Hooks
     const navigate = useNavigate();
     const { fetchMemories, isLoading } = useMemoryApi();
+    const { user } = useAuth();
 
     // Fetch memories on component mount
     useEffect(() => {
-        const getMemories = async () => {
+        const getMemories = async (username: string) => {
             try {
-                const fetchedMemories = await fetchMemories();
+                const fetchedMemories = await fetchMemories(username);
                 setMemories(fetchedMemories);
                 setFilteredMemories(fetchedMemories);
             } catch (error) {
                 setError(`Failed to fetch memories: ${error}`);
             }
         };
-        
-        getMemories();
-    }, []);
+        // Only fetch after user is available
+        if (user) {
+            getMemories(user);
+        }
+    }, [user]);
 
     // Filter memories based on search term
     useEffect(() => {

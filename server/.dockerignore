@@ -2,4 +2,10 @@
 test
 config/config.json
 *__pycache__*
-venv
+*venv*
+*ruff*
+archive
+.git
+*.pyc
+*.pyo
+*.pyd
