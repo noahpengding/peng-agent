@@ -173,7 +173,7 @@ class CustomOpenAICompletion(BaseChatModel):
 
     @property
     def _llm_type(self) -> str:
-        return "OpenAI"
+        return "OpenAI Completion"
 
     @property
     def _identifying_params(self) -> Dict[str, Any]:

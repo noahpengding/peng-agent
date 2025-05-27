@@ -5,7 +5,7 @@ stages:
 variables:
   SERVER_IMAGE: $CI_REGISTRY/peng-bot/peng-agent/server
   WEB_IMAGE: $CI_REGISTRY/peng-bot/peng-agent/front
-  VERSION: v2.0.2
+  VERSION: v2.0.3
 
 # Template for test builds (non-main branches)
 .test-build-template: &test-build

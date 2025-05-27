@@ -248,7 +248,7 @@ class CustomOpenAIResponse(BaseChatModel):
 
     @property
     def _llm_type(self) -> str:
-        return "OpenAI"
+        return "OpenAI Response"
 
     @property
     def _identifying_params(self) -> Dict[str, Any]:

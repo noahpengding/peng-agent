@@ -141,17 +141,10 @@ class CustomClaude(BaseChatModel):
         for message in prompt:
             if message.content == "":
                 continue
-            if isinstance(message, AIMessage):
+            if isinstance(message, AIMessage) or isinstance(message, SystemMessage):
                 prompt_text.append(
                     {
                         "role": "assistant",
-                        "content": message.content,
-                    }
-                )
-            elif isinstance(message, SystemMessage):
-                prompt_text.append(
-                    {
-                        "role": "system",
                         "content": message.content,
                     }
                 )
@@ -166,7 +159,7 @@ class CustomClaude(BaseChatModel):
 
     @property
     def _llm_type(self) -> str:
-        return "Google Gemini"
+        return "Anthropic Claude"
 
     @property
     def _identifying_params(self) -> Dict[str, Any]:
