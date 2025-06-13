@@ -214,7 +214,7 @@ class CustomOpenAIResponse(BaseChatModel):
                 prompt_text.append(
                     {
                         "role": "assistant",
-                        "content": [{"type": "input_text", "text": message.content}],
+                        "content": [{"type": "output_text", "text": message.content}],
                     }
                 )
             elif isinstance(message, SystemMessage):

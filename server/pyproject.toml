@@ -1,6 +1,6 @@
 [project]
 name = "Peng-Agent"
-version = "2.0.3"
+version = "2.0.4"
 description = "A LLM ongoing chat agent for learning"
 authors = [
     { name = "Noah Ding", email = "noah@dingyipeng.com" },
@@ -22,6 +22,7 @@ dependencies = [
     "langchain-qdrant>=0.2.0",
     "minio>=7.2.15",
     "mysql-connector-python>=9.2.0",
+    "numpy>=2.2.3",
     "openai>=1.66.3",
     "openpyxl>=3.1.5",
     "pandas>=2.2.3",
@@ -39,7 +40,7 @@ dependencies = [
     "tavily-python>=0.7.2",
     "uvicorn>=0.34.0",
 ]
-requires-python = ">=3.11"
+requires-python = ">=3.12"
 
 [build-system]
 requires = ["hatchling"]

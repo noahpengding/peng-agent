@@ -4,7 +4,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from models.agent_request import ChatRequest
 from models.rag_requests import RagRequest
 from models.user_models import UserLogin, TokenResponse, UserCreate
-from handlers.chat_handlers import create_streaming_response, create_completion_response
+from handlers.chat_handlers import create_streaming_response, create_completion_response, create_batch_response
 from handlers.memory_handlers import get_memory
 from handlers.operator_handlers import get_all_operators, update_operator
 from handlers.model_handlers import (
@@ -88,6 +88,21 @@ async def chat_completions(
     if request.message.strip() == "":
         raise HTTPException(status_code=400, detail="Empty message")
     return await create_completion_response(
+        request.user_name, request.message, request.image, request.config
+    )
+
+@app.options("/chat_batch")
+async def options_chat_batch():
+    return Response(headers={"Allow": "POST, OPTIONS"})
+
+@app.post("/chat_batch")
+async def chat_batch(
+    request: ChatRequest, auth: dict = Depends(authenticate_request)
+):
+    output_log(request, "DEBUG")
+    if not request.message or all(msg.strip() == "" for msg in request.message):
+        raise HTTPException(status_code=400, detail="Empty messages")
+    return create_batch_response(
         request.user_name, request.message, request.image, request.config
     )
 
