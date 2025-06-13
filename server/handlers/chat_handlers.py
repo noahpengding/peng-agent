@@ -11,24 +11,8 @@ import json
 from typing import AsyncIterator
 
 
-async def chat_handler(
-    user_name: str, message: str, image: str, chat_config: ChatConfig
-) -> AsyncIterator[str]:
-    output_log(
-        f"Streaming chat for User: {user_name}, Message: {message}, Image: {image}, Config: {chat_config}",
-        "debug",
-    )
-
-    base_model_ins = get_model_instance_by_operator(
-        chat_config.operator,
-        chat_config.base_model,
-    )
-    if base_model_ins is None:
-        yield (
-            json.dumps({"chunk": "Error: Model instance not found.", "done": True})
-            + "\n"
-        )
-        return
+def _generate_prompt_params(message: str, image: str, chat_config: ChatConfig):
+    """Generate prompt parameters for both streaming and completion handlers."""
     prompt = prompt_generator.prompt_template(
         model_name=chat_config.base_model,
         has_document=chat_config.collection_name != "default",
@@ -55,6 +39,30 @@ async def chat_handler(
             query=message,
             collection_name=chat_config.collection_name,
         )
+    return prompt, params
+
+
+async def chat_handler(
+    user_name: str, message: str, image: str, chat_config: ChatConfig
+) -> AsyncIterator[str]:
+    output_log(
+        f"Streaming chat for User: {user_name}, Message: {message}, Image: {image}, Config: {chat_config}",
+        "debug",
+    )
+
+    base_model_ins = get_model_instance_by_operator(
+        chat_config.operator,
+        chat_config.base_model,
+    )
+    if base_model_ins is None:
+        yield (
+            json.dumps({"chunk": "Error: Model instance not found.", "done": True})
+            + "\n"
+        )
+        return
+
+    prompt, params = _generate_prompt_params(message, image, chat_config)
+
     full_response = ""
     async for chunk in base_model_ins.astream(prompt.invoke(params)):
         if chunk:
@@ -81,6 +89,7 @@ def create_streaming_response(
         media_type="text/event-stream",
     )
 
+
 async def chat_completions_handler(
     user_name: str, message: str, image: str, chat_config: ChatConfig
 ) -> str:
@@ -94,32 +103,9 @@ async def chat_completions_handler(
     )
     if base_model_ins is None:
         return "Error: Model instance not found."
-    prompt = prompt_generator.prompt_template(
-        model_name=chat_config.base_model,
-        has_document=chat_config.collection_name != "default",
-        has_websearch=chat_config.web_search,
-    )
-    params = prompt_generator.base_prompt_generate(
-        message=message,
-        short_term_memory=chat_config.short_term_memory,
-        long_term_memory=chat_config.long_term_memory,
-    )
-    params = prompt_generator.add_image_to_prompt(
-        model_name=chat_config.base_model,
-        params=params,
-        image=image,
-    )
-    if chat_config.web_search:
-        params = prompt_generator.add_websearch_to_prompt(
-            params=params,
-            query=message,
-        )
-    if chat_config.collection_name != "default":
-        params = prompt_generator.add_document_to_prompt(
-            params=params,
-            query=message,
-            collection_name=chat_config.collection_name,
-        )
+
+    prompt, params = _generate_prompt_params(message, image, chat_config)
+
     full_response = await base_model_ins.ainvoke(prompt.invoke(params))
     full_response = response_formatter_main(
         chat_config.operator, full_response.content
@@ -146,8 +132,46 @@ async def create_completion_response(
     )
 
 
+def create_batch_response(
+    user_name: str, messages: list[str], image: str, chat_config: ChatConfig
+) -> JSONResponse:
+    if not isinstance(messages, list) or not messages:
+        return JSONResponse(
+            content={"error": "Invalid messages format."},
+            status_code=400,
+        )
+    base_model_ins = get_model_instance_by_operator(
+        chat_config.operator,
+        chat_config.base_model,
+    )
+    if base_model_ins is None:
+        return JSONResponse(
+            content={"error": "Model instance not found."},
+            status_code=500,
+        )
+    prompts = []
+    for message in messages:
+        prompt, params = _generate_prompt_params(message, image, chat_config)
+        prompts.append(prompt.invoke(params))
+    full_response = base_model_ins.batch(prompts)
+    reponses = [response_formatter_main(chat_config.operator, response.content) for response in full_response]
+    for message, response in zip(messages, reponses):
+        _save_chat(
+            user_name,
+            message,
+            response,
+            chat_config.base_model,
+            config.embedding_model,
+            chat_config.collection_name,
+        )
+    return JSONResponse(
+        content=reponses,
+        media_type="application/json",
+    )
+
+
 def _save_chat(
-    user_name, message, reponse, base_model, embedding_model, collection_name
+    user_name, message, response, base_model, embedding_model, collection_name
 ):
     mysql = MysqlConnect()
     try:
@@ -160,9 +184,9 @@ def _save_chat(
                 "human_input": message[: config.input_max_length]
                 if len(message) > config.input_max_length
                 else message,
-                "ai_response": reponse[: config.output_max_length]
-                if len(reponse) > config.output_max_length
-                else reponse,
+                "ai_response": response[: config.output_max_length]
+                if len(response) > config.output_max_length
+                else response,
                 "knowledge_base": collection_name,
                 "created_at": datetime.now(),
                 "expire_at": datetime.now() + timedelta(days=7),
