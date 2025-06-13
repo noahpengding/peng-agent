@@ -40,7 +40,7 @@ export const useChatApi = () => {
         () => {
           setIsLoading(false);
           setIsStreaming(false);
-          if (onComplete) onComplete();
+          onComplete?.();
         },
         // On error
         (err: Error) => {

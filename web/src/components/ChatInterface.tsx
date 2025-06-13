@@ -143,7 +143,13 @@ const ChatbotUI = () => {
     if (savedMemories) {
       try {
         const parsedMemories: Memory[] = JSON.parse(savedMemories);
-        setShortTermMemory(parsedMemories.map(memory => memory.ai_response));
+        // Format both human input and AI response like line 277
+        const formattedMemories: string[] = [];
+        parsedMemories.forEach(memory => {
+          formattedMemories.push("human: " + memory.human_input);
+          formattedMemories.push("assistant: " + memory.ai_response);
+        });
+        setShortTermMemory(formattedMemories);
         // Optionally clear localStorage after loading
         localStorage.removeItem('selectedMemories');
       } catch (error) {
@@ -274,7 +280,7 @@ const ChatbotUI = () => {
         // Handle completion
         () => {
           // Add the full response to short-term memory
-          setShortTermMemory(prevMemory => [...prevMemory, fullResponse]);
+          setShortTermMemory(prevMemory => [...prevMemory, "human: " + input, "assistant: " + fullResponse]);
           setIsLoading(false); // Ensure loading state is cleared
         }
       );

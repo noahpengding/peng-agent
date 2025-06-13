@@ -32,9 +32,7 @@ def base_prompt_generate(message, short_term_memory, long_term_memory):
     if message != "":
         params["input"] = message
     if short_term_memory != []:
-        params["short_term_memory"] = [
-            ("system", i) for i in short_term_memory
-        ]
+        params["short_term_memory"] = [(i.split(":")[0], ":".join(i.split(":")[1:])) for i in short_term_memory]
     if long_term_memory != []:
         params["long_term_memory"] = [
             ("system", i) for i in long_term_memory
