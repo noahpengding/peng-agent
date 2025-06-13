@@ -48,12 +48,16 @@ export const ChatService = {
       const decoder = new TextDecoder();
       
       let buffer = '';
+      let isCompleted = false; // Flag to prevent duplicate completion calls
       
       while (true) {
         const { done, value } = await reader.read();
         
         if (done) {
-          onComplete();
+          if (!isCompleted) {
+            isCompleted = true;
+            onComplete();
+          }
           break;
         }
         
@@ -70,10 +74,14 @@ export const ChatService = {
               if (!data.done) {
                 onChunk(data.chunk);
               } else {
-                onComplete();
+                if (!isCompleted) {
+                  isCompleted = true;
+                  onComplete();
+                }
               }
             } catch (e) {
-              console.error('Error parsing streaming response:', e);
+              // Silently handle JSON parsing errors to avoid console warnings
+              // This can happen with incomplete streaming data
             }
           }
         }
