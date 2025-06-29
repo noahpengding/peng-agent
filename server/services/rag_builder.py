@@ -134,7 +134,7 @@ class RagBuilder:
             Rules:
             1. Identify all noun phrases, named entities, numbers, dates, locations, and technical terms.
             2. Make sure the information is mathematically correct and make sense.
-            3. All information should be directly comming from the image.
+            3. All information should be directly coming from the image.
             4. All information should be in standard Markdown format with as simple format as possible.
             """,
             ),
