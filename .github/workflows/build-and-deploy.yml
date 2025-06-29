@@ -23,7 +23,10 @@ jobs:
           version: "latest"
 
       - name: Set up Python
-        run: uv python install
+        run: uv python install 3.11
+
+      - name: Install dependencies
+        run: apt-get update && apt-get install -y --no-install-recommends build-essential libpq-dev
 
       - name: Install dependencies
         run: uv sync
