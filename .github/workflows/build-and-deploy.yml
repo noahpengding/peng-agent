@@ -10,9 +10,37 @@ env:
   VERSION: v2.0.4
 
 jobs:
+  # Code quality check - runs on all branches
+  ruff-check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v4
+        with:
+          version: "latest"
+
+      - name: Set up Python
+        run: uv python install
+
+      - name: Install dependencies
+        run: uv sync
+        working-directory: ./server
+
+      - name: Run ruff check
+        run: uv run ruff check
+        working-directory: ./server
+
+      - name: Run ruff format check
+        run: uv run ruff format --check
+        working-directory: ./server
+
   # Test builds for non-main branches (PRs)
   test-server-x64:
     if: github.ref != 'refs/heads/main'
+    needs: [ruff-check]
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -42,6 +70,7 @@ jobs:
 
   test-web-x64:
     if: github.ref != 'refs/heads/main'
+    needs: [ruff-check]
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -72,6 +101,7 @@ jobs:
   # Production builds for main branch
   server-x64:
     if: github.ref == 'refs/heads/main'
+    needs: [ruff-check]
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -103,6 +133,7 @@ jobs:
 
   web-x64:
     if: github.ref == 'refs/heads/main'
+    needs: [ruff-check]
     runs-on: ubuntu-latest
     permissions:
       contents: read
