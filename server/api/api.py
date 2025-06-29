@@ -4,7 +4,11 @@ from fastapi.middleware.cors import CORSMiddleware
 from models.agent_request import ChatRequest
 from models.rag_requests import RagRequest
 from models.user_models import UserLogin, TokenResponse, UserCreate
-from handlers.chat_handlers import create_streaming_response, create_completion_response, create_batch_response
+from handlers.chat_handlers import (
+    create_streaming_response,
+    create_completion_response,
+    create_batch_response,
+)
 from handlers.memory_handlers import get_memory
 from handlers.operator_handlers import get_all_operators, update_operator
 from handlers.model_handlers import (
@@ -71,14 +75,6 @@ async def chat(request: ChatRequest, auth: dict = Depends(authenticate_request))
         request.user_name, request.message, request.image, request.config
     )
 
-@app.post("/chat_completions")
-async def chat_completions(request: ChatRequest, auth: dict = Depends(authenticate_request)):
-    output_log(request, "DEBUG")
-    if request.message.strip() == "":
-        raise HTTPException(status_code=400, detail="Empty message")
-    return await create_completion_response(
-        request.user_name, request.message, request.image, request.config
-    )
 
 @app.post("/chat_completions")
 async def chat_completions(
@@ -91,14 +87,14 @@ async def chat_completions(
         request.user_name, request.message, request.image, request.config
     )
 
+
 @app.options("/chat_batch")
 async def options_chat_batch():
     return Response(headers={"Allow": "POST, OPTIONS"})
 
+
 @app.post("/chat_batch")
-async def chat_batch(
-    request: ChatRequest, auth: dict = Depends(authenticate_request)
-):
+async def chat_batch(request: ChatRequest, auth: dict = Depends(authenticate_request)):
     output_log(request, "DEBUG")
     if not request.message or all(msg.strip() == "" for msg in request.message):
         raise HTTPException(status_code=400, detail="Empty messages")
@@ -131,38 +127,28 @@ async def model(auth: dict = Depends(authenticate_request)):
 async def options_operator():
     return Response(headers={"Allow": "GET, OPTIONS, POST"})
 
+
 @app.get("/operator")
 async def operator(auth: dict = Depends(authenticate_request)):
     return get_all_operators()
+
 
 @app.post("/operator")
 async def operator_update(auth: dict = Depends(authenticate_request)):
     update_operator()
     return {"message": "Operator updated successfully"}
+
 
 @app.post("/model_avaliable")
 async def flip_model(request: dict, auth: dict = Depends(authenticate_request)):
     return flip_avaliable(request["model_name"])
 
+
 @app.post("/model_multimodal")
-async def flip_model_multimodal(request: dict, auth: dict = Depends(authenticate_request)):
+async def flip_model_multimodal(
+    request: dict, auth: dict = Depends(authenticate_request)
+):
     return flip_multimodal(request["model_name"])
-
-
-@app.options("/operator")
-async def options_operator():
-    return Response(headers={"Allow": "GET, OPTIONS, POST"})
-
-
-@app.get("/operator")
-async def operator(auth: dict = Depends(authenticate_request)):
-    return get_all_operators()
-
-
-@app.post("/operator")
-async def operator_update(auth: dict = Depends(authenticate_request)):
-    update_operator()
-    return {"message": "Operator updated successfully"}
 
 
 @app.get("/model_refresh")
@@ -179,6 +165,7 @@ async def options_model_refresh(auth: dict = Depends(authenticate_request)):
 async def avaliable_model(request: dict, auth: dict = Depends(authenticate_request)):
     return avaliable_models(request["type"])
 
+
 @app.get("/rag")
 async def rag(auth: dict = Depends(authenticate_request)):
     return get_rag()
@@ -190,7 +177,12 @@ async def index_file_api(
 ):
     if request.user_name == "":
         request.user_name = auth["username"]
-    return index_all(request.user_name, request.file_path, request.type_of_file,request.collection_name)
+    return index_all(
+        request.user_name,
+        request.file_path,
+        request.type_of_file,
+        request.collection_name,
+    )
 
 
 @app.options("/rag")

@@ -49,3 +49,6 @@ build-backend = "hatchling.build"
 [tool.hatch.build.targets.wheel]
 packages = ["api", "config", "models", "handlers", "services"]
 
+[tool.ruff]
+extend-exclude = ["archive/**"]
+

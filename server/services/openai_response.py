@@ -1,5 +1,3 @@
-from typing import Any, Dict, List, Optional, Iterator
-
 from langchain_core.callbacks import (
     CallbackManagerForLLMRun,
 )
@@ -20,7 +18,7 @@ from openai import OpenAI
 from utils.log import output_log
 
 from collections.abc import Sequence
-from typing import Any, Callable, Dict, Literal, Optional, Union
+from typing import Any, Callable, Dict, Literal, Optional, Union, List, Iterator
 from langchain_core.tools import BaseTool
 from langchain_core.runnables import Runnable
 from langchain_core.language_models import LanguageModelInput
@@ -241,7 +239,9 @@ class CustomOpenAIResponse(BaseChatModel):
                     prompt_text.append(
                         {
                             "role": "user",
-                            "content": [{"type": "input_text", "text": message.content}],
+                            "content": [
+                                {"type": "input_text", "text": message.content}
+                            ],
                         }
                     )
         return prompt_text
