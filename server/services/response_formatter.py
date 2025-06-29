@@ -8,7 +8,7 @@ def response_formatter_main(operator: str, response: str):
     output_log(
         f"Response from {operator}: {response} | Temp_respons: {TEMP_RESPONSE}", "DEBUG"
     )
-    if type(response) != str:
+    if type(response) is not str:
         output_log(
             f"Response is not string, type: {type(response)} | response: {response}",
             "DEBUG",

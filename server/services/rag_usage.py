@@ -39,19 +39,22 @@ class RagUsage:
         )
         combine_docs_chain = create_stuff_documents_chain(self.llm, prompt)
         self.chain = create_retrieval_chain(retriever, combine_docs_chain)
-        output_log(f"RAG Usage setup complete for user: {self.user_name}, collection: {self.collection_name}", "debug")
+        output_log(
+            f"RAG Usage setup complete for user: {self.user_name}, collection: {self.collection_name}",
+            "debug",
+        )
 
     async def astream(self, prompt, param) -> AsyncIterator[AIMessage]:
         self.setup(prompt)
         async for chunk in self.chain.astream(param):
             if "answer" in chunk:
-                yield AIMessage(content=chunk["answer"]) 
+                yield AIMessage(content=chunk["answer"])
 
     async def ainvoke(self, prompt, param) -> AIMessage:
         self.setup(prompt)
         result = await self.chain.ainvoke(param)
         return AIMessage(content=result["answer"])
-    
+
     def invoke(self, prompt, param) -> AIMessage:
         self.setup(prompt)
         result = self.chain.invoke(param)

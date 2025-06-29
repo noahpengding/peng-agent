@@ -1,6 +1,6 @@
 from config.config import config
 from tavily import TavilyClient
-from services.qdrant_api import Qdrant
+
 
 def _tavily_search(query, num_results=5):
     client = TavilyClient(config.tavily_api_key)
@@ -9,6 +9,7 @@ def _tavily_search(query, num_results=5):
         num_results=num_results,
     )
     return response["results"] if response else []
+
 
 def websearch_main(query):
     search_results = _tavily_search(query)

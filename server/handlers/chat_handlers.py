@@ -107,9 +107,7 @@ async def chat_completions_handler(
     prompt, params = _generate_prompt_params(message, image, chat_config)
 
     full_response = await base_model_ins.ainvoke(prompt.invoke(params))
-    full_response = response_formatter_main(
-        chat_config.operator, full_response.content
-    )
+    full_response = response_formatter_main(chat_config.operator, full_response.content)
     _save_chat(
         user_name,
         message,
@@ -154,7 +152,10 @@ def create_batch_response(
         prompt, params = _generate_prompt_params(message, image, chat_config)
         prompts.append(prompt.invoke(params))
     full_response = base_model_ins.batch(prompts)
-    reponses = [response_formatter_main(chat_config.operator, response.content) for response in full_response]
+    reponses = [
+        response_formatter_main(chat_config.operator, response.content)
+        for response in full_response
+    ]
     for message, response in zip(messages, reponses):
         _save_chat(
             user_name,

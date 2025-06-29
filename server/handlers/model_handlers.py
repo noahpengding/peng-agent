@@ -15,9 +15,7 @@ def _get_local_models() -> list[ModelConfig]:
     models.dropna(subset=["model_name"], inplace=True)
     result = []
     for index, row in models.iterrows():
-        result.append(
-            ModelConfig(**row.to_dict())
-        )
+        result.append(ModelConfig(**row.to_dict()))
     return result
 
 
@@ -91,7 +89,10 @@ def refresh_models():
             ):
                 responses.append(
                     _check_new_model(
-                        operator.operator, model, operator.embedding_pattern, "embedding",
+                        operator.operator,
+                        model,
+                        operator.embedding_pattern,
+                        "embedding",
                     )
                 )
             elif _check_new_model(
@@ -147,9 +148,7 @@ def _flip_record(model_name: str, field: str):
     model = mysql.read_records("model", {"model_name": model_name})
     if model:
         pre_value = model[0][field]
-        mysql.update_record(
-            "model", {field: not pre_value}, {"model_name": model_name}
-        )
+        mysql.update_record("model", {field: not pre_value}, {"model_name": model_name})
         return f"Model {model_name}'s {field} status changed to {not pre_value}"
     mysql.close()
     return f"Model {model_name} not found"
@@ -182,6 +181,7 @@ def flip_multimodal(model_name: str):
 def get_all_available_models():
     mysql = MysqlConnect()
     return mysql.read_record_v2("model", {"isAvailable=": 1})
+
 
 def get_all_multimodal_models():
     mysql = MysqlConnect()

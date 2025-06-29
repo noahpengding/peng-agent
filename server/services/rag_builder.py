@@ -12,9 +12,7 @@ import tempfile
 import base64
 import io
 import fitz
-import asyncio
 from PIL import Image
-
 
 
 class RagBuilder:
@@ -36,7 +34,9 @@ class RagBuilder:
             collection_name=self.collection_name,
         )
 
-    def _add_to_db(self, local_path, type_of_file, file_path, create_by="Python RAG Builder"):
+    def _add_to_db(
+        self, local_path, type_of_file, file_path, create_by="Python RAG Builder"
+    ):
         title = local_path.split("/")[-1]
         mysql = MysqlConnect()
         if (
@@ -115,25 +115,29 @@ class RagBuilder:
         )
         chunks = text_splitter.split_documents(documents)
         return chunks
-    
+
     def _pure_text_text_process(self, text):
         text_splitter = RecursiveCharacterTextSplitter(
             chunk_size=300, chunk_overlap=20, length_function=len
         )
         chunks = text_splitter.split_text(text)
         return chunks
-    
+
     def _process_single_image(self, base64_image):
         from handlers.model_utils import get_model_instance_by_operator
+
         prompt = [
-            ("system", '''
+            (
+                "system",
+                """
             The image attached is a handwriting note. Read and describe any information you can find. 
             Rules:
             1. Identify all noun phrases, named entities, numbers, dates, locations, and technical terms.
             2. Make sure the information is mathematically correct and make sense.
             3. All information should be directly comming from the image.
             4. All information should be in standard Markdown format with as simple format as possible.
-            '''),
+            """,
+            ),
             ("human", base64_image),
         ]
         base_model_ins = get_model_instance_by_operator(
@@ -150,4 +154,3 @@ class RagBuilder:
         output_log(f"Text chunks: {results}", "debug")
         combined_text = "\n\n".join(results)
         return self._pure_text_text_process(combined_text)
-

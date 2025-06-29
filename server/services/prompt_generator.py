@@ -12,7 +12,10 @@ from config.config import config
 
 def prompt_template(model_name, has_document=False, has_websearch=False):
     base_result = [
-        ("system", "You are a helpful assistant. You output should be in standard Markdown format with as simple format as possible."),
+        (
+            "system",
+            "You are a helpful assistant. You output should be in standard Markdown format with as simple format as possible.",
+        ),
         ("placeholder", "{long_term_memory}"),
         ("placeholder", "{short_term_memory}"),
         ("human", "{input}"),
@@ -20,24 +23,30 @@ def prompt_template(model_name, has_document=False, has_websearch=False):
     if check_multimodal(model_name):
         base_result.append(("human", "{image}"))
     if has_document:
-        base_result.insert(0, ("system", "Use following context to answer the question:"))
+        base_result.insert(
+            0, ("system", "Use following context to answer the question:")
+        )
         base_result.insert(1, ("system", "{context}"))
     if has_websearch:
-        base_result.insert(0, ("system", "Answer the question based on the context below:"))
+        base_result.insert(
+            0, ("system", "Answer the question based on the context below:")
+        )
         base_result.insert(1, ("system", "{websearch}"))
     return ChatPromptTemplate(base_result)
+
 
 def base_prompt_generate(message, short_term_memory, long_term_memory):
     params = {}
     if message != "":
         params["input"] = message
     if short_term_memory != []:
-        params["short_term_memory"] = [(i.split(":")[0], ":".join(i.split(":")[1:])) for i in short_term_memory]
-    if long_term_memory != []:
-        params["long_term_memory"] = [
-            ("system", i) for i in long_term_memory
+        params["short_term_memory"] = [
+            (i.split(":")[0], ":".join(i.split(":")[1:])) for i in short_term_memory
         ]
+    if long_term_memory != []:
+        params["long_term_memory"] = [("system", i) for i in long_term_memory]
     return params
+
 
 def add_image_to_prompt(model_name, params, image):
     if check_multimodal(model_name):
@@ -51,8 +60,11 @@ def add_image_to_prompt(model_name, params, image):
 def add_websearch_to_prompt(params, query):
     from services.websearch import websearch_main
     from handlers.model_utils import get_model_instance_by_operator
+
     prompt = [
-        ("system", '''
+        (
+            "system",
+            """
         You are a Search Query Optimizer. Your job is to take a user’s free-form query and split it into a small set of high-value keywords and key-phrases that maximize web-search relevance.
         Rules:
         1. Identify all noun phrases, named entities, numbers, dates, locations, and technical terms.
@@ -71,7 +83,8 @@ def add_websearch_to_prompt(params, query):
             "outdoor seating"
         ]
         Now process the following user query and return a JSON array of search terms.
-        '''),
+        """,
+        ),
         ("human", "User query:{query}"),
     ]
     openai = get_model_instance_by_operator(
@@ -83,6 +96,7 @@ def add_websearch_to_prompt(params, query):
     )
     params["websearch"] = ""
     import ast
+
     try:
         websearch_queries = ast.literal_eval(websearch_queries.content)
     except (SyntaxError, ValueError):
@@ -93,10 +107,14 @@ def add_websearch_to_prompt(params, query):
                 params["websearch"] = websearch_main(query.strip())
         return params
 
+
 def add_document_to_prompt(params, query, collection_name="default"):
     from services.rag_usage import RagUsage
+
     prompt = [
-        ("system", '''
+        (
+            "system",
+            """
         You are a Document Retriever. Your job is to first retrieve relevant documents from a collection based on the user query.
         You will list a set of documents that are most relevant to the user query.
         Rules:
@@ -106,7 +124,8 @@ def add_document_to_prompt(params, query, collection_name="default"):
         4. Do not include any information that is not in the retrieved documents.
         5. Output a numbering list with only the detailed related context of each document realted to the user's query.
         Now process the following user query and return a list of retrieved documents.
-        '''),
+        """,
+        ),
         ("human", "User query:{input}"),
         ("system", "{context}"),
     ]

@@ -151,7 +151,7 @@ class CustomGemini(BaseChatModel):
                     )
                 )
         return prompt_text
-    
+
     def embed_documents(self, texts: List[str]) -> List[List[float]]:
         texts = list(map(lambda x: x.replace("\n", " "), texts))
         embeddings = self.client.models.embed_content(
@@ -165,7 +165,7 @@ class CustomGemini(BaseChatModel):
                 "got a list instead."
             )
         return embeddings.tolist()
-    
+
     def embed_query(self, text: str) -> List[float]:
         return self.embed_documents([text])[0]
 
