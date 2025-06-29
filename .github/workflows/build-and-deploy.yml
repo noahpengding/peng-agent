@@ -32,12 +32,15 @@ jobs:
         run: uv sync
         working-directory: ./server
 
+      - name: Install ruff
+        run: uv tool install ruff
+
       - name: Run ruff check
-        run: uv run ruff check
+        run: uv tool run ruff check
         working-directory: ./server
 
       - name: Run ruff format check
-        run: uv run ruff format --check
+        run: uv tool run ruff format --check
         working-directory: ./server
 
   # Test builds for non-main branches (PRs)
