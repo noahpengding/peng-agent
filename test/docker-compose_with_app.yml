@@ -1,0 +1,91 @@
+services:
+  qdrant:
+    image: qdrant/qdrant:latest
+    container_name: qdrant
+    restart: always
+    networks:
+      - agent
+    volumes:
+      - /RAID1/docker/qdrant:/qdrant/storage
+    labels:
+      - traefik.enable=false
+    profiles: ["prod", "ollama"]
+
+  peng-agent-mysql:
+    image: mysql:lts
+    container_name: peng-agent-mysql
+    hostname: peng-agent
+    restart: always
+    env_file:
+      - ./peng-chat.env
+    volumes:
+      - /etc/localtime:/etc/localtime:ro
+      - /RAID1/docker/peng-agent:/var/lib/mysql
+    networks:
+      - agent
+    labels:
+      - traefik.enable=false
+    profiles: ["prod", "ollama"]
+
+  peng-agent-server:
+    image: ghcr.io/noahpengding/peng-agent/server:latest
+    container_name: peng-agent-server
+    hostname: peng-chat
+    restart: always
+    env_file:
+      - ./peng-chat.env
+    depends_on:
+      - peng-agent-mysql
+    environment:
+      - NVIDIA_VISIBLE_DEVICES=all
+      - NVIDIA_DRIVER_CAPABILITIES=compute,utility
+    networks:
+      - agent
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.peng-agent-backend.rule=Host(`agent.tenawalcott.com`) && PathPrefix(`/api`)
+      - traefik.http.routers.peng-agent-backend.entrypoints=websecure
+      - traefik.http.routers.peng-agent-backend.tls=true
+      - treafik.http.routers.peng-agent-backend.service=peng-agent-server
+      - traefik.http.services.peng-agent-server.loadbalancer.server.port=1532
+        
+      - traefik.http.middlewares.api-stripprefix.stripprefix.prefixes=/api
+      - traefik.http.routers.peng-agent-backend.middlewares=api-stripprefix@docker
+    profiles: ["prod", "ollama"]
+
+  peng-agent-front:
+    image: ghcr.io/noahpengding/peng-agent/front:latest
+    container_name: peng-agent-front
+    restart: always
+    environment:
+      - VITE_BACKEND_URL=http://peng-chat:1532/
+    depends_on:
+      - peng-agent-server
+    networks:
+      - agent
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.peng-agent-frontend.rule=Host(`agent.tenawalcott.com`)
+      - traefik.http.routers.peng-agent-frontend.entrypoints=websecure
+      - traefik.http.routers.mattermost-frontend.tls=true
+      - traefik.http.routers.peng-agent-frontend.service=peng-agent-front
+      - traefik.http.services.peng-agent-front.loadbalancer.server.port=80
+    profiles: ["prod", "ollama"]
+
+
+networks:
+  agent:
+    driver: bridge
+    name: agent
+    internal: false
+    driver_opts:
+      com.docker.network.bridge.name: br-agent
+      com.docker.network.bridge.enable_icc: "true"
+      com.docker.network.bridge.enable_ip_masquerade: "true"
+      com.docker.network.driver.mtu: 1500
+    ipam:
+      config:
+        - subnet: 10.0.10.0/24
+          gateway: 10.0.10.1
+
+
