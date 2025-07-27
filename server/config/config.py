@@ -32,6 +32,11 @@ class Config(BaseModel):
     web_search_max_results: int
     input_max_length: int
     output_max_length: int
+    smtp_server: str
+    smtp_port: int
+    smtp_use_ssl: bool
+    smtp_username: str
+    smtp_password: str
 
 
 try:
@@ -113,6 +118,21 @@ try:
         "output_max_length": int(os.environ.get("output_max_length"))
         if os.environ.get("output_max_length")
         else 8192,
+        "smtp_server": os.environ.get("smtp_server")
+        if os.environ.get("smtp_server")
+        else "smtp.example.com",
+        "smtp_port": int(os.environ.get("smtp_port"))
+        if os.environ.get("smtp_port")
+        else 587,
+        "smtp_use_ssl": os.environ.get("smtp_use_ssl") == "true"
+        if os.environ.get("smtp_use_ssl") is not None
+        else False,
+        "smtp_username": os.environ.get("smtp_username")
+        if os.environ.get("smtp_username")
+        else "username",
+        "smtp_password": os.environ.get("smtp_password")
+        if os.environ.get("smtp_password")
+        else "password",
     }
     for key, value in env_vars.items():
         if value is not None:

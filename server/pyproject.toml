@@ -14,12 +14,13 @@ dependencies = [
     "fastapi>=0.115.11",
     "google-genai>=1.8.0",
     "importlib>=1.0.4",
-    "langchain>=0.3.20",
+    "langchain[openai]>=0.3.20",
     "langchain-community>=0.3.19",
     "langchain-core>=0.3.45",
     "langchain-google-genai>=2.1.4",
     "langchain-openai>=0.3.17",
     "langchain-qdrant>=0.2.0",
+    "langgraph>=0.5.3",
     "minio>=7.2.15",
     "mysql-connector-python>=9.2.0",
     "numpy>=2.2.3",
@@ -37,8 +38,12 @@ dependencies = [
     "python-multipart>=0.0.20",
     "qdrant-client>=1.13.3",
     "requests>=2.32.3",
-    "tavily-python>=0.7.2",
     "uvicorn>=0.34.0",
+    "wikipedia>=1.4.0",
+    "langchain-tavily>=0.2.11",
+    "playwright>=1.54.0",
+    "lxml>=6.0.0",
+    "email-to>=0.1.0",
 ]
 requires-python = ">=3.12"
 

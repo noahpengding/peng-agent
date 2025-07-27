@@ -13,6 +13,8 @@ COPY pyproject.toml uv.lock ./
 
 RUN uv sync --locked
 
+RUN playwright install chromium
+
 COPY . .
 
 ENV PATH="/app/.venv/bin:$PATH"
