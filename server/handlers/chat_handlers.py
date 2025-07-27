@@ -12,11 +12,8 @@ from typing import AsyncIterator
 
 
 def _generate_prompt_params(message: str, image: str, chat_config: ChatConfig):
-    """Generate prompt parameters for both streaming and completion handlers."""
     prompt = prompt_generator.prompt_template(
         model_name=chat_config.base_model,
-        has_document=chat_config.collection_name != "default",
-        has_websearch=chat_config.web_search,
     )
     params = prompt_generator.base_prompt_generate(
         message=message,
@@ -28,17 +25,6 @@ def _generate_prompt_params(message: str, image: str, chat_config: ChatConfig):
         params=params,
         image=image,
     )
-    if chat_config.web_search:
-        params = prompt_generator.add_websearch_to_prompt(
-            params=params,
-            query=message,
-        )
-    if chat_config.collection_name != "default":
-        params = prompt_generator.add_document_to_prompt(
-            params=params,
-            query=message,
-            collection_name=chat_config.collection_name,
-        )
     return prompt, params
 
 
@@ -50,6 +36,8 @@ async def chat_handler(
         "debug",
     )
 
+    prompt, params = _generate_prompt_params(message, image, chat_config)
+
     base_model_ins = get_model_instance_by_operator(
         chat_config.operator,
         chat_config.base_model,
@@ -60,24 +48,57 @@ async def chat_handler(
             + "\n"
         )
         return
+    
+    if chat_config.tools_name != []:
+        from services.tools_routers import tools_routers
+        from langgraph.prebuilt import create_react_agent
+        tools = tools_routers(chat_config.tools_name)
+        llm_with_tools = base_model_ins.bind_tools(tools)
+        agent = create_react_agent(
+            model=llm_with_tools,
+            tools=tools,
+        )
+        full_response = ""
+        async for chunk in agent.astream(prompt.invoke(params), stream_mode="updates"):
+            if chunk:
+                chunk_type = "unknown"
+                if "agent" in chunk and "messages" in chunk["agent"]:
+                    chunk_content = chunk["agent"]["messages"][0].content
+                    chunk_type = "agent"
+                elif "tools" in chunk and "messages" in chunk["tools"]:
+                    chunk_content = chunk["tools"]["messages"][0].content
+                    chunk_type = "tools"
+                else:
+                    chunk_content = ""
+                chunk_content = response_formatter_main(chat_config.operator, chunk_content)
+                yield json.dumps({"chunk": chunk_content, "type": chunk_type, "done": False}) + "\n"
+                full_response += chunk_content
+        _save_chat(
+            user_name,
+            message,
+            full_response,
+            chat_config.base_model,
+            config.embedding_model,
+            "testtest_collection",  # Replace with actual collection name if needed
+        )
+    else:
+        full_response = ""
+        async for chunk in base_model_ins.astream(prompt.invoke(params)):
+            if chunk:
+                chunk = response_formatter_main(chat_config.operator, chunk.content)
+                full_response += chunk
+                yield json.dumps({"chunk": chunk, "type": "assisstent", "done": False}) + "\n"
 
-    prompt, params = _generate_prompt_params(message, image, chat_config)
+        _save_chat(
+            user_name,
+            message,
+            full_response,
+            chat_config.base_model,
+            config.embedding_model,
+            "testtest_collection",  # Replace with actual collection name if needed
+        )
 
-    full_response = ""
-    async for chunk in base_model_ins.astream(prompt.invoke(params)):
-        if chunk:
-            chunk = response_formatter_main(chat_config.operator, chunk.content)
-            full_response += chunk
-            yield json.dumps({"chunk": chunk, "done": False}) + "\n"
-
-    _save_chat(
-        user_name,
-        message,
-        full_response,
-        chat_config.base_model,
-        config.embedding_model,
-        chat_config.collection_name,
-    )
+    
     yield json.dumps({"chunk": "", "done": True}) + "\n"
 
 
@@ -97,26 +118,50 @@ async def chat_completions_handler(
         f"Chat Completion for User: {user_name}, Message: {message}, Image: {image}, Config: {chat_config}",
         "debug",
     )
+
+    prompt, params = _generate_prompt_params(message, image, chat_config)
+
     base_model_ins = get_model_instance_by_operator(
         chat_config.operator,
         chat_config.base_model,
     )
     if base_model_ins is None:
         return "Error: Model instance not found."
-
-    prompt, params = _generate_prompt_params(message, image, chat_config)
-
-    full_response = await base_model_ins.ainvoke(prompt.invoke(params))
-    full_response = response_formatter_main(chat_config.operator, full_response.content)
-    _save_chat(
-        user_name,
-        message,
-        full_response,
-        chat_config.base_model,
-        config.embedding_model,
-        chat_config.collection_name,
-    )
-
+    
+    if chat_config.tools_name != []:
+        from services.tools_routers import tools_routers
+        from langgraph.prebuilt import create_react_agent
+        tools = tools_routers(chat_config.tools_name)
+        llm_with_tools = base_model_ins.bind_tools(tools)
+        agent = create_react_agent(
+            model=llm_with_tools,
+            tools=tools,
+        )
+        response = await agent.ainvoke(prompt.invoke(params))
+        full_response = []
+        for response_message in response["messages"]:
+            if response_message.content:
+                full_response.append(f"{response_message.type}: {response_formatter_main(chat_config.operator, response_message.content)}")
+            _save_chat(
+                user_name,
+                message,
+                response_message.content,
+                chat_config.base_model,
+                config.embedding_model,
+                "testtest_collection",
+            )
+        full_response = "||\n".join(full_response)
+    else:
+        full_response = await base_model_ins.ainvoke(prompt.invoke(params))
+        full_response = response_formatter_main(chat_config.operator, full_response.content)
+        _save_chat(
+            user_name,
+            message,
+            full_response,
+            chat_config.base_model,
+            config.embedding_model,
+            "testtest_collection",
+        )
     return full_response
 
 
@@ -163,7 +208,7 @@ def create_batch_response(
             response,
             chat_config.base_model,
             config.embedding_model,
-            chat_config.collection_name,
+            "testtest_collection",  # Replace with actual collection name if needed
         )
     return JSONResponse(
         content=reponses,

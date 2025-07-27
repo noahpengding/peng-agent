@@ -8,6 +8,7 @@ from langchain_core.messages import (
     SystemMessage,
     HumanMessage,
     BaseMessage,
+    ToolMessage,
 )
 from langchain_core.messages.ai import UsageMetadata
 from langchain_core.outputs import ChatGeneration, ChatGenerationChunk, ChatResult
@@ -57,25 +58,56 @@ class CustomOpenAIResponse(BaseChatModel):
         now = time.time()
         prompt_translated = self._prompt_translate(prompt)
         output_log(f"Translated prompt: {prompt_translated}", "debug")
-        responses = self.client.responses.create(
-            model=self.model_name,
-            input=prompt_translated,
-            max_output_tokens=self.max_tokens,
-            stream=False,
-        )
+        request_params = {
+            "model": self.model_name,
+            "input": prompt_translated,
+            "stream": False,
+        }
+        tools = kwargs.get('tools')
+        tool_choice = kwargs.get('tool_choice')
+        if tools:
+            request_params["tools"] = []
+            for tool in tools:
+                parameters = tool.get("function", {}).get("parameters", {})
+                parameters['additionalProperties'] = False
+                request_params["tools"].append({
+                    "type": "function",
+                    "name": tool.get("function", {}).get("name"),
+                    "description": tool.get("function", {}).get("description"),
+                    "parameters": parameters,
+                    "strict": False
+                })
+        if tool_choice:
+            request_params["tool_choice"] = tool_choice
+        responses = self.client.responses.create(**request_params)
+        additional_kwargs = {}
+        message_content = ""
         for response in responses.output:
-            if re.match(r"^msg_", response.id):
-                message = response.content[0].text
+            if response.type == "message":
+                message_content = response.content[0].text
+            elif response.type == "function_call":
+                additional_kwargs = {
+                    "tool_calls": [
+                        {
+                            "id": response.call_id,
+                            "function": {
+                                "name": response.name,
+                                "arguments": response.arguments,
+                            },
+                            "type": response.type,
+                        }
+                    ]
+                }
         generate_message = AIMessage(
-            content=message,
-            additional_kwargs={},
+            content=message_content,
+            additional_kwargs=additional_kwargs,
             response_metadata={
                 "time_in_seconds": time.time() - now,
             },
             metadata={
                 "input_tokens": len(prompt),
-                "output_tokens": len(message),
-                "total_tokens": len(prompt) + len(message),
+                "output_tokens": len(message_content),
+                "total_tokens": len(prompt) + len(message_content),
             },
         )
         generation = ChatGeneration(message=generate_message)
@@ -88,18 +120,35 @@ class CustomOpenAIResponse(BaseChatModel):
         run_manager: Optional[CallbackManagerForLLMRun] = None,
         **kwargs: Any,
     ) -> Iterator[ChatGenerationChunk]:
-        output_log(f"Streaming chat completion request{prompt}", "debug")
+        output_log(f"Streaming chat completion request: {prompt}", "debug")
         prompt_translated = self._prompt_translate(prompt)
-        output_log(f"Translated prompt for streaming{prompt_translated}", "debug")
-        output_log(
-            f"Requesting streaming response from model: {self.model_name}", "debug"
-        )
-        stream = self.client.responses.create(
-            model=self.model_name,
-            input=prompt_translated,
-            max_output_tokens=self.max_tokens,
-            stream=True,
-        )
+        output_log(f"Translated prompt for streaming: {prompt_translated}", "debug")
+        request_params = {
+            "model": self.model_name,
+            "input": prompt_translated,
+            "stream": True,
+        }
+        
+        tools = kwargs.get('tools')
+        tool_choice = kwargs.get('tool_choice')
+        tools = kwargs.get('tools')
+        tool_choice = kwargs.get('tool_choice')
+        if tools:
+            request_params["tools"] = []
+            for tool in tools:
+                parameters = tool.get("function", {}).get("parameters", {})
+                parameters['additionalProperties'] = False
+                request_params["tools"].append({
+                    "type": "function",
+                    "name": tool.get("function", {}).get("name"),
+                    "description": tool.get("function", {}).get("description"),
+                    "parameters": parameters,
+                    "strict": False
+                })
+        if tool_choice:
+            request_params["tool_choice"] = tool_choice
+
+        stream = self.client.responses.create(**request_params)
         token_count = len(prompt)
         for event in stream:
             output_log(f"Received event: {event}", "debug")
@@ -122,6 +171,7 @@ class CustomOpenAIResponse(BaseChatModel):
                     if run_manager:
                         run_manager.on_llm_new_token(token, chunk=chunk)
                     yield chunk
+
 
     def bind_tools(
         self,
@@ -147,37 +197,8 @@ class CustomOpenAIResponse(BaseChatModel):
                 tool_names.append(tool["name"])
             else:
                 pass
-        if tool_choice:
-            if isinstance(tool_choice, str):
-                # tool_choice is a tool/function name
-                if tool_choice in tool_names:
-                    tool_choice = {
-                        "type": "function",
-                        "function": {"name": tool_choice},
-                    }
-                elif tool_choice in (
-                    "file_search",
-                    "web_search_preview",
-                    "computer_use_preview",
-                ):
-                    tool_choice = {"type": tool_choice}
-                # 'any' is not natively supported by OpenAI API.
-                # We support 'any' since other models use this instead of 'required'.
-                elif tool_choice == "any":
-                    tool_choice = "required"
-                else:
-                    pass
-            elif isinstance(tool_choice, bool):
-                tool_choice = "required"
-            elif isinstance(tool_choice, dict):
-                pass
-            else:
-                raise ValueError(
-                    f"Unrecognized tool_choice type. Expected str, bool or dict. "
-                    f"Received: {tool_choice}"
-                )
-            kwargs["tool_choice"] = tool_choice
-        return super().bind(tools=formatted_tools, **kwargs)
+        kwargs["tools"] = formatted_tools
+        return super().bind(**kwargs)
 
     def list_models(self):
         response = self.client.models.list()
@@ -205,46 +226,52 @@ class CustomOpenAIResponse(BaseChatModel):
             output_log(f"Invalid parameter: {name}", "error")
             return f"Invalid parameter: {name}, {value}"
 
-    def _prompt_translate(self, prompt: List[BaseMessage]) -> str:
-        prompt_text = []
+    def _prompt_translate(self, prompt: List[BaseMessage]) -> List[Dict[str, Any]]:
+        prompt_messages = []
         for message in prompt:
             if isinstance(message, AIMessage):
-                prompt_text.append(
-                    {
-                        "role": "assistant",
-                        "content": [{"type": "output_text", "text": message.content}],
-                    }
-                )
+                msg_dict = {
+                    "role": "assistant",
+                    "content": message.content,
+                }
+                prompt_messages.append(msg_dict)
             elif isinstance(message, SystemMessage):
-                prompt_text.append(
+                prompt_messages.append(
                     {
                         "role": "system",
-                        "content": [{"type": "input_text", "text": message.content}],
+                        "content": message.content,
                     }
                 )
             elif isinstance(message, HumanMessage):
-                if message.content.startswith("data:image"):
-                    prompt_text.append(
+                if isinstance(message.content, str) and message.content.startswith("data:image"):
+                    prompt_messages.append(
                         {
                             "role": "user",
                             "content": [
                                 {
-                                    "type": "input_image",
-                                    "image_url": f"data:image/jpeg;base64,{message.content.split(',')[1]}",
+                                    "type": "image_url",
+                                    "image_url": {
+                                        "url": message.content
+                                    },
                                 }
                             ],
                         }
                     )
                 else:
-                    prompt_text.append(
+                    prompt_messages.append(
                         {
                             "role": "user",
-                            "content": [
-                                {"type": "input_text", "text": message.content}
-                            ],
+                            "content": message.content,
                         }
                     )
-        return prompt_text
+            elif isinstance(message, ToolMessage):
+                prompt_messages.append(
+                    {
+                        "role": "assistant",
+                        "content": message.content,
+                    }
+                )
+        return prompt_messages
 
     @property
     def _llm_type(self) -> str:
