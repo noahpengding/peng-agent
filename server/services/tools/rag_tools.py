@@ -1,7 +1,7 @@
 from config.config import config
 
 def _rag_usage_tool(query: str, collection: str) -> str:
-    from services.rag_usage import RagUsage
+    from services.rag.rag_usage import RagUsage
     from langchain_core.prompts import ChatPromptTemplate
     prompt = [
         (
@@ -35,7 +35,7 @@ def _rag_usage_tool(query: str, collection: str) -> str:
 from langchain_core.tools import StructuredTool
 
 def get_all_collections() -> list:
-    from services.qdrant_api import Qdrant
+    from services.rag.qdrant_api import Qdrant
     qdrant = Qdrant(
         host=config.qdrant_host,
         port=config.qdrant_port,

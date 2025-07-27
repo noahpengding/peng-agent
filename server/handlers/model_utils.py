@@ -14,7 +14,7 @@ def get_model_instance_by_operator(operator_name, model_name: str = ""):
         )
         return None
     if operator.runtime == "openai_response":
-        from services.openai_response import CustomOpenAIResponse
+        from services.chat_models.openai_response import CustomOpenAIResponse
 
         base_model_ins = CustomOpenAIResponse(
             base_url=operator.endpoint,
@@ -24,7 +24,7 @@ def get_model_instance_by_operator(operator_name, model_name: str = ""):
             model=model_name,
         )
     elif operator.runtime == "openai_completion":
-        from services.openai_completion import CustomOpenAICompletion
+        from services.chat_models.openai_completion import CustomOpenAICompletion
 
         base_model_ins = CustomOpenAICompletion(
             base_url=operator.endpoint,
@@ -34,14 +34,14 @@ def get_model_instance_by_operator(operator_name, model_name: str = ""):
             model=model_name,
         )
     elif operator.runtime == "gemini":
-        from services.gemini_langchain import CustomGemini
+        from services.chat_models.gemini_langchain import CustomGemini
 
         base_model_ins = CustomGemini(
             api_key=operator.api_key,
             model=model_name,
         )
     elif operator.runtime == "claude":
-        from services.claude_langchain import CustomClaude
+        from services.chat_models.claude_langchain import CustomClaude
 
         base_model_ins = CustomClaude(
             api_key=operator.api_key,

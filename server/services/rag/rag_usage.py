@@ -1,4 +1,4 @@
-from services.qdrant_api import Qdrant
+from services.rag.qdrant_api import Qdrant
 import services.prompt_generator as prompt_generator
 from handlers.model_utils import get_model_instance_by_operator
 from config.config import config

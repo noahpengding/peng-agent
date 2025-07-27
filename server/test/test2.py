@@ -10,7 +10,7 @@ import sys
 SCRIPT_DIR = os.path.dirname(os.path.realpath(__file__))
 sys.path.append(os.path.dirname(SCRIPT_DIR+ '../'))
 
-from services.openai_response import CustomOpenAIResponse
+from services.chat_models.openai_response import CustomOpenAIResponse
 
 llm = CustomOpenAIResponse(
     api_key="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",
@@ -21,7 +21,7 @@ llm = CustomOpenAIResponse(
 )
 
 from config.config import config
-from services.search_tools import tavily_search_tool, wikipedia_search_tool
+from services.tools.search_tools import tavily_search_tool, wikipedia_search_tool
 # from services.rag_tools import rag_usage_tool
 # from services.web_page_tools import requests_tools
 # from services.smtp_tools import email_send_tool

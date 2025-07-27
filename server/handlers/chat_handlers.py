@@ -50,7 +50,7 @@ async def chat_handler(
         return
     
     if chat_config.tools_name != []:
-        from services.tools_routers import tools_routers
+        from services.tools.tools_routers import tools_routers
         from langgraph.prebuilt import create_react_agent
         tools = tools_routers(chat_config.tools_name)
         llm_with_tools = base_model_ins.bind_tools(tools)
