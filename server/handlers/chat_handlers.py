@@ -70,17 +70,17 @@ async def chat_handler(
                     chunk_type = "tools"
                 else:
                     chunk_content = ""
+                    continue
                 chunk_content = response_formatter_main(chat_config.operator, chunk_content)
                 yield json.dumps({"chunk": chunk_content, "type": chunk_type, "done": False}) + "\n"
                 full_response += chunk_content
-        _save_chat(
-            user_name,
-            message,
-            full_response,
-            chat_config.base_model,
-            config.embedding_model,
-            "testtest_collection",  # Replace with actual collection name if needed
-        )
+                _save_chat(
+                    user_name,
+                    chunk_type,
+                    chat_config.base_model,
+                    message,
+                    chunk_content,
+                )
     else:
         full_response = ""
         async for chunk in base_model_ins.astream(prompt.invoke(params)):
@@ -88,14 +88,12 @@ async def chat_handler(
                 chunk = response_formatter_main(chat_config.operator, chunk.content)
                 full_response += chunk
                 yield json.dumps({"chunk": chunk, "type": "assisstent", "done": False}) + "\n"
-
         _save_chat(
             user_name,
+            "assistant",
+            chat_config.base_model,
             message,
             full_response,
-            chat_config.base_model,
-            config.embedding_model,
-            "testtest_collection",  # Replace with actual collection name if needed
         )
 
     
@@ -141,26 +139,25 @@ async def chat_completions_handler(
         full_response = []
         for response_message in response["messages"]:
             if response_message.content:
-                full_response.append(f"{response_message.type}: {response_formatter_main(chat_config.operator, response_message.content)}")
-            _save_chat(
-                user_name,
-                message,
-                response_message.content,
-                chat_config.base_model,
-                config.embedding_model,
-                "testtest_collection",
-            )
+                formatted_response = response_formatter_main(chat_config.operator, response_message.content)
+                full_response.append(f"{response_message.type}: {formatted_response}")
+                _save_chat(
+                    user_name,
+                    response_message.type,
+                    chat_config.base_model,
+                    message,
+                    formatted_response,
+                )
         full_response = "||\n".join(full_response)
     else:
         full_response = await base_model_ins.ainvoke(prompt.invoke(params))
         full_response = response_formatter_main(chat_config.operator, full_response.content)
         _save_chat(
             user_name,
-            message,
-            full_response,
+            "assistant",
             chat_config.base_model,
-            config.embedding_model,
-            "testtest_collection",
+            message,
+            response,
         )
     return full_response
 
@@ -204,11 +201,10 @@ def create_batch_response(
     for message, response in zip(messages, reponses):
         _save_chat(
             user_name,
+            "assistant",
+            chat_config.base_model,
             message,
             response,
-            chat_config.base_model,
-            config.embedding_model,
-            "testtest_collection",  # Replace with actual collection name if needed
         )
     return JSONResponse(
         content=reponses,
@@ -217,7 +213,7 @@ def create_batch_response(
 
 
 def _save_chat(
-    user_name, message, response, base_model, embedding_model, collection_name
+    user_name, chat_type, base_model, human_input, ai_response,
 ):
     mysql = MysqlConnect()
     try:
@@ -225,15 +221,14 @@ def _save_chat(
             "chat",
             {
                 "user_name": user_name,
+                "type": chat_type,
                 "base_model": base_model,
-                "embedding_model": embedding_model,
-                "human_input": message[: config.input_max_length]
-                if len(message) > config.input_max_length
-                else message,
-                "ai_response": response[: config.output_max_length]
-                if len(response) > config.output_max_length
-                else response,
-                "knowledge_base": collection_name,
+                "human_input": human_input[: config.input_max_length]
+                if len(human_input) > config.input_max_length
+                else human_input,
+                "ai_response": ai_response[: config.output_max_length]
+                if len(ai_response) > config.output_max_length
+                else ai_response,
                 "created_at": datetime.now(),
                 "expire_at": datetime.now() + timedelta(days=7),
             },

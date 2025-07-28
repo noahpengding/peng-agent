@@ -1,7 +1,9 @@
 def async_playwright_toolkit():
     from langchain_community.agent_toolkits import PlayWrightBrowserToolkit
     from langchain_community.tools.playwright.utils import create_async_playwright_browser
+    import nest_asyncio
 
+    nest_asyncio.apply()
     async_browser = create_async_playwright_browser()
     toolkit = PlayWrightBrowserToolkit.from_browser(async_browser=async_browser)
     tools = toolkit.get_tools()
@@ -10,7 +12,6 @@ def async_playwright_toolkit():
 def sync_playwright_toolkit():
     from langchain_community.agent_toolkits import PlayWrightBrowserToolkit
     from langchain_community.tools.playwright.utils import create_sync_playwright_browser
-
     sync_browser = create_sync_playwright_browser()
     toolkit = PlayWrightBrowserToolkit.from_browser(sync_browser=sync_browser)
     tools = toolkit.get_tools()
@@ -30,5 +31,4 @@ def requests_toolkit():
     return tools
 
 async_playwright_tools = async_playwright_toolkit()
-sync_playwright_tools = sync_playwright_toolkit()
 requests_tools = requests_toolkit()

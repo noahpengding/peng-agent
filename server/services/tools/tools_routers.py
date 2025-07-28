@@ -17,12 +17,15 @@ def tools_routers(tools_name: List[str]):
             tools += [rag_usage_tool]
         elif tool_name == "requests_tools":
             from services.tools.web_page_tools import requests_tools
-            tools += [requests_tools]
+            tools += requests_tools
         elif tool_name == "playwright_tools":
-            from services.tools.web_page_tools import playwright_tools
-            tools += [playwright_tools]
+            from services.tools.web_page_tools import async_playwright_tools
+            tools += async_playwright_tools
         elif tool_name == "email_send_tool":
             from services.tools.smtp_tools import email_send_tool
             tools += [email_send_tool]
+
+    print("---" * 20)
+    print(tools)
 
     return tools
