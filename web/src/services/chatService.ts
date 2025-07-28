@@ -5,8 +5,7 @@ interface ChatRequest {
   config: {
     operator: string;
     base_model: string;
-    collection_name: string;
-    web_search: boolean;
+    tools_name: string[];
     short_term_memory: string[];
     long_term_memory: string[];
   };
@@ -15,7 +14,7 @@ interface ChatRequest {
 export const ChatService = {
   async sendMessage(
     request: ChatRequest, 
-    onChunk: (chunk: string) => void,
+    onChunk: (chunk: string, type: string) => void,
     onComplete: () => void,
     onError: (error: Error) => void
   ): Promise<void> {
@@ -72,7 +71,8 @@ export const ChatService = {
             try {
               const data = JSON.parse(line);
               if (!data.done) {
-                onChunk(data.chunk);
+                // pass chunk and its type
+                onChunk(data.chunk, data.type);
               } else {
                 if (!isCompleted) {
                   isCompleted = true;

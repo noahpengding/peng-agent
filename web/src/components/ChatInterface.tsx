@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useChatApi } from '../hooks/ChatAPI';
 import { Memory } from '../hooks/MemoryAPI';
-import { useRAGApi } from '../hooks/RAGAPI';
+import { Tool, useToolApi } from '../hooks/ToolAPI';
 import { useAuth } from '../contexts/AuthContext';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
@@ -30,6 +30,10 @@ const ChatbotUI = () => {
     role: string;
     content: string;
     image?: string;
+    // type distinguishes tool vs assistant/agent messages
+    type?: string;
+    // folded indicates tool messages should be initially collapsed
+    folded?: boolean;
   }
   
   const [messages, setMessages] = useState<Message[]>([]);
@@ -44,50 +48,34 @@ const ChatbotUI = () => {
   
   // Initialize the chat API hook
   const { sendMessage, error: apiError } = useChatApi();
-  // Initialize the RAG API hook
-  const { getAllRAGDocuments, isLoading: ragLoading, error: ragError } = useRAGApi();
+  // Initialize the tool API hook
+  const { getAllTools, updateTools, isLoading: toolsLoading, error: toolsError } = useToolApi();
   // Get authentication context
   const { user } = useAuth();
   
-  // State for available knowledge bases
-  const [availableKnowledgeBases, setAvailableKnowledgeBases] = useState<string[]>(['default']);
   // State for available base models
   const [availableBaseModels, setAvailableBaseModels] = useState<ModelInfo[]>([]);
   // Loading states for model lists
   const [baseModelsLoading, setBaseModelsLoading] = useState(false);
+  
+  // Tool selection states
+  const [availableTools, setAvailableTools] = useState<Tool[]>([]);
+  const [selectedToolNames, setSelectedToolNames] = useState<string[]>([]);
+  const [isToolPopupOpen, setIsToolPopupOpen] = useState(false);
   
   // Map UI selections to backend config
   useEffect(() => {
     if (apiError) {
       setError(`API Error: ${apiError}`);
     }
-    
-    if (ragError) {
-      setError(`RAG API Error: ${ragError}`);
-    }
-  }, [apiError, ragError]);
+  }, [apiError]);
 
-  // Fetch available knowledge bases on component mount
+  // Handle tool API errors
   useEffect(() => {
-    const fetchKnowledgeBases = async () => {
-      try {
-        const ragDocuments = await getAllRAGDocuments();
-        // Extract unique knowledge base names
-        const uniqueKnowledgeBases = Array.from(
-          new Set(ragDocuments.map(doc => doc.knowledge_base))
-        );
-        
-        // Add default option if no knowledge bases found
-        if (uniqueKnowledgeBases.length > 0) {
-          setAvailableKnowledgeBases(['default', ...uniqueKnowledgeBases]);
-        }
-      } catch (err) {
-        setError(`Error fetching knowledge bases: ${err instanceof Error ? err.message : String(err)}`);
-      }
-    };
-    
-    fetchKnowledgeBases();
-  }, []);
+    if (toolsError) {
+      setError(`Tool API Error: ${toolsError}`);
+    }
+  }, [toolsError]);
 
   // Fetch available base models on component mount
   useEffect(() => {
@@ -131,9 +119,6 @@ const ChatbotUI = () => {
 
   // Legacy state for UI components
   const [baseModel, setbaseModel] = useState('gpt-4');
-  const [knowledgeBase, setKnowledgeBase] = useState('default');
-  const [contextWindow, setContextWindow] = useState(8192);
-  const [useWebSearch, setUseWebSearch] = useState(false);
   const [shortTermMemory, setShortTermMemory] = useState<string[]>([]);
   const [longTermMemory] = useState([]);
 
@@ -167,6 +152,44 @@ const ChatbotUI = () => {
     
     // Return the operator if found, or default to "openai"
     return matchingModel?.operator || "openai";
+  };
+
+  // Tool management functions
+  const loadTools = async () => {
+    try {
+      const tools = await getAllTools();
+      setAvailableTools(tools);
+    } catch (error) {
+      setError(`Failed to load tools: ${error instanceof Error ? error.message : String(error)}`);
+    }
+  };
+
+  const handleUpdateTools = async () => {
+    try {
+      await updateTools();
+      await loadTools(); // Refresh the tools list
+    } catch (error) {
+      setError(`Failed to update tools: ${error instanceof Error ? error.message : String(error)}`);
+    }
+  };
+
+  const handleToolSelection = (toolName: string, isSelected: boolean) => {
+    if (isSelected) {
+      setSelectedToolNames(prev => [...prev, toolName]);
+    } else {
+      setSelectedToolNames(prev => prev.filter(name => name !== toolName));
+    }
+  };
+
+  const openToolPopup = () => {
+    setIsToolPopupOpen(true);
+    if (availableTools.length === 0) {
+      loadTools();
+    }
+  };
+
+  const closeToolPopup = () => {
+    setIsToolPopupOpen(false);
   };
 
   // Function to handle image uploads
@@ -242,8 +265,7 @@ const ChatbotUI = () => {
       const config = {
         operator: getOperatorForModel(baseModel),
         base_model: baseModel,
-        collection_name: knowledgeBase,
-        web_search: useWebSearch,
+        tools_name: selectedToolNames, // Use selected tool names
         short_term_memory: shortTermMemory, // Now already includes selected memories
         long_term_memory: longTermMemory,
       };
@@ -256,32 +278,40 @@ const ChatbotUI = () => {
         config: config
       };
       
-      // Keep track of the full response for memory
+      // Keep track of the full assistant response for memory
       let fullResponse = '';
-      
-      // Stream the message to get chunks
+      // Stream the message to get chunks (type-aware)
       await sendMessage(
         request,
-        // Handle each chunk
-        (chunk: string) => {
-          // Update the assistant message with the accumulated content
-          fullResponse += chunk;
-          setMessages(currentMessages => {
-            const updatedMessages = [...currentMessages];
-            if (updatedMessages[assistantMessageIndex]) {
-              updatedMessages[assistantMessageIndex] = {
-                role: 'assistant',
-                content: fullResponse // Use the full response so far
-              };
-            }
-            return updatedMessages;
-          });
+        // Handle each chunk with its type
+        (chunk: string, type: string) => {
+          if (type === 'tools') {
+            // Add individual tool message chunk
+            setMessages(current => [
+              ...current,
+              { role: 'assistant', content: chunk, type: 'tools', folded: false }
+            ]);
+          } else {
+            // Accumulate assistant chunks
+            fullResponse += chunk;
+            setMessages(currentMessages => {
+              const updated = [...currentMessages];
+              if (updated[assistantMessageIndex]) {
+                updated[assistantMessageIndex] = {
+                  role: 'assistant', content: fullResponse, type: 'assistant'
+                };
+              }
+              return updated;
+            });
+          }
         },
         // Handle completion
         () => {
+          // Fold all tool messages
+          setMessages(current => current.map(m => m.type === 'tools' ? { ...m, folded: true } : m));
           // Add the full response to short-term memory
-          setShortTermMemory(prevMemory => [...prevMemory, "human: " + input, "assistant: " + fullResponse]);
-          setIsLoading(false); // Ensure loading state is cleared
+          setShortTermMemory(prev => [...prev, 'human: ' + input, 'assistant: ' + fullResponse]);
+          setIsLoading(false);
         }
       );
       
@@ -319,26 +349,6 @@ const ChatbotUI = () => {
         textareaRef.current.focus();
       }
     }
-  };
-
-  // Knowledge Base Selection (updated part)
-  const renderKnowledgeBaseSelection = () => {
-    return (
-      <div className="form-group">
-        <label className="form-label">Knowledge Base</label>
-        <select 
-          className="form-select"
-          value={knowledgeBase}
-          onChange={(e) => setKnowledgeBase(e.target.value)}
-          disabled={ragLoading}
-        >
-          {availableKnowledgeBases.map(kb => (
-            <option key={kb} value={kb}>{kb}</option>
-          ))}
-        </select>
-        {ragLoading && <div className="loading-indicator">Loading knowledge bases...</div>}
-      </div>
-    );
   };
 
   // Base Model Selection
@@ -395,36 +405,37 @@ const ChatbotUI = () => {
           {/* Model Selection - replaced with dynamic version */}
           {renderBaseModelSelection()}
           
-          {/* Knowledge Base Selection - replaced with dynamic version */}
-          {renderKnowledgeBaseSelection()}
-          
-          {/* Context Window Slider */}
+          {/* Tool Selection */}
           <div className="form-group">
-            <label className="form-label">
-              Context Window: {contextWindow} tokens
-            </label>
-            <input 
-              type="range" 
-              min="1024" 
-              max="32768" 
-              step="1024"
-              className="form-range" 
-              value={contextWindow}
-              onChange={(e) => setContextWindow(parseInt(e.target.value, 10))}
-            />
-          </div>
-          
-          {/* Web Search Checkbox */}
-          <div className="form-group">
-            <label className="checkbox-label">
-              <input 
-                type="checkbox" 
-                className="form-checkbox" 
-                checked={useWebSearch}
-                onChange={(e) => setUseWebSearch(e.target.checked)}
-              />
-              <span className="checkbox-text">Enable Web Search</span>
-            </label>
+            <div className="tool-section-header">
+              <label className="form-label">Tools</label>
+              <button 
+                className="tool-add-button"
+                onClick={openToolPopup}
+                title="Add Tools"
+              >
+                +
+              </button>
+            </div>
+            {selectedToolNames.length > 0 ? (
+              <div className="selected-tools-list">
+                {selectedToolNames.map((toolName, index) => (
+                  <div key={index} className="selected-tool-item">
+                    <span className="selected-tool-name">{toolName}</span>
+                    <button
+                      type="button"
+                      className="tool-remove-button"
+                      onClick={() => handleToolSelection(toolName, false)}
+                      title="Remove tool"
+                    >
+                      ×
+                    </button>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="no-tools-selected">No tools selected</div>
+            )}
           </div>
           
           {/* Memory Selection Link */}
@@ -467,34 +478,34 @@ const ChatbotUI = () => {
                         />
                       </div>
                     )}
-                    {msg.role === 'assistant' ? (
+                    {msg.type === 'tools' ? (
+                      <details className="tool-details" open={!msg.folded}>
+                        <summary className="tool-summary">Tool Calls</summary>
+                        <p className="message-text tool-text">{msg.content}</p>
+                      </details>
+                    ) : msg.role === 'assistant' ? (
                       <div className="message-text">
                         <div className="markdown-content">
                           <ReactMarkdown 
                             remarkPlugins={[remarkGfm, remarkMath]}
                             rehypePlugins={[rehypeKatex]}
                             components={{
-                              p: ({node, ...props}) => <p className="tight-paragraph" {...props} />,
-                              li: ({node, ...props}) => <li className="tight-list-item" {...props} />,
-                              code({node, inline, className, children, ...props}: {
-                                node?: any;
-                                inline?: boolean;
-                                className?: string;
-                                children?: React.ReactNode;
-                                [key: string]: any;
-                              }) {
+                              p: ({node, ...props}) => <p className="tight-paragraph" {...props} />,    
+                              li: ({node, ...props}) => <li className="tight-list-item" {...props} />,  
+                              code: (props: any) => {
+                                const { inline, className, children, ...rest } = props;
                                 const match = /language-(\w+)/.exec(className || '');
                                 return !inline && match ? (
                                   <SyntaxHighlighter
-                                    style={vscDarkPlus}
+                                    style={vscDarkPlus as any}
                                     language={match[1]}
                                     PreTag="div"
-                                    {...props}
+                                    {...rest}
                                   >
                                     {String(children).replace(/\n$/, '')}
                                   </SyntaxHighlighter>
                                 ) : (
-                                  <code className={className} {...props}>
+                                  <code className={className} {...rest}>
                                     {children}
                                   </code>
                                 );
@@ -578,6 +589,56 @@ const ChatbotUI = () => {
           </div>
         </div>
       </div>
+      
+      {/* Tool Selection Popup */}
+      {isToolPopupOpen && (
+        <div className="popup-overlay" onClick={closeToolPopup}>
+          <div className="popup-content" onClick={(e) => e.stopPropagation()}>
+            <div className="popup-header">
+              <h3>Select Tools</h3>
+              <div className="popup-actions">
+                <button 
+                  className="update-button"
+                  onClick={handleUpdateTools}
+                  disabled={toolsLoading}
+                >
+                  {toolsLoading ? 'Updating...' : 'Update'}
+                </button>
+                <button className="close-button" onClick={closeToolPopup}>
+                  ×
+                </button>
+              </div>
+            </div>
+            <div className="popup-body">
+              {toolsLoading ? (
+                <div className="loading-indicator">Loading tools...</div>
+              ) : availableTools.length === 0 ? (
+                <div className="no-tools">No tools available</div>
+              ) : (
+                <div className="tools-list">
+                  {availableTools.map((tool) => (
+                    <div key={tool.id} className="tool-item">
+                      <label className="tool-checkbox-label">
+                        <input
+                          type="checkbox"
+                          className="tool-checkbox"
+                          checked={selectedToolNames.includes(tool.name)}
+                          onChange={(e) => handleToolSelection(tool.name, e.target.checked)}
+                        />
+                        <div className="tool-info">
+                          <div className="tool-name">{tool.name}</div>
+                          <div className="tool-type">{tool.type}</div>
+                          <div className="tool-url">{tool.url}</div>
+                        </div>
+                      </label>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
