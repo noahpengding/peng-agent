@@ -215,6 +215,8 @@ def create_batch_response(
 def _save_chat(
     user_name, chat_type, base_model, human_input, ai_response,
 ):
+    if ai_response is None or ai_response.strip() == "":
+        return
     mysql = MysqlConnect()
     try:
         mysql.create_record(

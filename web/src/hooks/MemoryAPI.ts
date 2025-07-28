@@ -5,8 +5,8 @@ import { MemoryService } from '../services/memoryService';
 export interface Memory {
   id: string;
   user_name: string;
+  type: string;
   base_model: string;
-  knowledge_base: string;
   human_input: string;
   ai_response: string;
   timestamp?: string;

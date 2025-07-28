@@ -76,7 +76,7 @@ const MemoryPage: React.FC = () => {
     };
 
     // Truncate text for display
-    const truncateText = (text: string, maxLength: number = 100) => {
+    const truncateText = (text: string, maxLength: number = 400) => {
         if (text.length <= maxLength) return text;
         return text.slice(0, maxLength) + '...';
     };
@@ -118,7 +118,7 @@ const MemoryPage: React.FC = () => {
                             <tr>
                                 <th className="select-column">Select</th>
                                 <th className="model-column">Model</th>
-                                <th className="kb-column">Knowledge Base</th>
+                                <th className="kb-column">Type</th>
                                 <th className="human-input-column">Human Input</th>
                                 <th className="ai-response-column">AI Response</th>
                             </tr>
@@ -135,12 +135,12 @@ const MemoryPage: React.FC = () => {
                                             />
                                         </td>
                                         <td>{memory.base_model}</td>
-                                        <td>{memory.knowledge_base}</td>
+                                        <td>{memory.type}</td>
                                         <td title={memory.human_input}>
                                             {truncateText(memory.human_input)}
                                         </td>
                                         <td title={memory.ai_response}>
-                                            {truncateText(memory.ai_response, 200)}  {/* Increased truncate length */}
+                                            {truncateText(memory.ai_response, 600)}
                                         </td>
                                     </tr>
                                 ))

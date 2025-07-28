@@ -128,13 +128,20 @@ const ChatbotUI = () => {
     if (savedMemories) {
       try {
         const parsedMemories: Memory[] = JSON.parse(savedMemories);
-        // Format both human input and AI response like line 277
+        // Prepare both the short-term memory strings for API config
         const formattedMemories: string[] = [];
+        // Prepare initial messages to display in chat
+        const memoryMessages: Message[] = [];
         parsedMemories.forEach(memory => {
           formattedMemories.push("human: " + memory.human_input);
           formattedMemories.push("assistant: " + memory.ai_response);
+          // Add as chat messages
+          memoryMessages.push({ role: 'user', content: memory.human_input });
+          memoryMessages.push({ role: 'assistant', content: memory.ai_response });
         });
         setShortTermMemory(formattedMemories);
+        // Preload messages to display selected memories
+        setMessages(memoryMessages);
         // Optionally clear localStorage after loading
         localStorage.removeItem('selectedMemories');
       } catch (error) {
