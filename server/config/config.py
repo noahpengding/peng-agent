@@ -16,7 +16,6 @@ class Config(BaseModel):
     qdrant_port: int
     default_operator: str
     default_base_model: str
-    huggingface_cache_dir: str
     embedding_operator: str
     embedding_model: str
     embedding_size: int
@@ -42,96 +41,93 @@ class Config(BaseModel):
 try:
     config_data = {}
     env_vars = {
-        "app_name": os.environ.get("app_name") or "peng-chat",
-        "log_level": os.environ.get("log_level") or "INFO",
-        "host": os.environ.get("host") or "0.0.0.0",
-        "port": int(os.environ.get("port")) if os.environ.get("port") else 8000,
-        "s3_url": os.environ.get("s3_url")
-        if os.environ.get("s3_url")
+        "app_name": os.environ.get("APP_NAME") or "peng-chat",
+        "log_level": os.environ.get("LOG_LEVEL") or "INFO",
+        "host": os.environ.get("HOST") or "0.0.0.0",
+        "port": int(os.environ.get("PORT")) if os.environ.get("PORT") else 8000,
+        "s3_url": os.environ.get("S3_URL")
+        if os.environ.get("S3_URL")
         else "http://localhost:9000",
-        "s3_bucket": os.environ.get("s3_bucket")
-        if os.environ.get("s3_bucket")
+        "s3_bucket": os.environ.get("S3_BUCKET")
+        if os.environ.get("S3_BUCKET")
         else "test",
-        "s3_access_key": os.environ.get("s3_access_key")
-        if os.environ.get("s3_access_key")
+        "s3_access_key": os.environ.get("S3_ACCESS_KEY")
+        if os.environ.get("S3_ACCESS_KEY")
         else "minioadmin",
-        "s3_secret_key": os.environ.get("s3_secret_key")
-        if os.environ.get("s3_secret_key")
+        "s3_secret_key": os.environ.get("S3_SECRET_KEY")
+        if os.environ.get("S3_SECRET_KEY")
         else "minioadmin",
-        "qdrant_host": os.environ.get("qdrant_host")
-        if os.environ.get("qdrant_host")
+        "qdrant_host": os.environ.get("QDRANT_HOST")
+        if os.environ.get("QDRANT_HOST")
         else "localhost",
-        "qdrant_port": int(os.environ.get("qdrant_port"))
-        if os.environ.get("qdrant_port")
+        "qdrant_port": int(os.environ.get("QDRANT_PORT"))
+        if os.environ.get("QDRANT_PORT")
         else 6333,
-        "default_operator": os.environ.get("default_operator")
-        if os.environ.get("default_operator")
+        "default_operator": os.environ.get("DEFAULT_OPERATOR")
+        if os.environ.get("DEFAULT_OPERATOR")
         else "openai_response",
-        "default_base_model": os.environ.get("default_base_model")
-        if os.environ.get("default_base_model")
+        "default_base_model": os.environ.get("DEFAULT_BASE_MODEL")
+        if os.environ.get("DEFAULT_BASE_MODEL")
         else "gpt-3.5-turbo",
-        "huggingface_cache_dir": os.environ.get("huggingface_cache_dir")
-        if os.environ.get("huggingface_cache_dir")
-        else os.path.join(os.path.expanduser("~"), ".cache", "huggingface"),
-        "embedding_operator": os.environ.get("embedding_operator")
-        if os.environ.get("embedding_operator")
+        "embedding_operator": os.environ.get("EMBEDDING_OPERATOR")
+        if os.environ.get("EMBEDDING_OPERATOR")
         else "openai_response",
-        "embedding_model": os.environ.get("embedding_model")
-        if os.environ.get("embedding_model")
+        "embedding_model": os.environ.get("EMBEDDING_MODEL")
+        if os.environ.get("EMBEDDING_MODEL")
         else "text-embedding-ada-002",
-        "embedding_size": int(os.environ.get("embedding_size"))
-        if os.environ.get("embedding_size")
+        "embedding_size": int(os.environ.get("EMBEDDING_SIZE"))
+        if os.environ.get("EMBEDDING_SIZE")
         else 1536,
-        "mysql_host": os.environ.get("mysql_host")
-        if os.environ.get("mysql_host")
-        else "localhost",
-        "mysql_user": os.environ.get("mysql_user")
-        if os.environ.get("mysql_user")
-        else "root",
-        "mysql_password": os.environ.get("mysql_password")
-        if os.environ.get("mysql_password")
-        else "password",
-        "mysql_database": os.environ.get("mysql_database")
-        if os.environ.get("mysql_database")
-        else "test",
-        "jwt_secret_key": os.environ.get("jwt_secret_key")
-        if os.environ.get("jwt_secret_key")
-        else "randome-secret-key",
-        "admin_password": os.environ.get("admin_password")
-        if os.environ.get("admin_password")
-        else "admin",
-        "azure_document_endpoint": os.environ.get("azure_document_endpoint")
-        if os.environ.get("azure_document_endpoint")
-        else "https://test.cognitiveservices.azure.com/",
-        "azure_document_key": os.environ.get("azure_document_key")
-        if os.environ.get("azure_document_key")
-        else "asdadasdasd",
-        "tavily_api_key": os.environ.get("tavily_api_key")
-        if os.environ.get("tavily_api_key")
-        else "tavily_api_key",
-        "web_search_max_results": int(os.environ.get("web_search_max_results"))
-        if os.environ.get("web_search_max_results")
-        else 5,
-        "input_max_length": int(os.environ.get("input_max_length"))
-        if os.environ.get("input_max_length")
+        "input_max_length": int(os.environ.get("INPUT_MAX_LENGTH"))
+        if os.environ.get("INPUT_MAX_LENGTH")
         else 4096,
-        "output_max_length": int(os.environ.get("output_max_length"))
-        if os.environ.get("output_max_length")
+        "output_max_length": int(os.environ.get("OUTPUT_MAX_LENGTH"))
+        if os.environ.get("OUTPUT_MAX_LENGTH")
         else 8192,
-        "smtp_server": os.environ.get("smtp_server")
-        if os.environ.get("smtp_server")
+        "mysql_host": os.environ.get("MYSQL_HOST")
+        if os.environ.get("MYSQL_HOST")
+        else "localhost",
+        "mysql_user": os.environ.get("MYSQL_USER")
+        if os.environ.get("MYSQL_USER")
+        else "root",
+        "mysql_password": os.environ.get("MYSQL_PASSWORD")
+        if os.environ.get("MYSQL_PASSWORD")
+        else "password",
+        "mysql_database": os.environ.get("MYSQL_DATABASE")
+        if os.environ.get("MYSQL_DATABASE")
+        else "test",
+        "jwt_secret_key": os.environ.get("JWT_SECRET_KEY")
+        if os.environ.get("JWT_SECRET_KEY")
+        else "randome-secret-key",
+        "admin_password": os.environ.get("ADMIN_PASSWORD")
+        if os.environ.get("ADMIN_PASSWORD")
+        else "admin",
+        "azure_document_endpoint": os.environ.get("AZURE_DOCUMENT_ENDPOINT")
+        if os.environ.get("AZURE_DOCUMENT_ENDPOINT")
+        else "https://test.cognitiveservices.azure.com/",
+        "azure_document_key": os.environ.get("AZURE_DOCUMENT_KEY")
+        if os.environ.get("AZURE_DOCUMENT_KEY")
+        else "asdadasdasd",
+        "tavily_api_key": os.environ.get("TAVILY_API_KEY")
+        if os.environ.get("TAVILY_API_KEY")
+        else "tavily_api_key",
+        "web_search_max_results": int(os.environ.get("WEB_SEARCH_MAX_RESULTS"))
+        if os.environ.get("WEB_SEARCH_MAX_RESULTS")
+        else 5,
+        "smtp_server": os.environ.get("SMTP_SERVER")
+        if os.environ.get("SMTP_SERVER")
         else "smtp.example.com",
-        "smtp_port": int(os.environ.get("smtp_port"))
-        if os.environ.get("smtp_port")
+        "smtp_port": int(os.environ.get("SMTP_PORT"))
+        if os.environ.get("SMTP_PORT")
         else 587,
-        "smtp_use_ssl": os.environ.get("smtp_use_ssl") == "true"
-        if os.environ.get("smtp_use_ssl") is not None
+        "smtp_use_ssl": os.environ.get("SMTP_USE_SSL") == "true"
+        if os.environ.get("SMTP_USE_SSL") is not None
         else False,
-        "smtp_username": os.environ.get("smtp_username")
-        if os.environ.get("smtp_username")
+        "smtp_username": os.environ.get("SMTP_USERNAME")
+        if os.environ.get("SMTP_USERNAME")
         else "username",
-        "smtp_password": os.environ.get("smtp_password")
-        if os.environ.get("smtp_password")
+        "smtp_password": os.environ.get("SMTP_PASSWORD")
+        if os.environ.get("SMTP_PASSWORD")
         else "password",
     }
     for key, value in env_vars.items():
