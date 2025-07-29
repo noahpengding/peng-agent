@@ -253,8 +253,8 @@ class CustomOpenAIResponse(BaseChatModel):
                             "role": "user",
                             "content": [
                                 {
-                                    "type": "image_url",
-                                    "image_url": {"url": message.content},
+                                    "type": "input_image",
+                                    "image_url": message.content,
                                 }
                             ],
                         }
