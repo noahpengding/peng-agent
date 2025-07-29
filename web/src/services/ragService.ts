@@ -18,5 +18,5 @@ export const RAGService = {
     } catch (error) {
       throw error;
     }
-  }
+  },
 };

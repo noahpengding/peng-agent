@@ -6,36 +6,38 @@ import axios from 'axios';
 export const apiCall = async (method: string, endpoint: string, data?: any) => {
   // Use the proxy path instead of the full backend URL
   const url = `/proxy${endpoint}`;
-  
+
   // Get token from localStorage for authenticated requests
   const token = localStorage.getItem('access_token');
-  
+
   try {
     const response = await axios({
       method,
       url,
-      data: (method === 'POST' || method === 'PUT' || method === 'PATCH') ? data : undefined,
+      data: method === 'POST' || method === 'PUT' || method === 'PATCH' ? data : undefined,
       params: method === 'GET' ? data : undefined,
       headers: {
         'Content-Type': 'application/json',
         // Add Authorization header if token exists
-        ...(token ? { 
-          'Authorization': `Bearer ${token}`,
-          'Authentication': token
-        } : {})
+        ...(token
+          ? {
+              Authorization: `Bearer ${token}`,
+              Authentication: token,
+            }
+          : {}),
       },
       withCredentials: true, // Equivalent to credentials: 'include'
       timeout: 300000,
     });
-    
+
     // Axios automatically throws errors for non-2xx status codes
     // and automatically parses JSON responses
-    
+
     // For HTTP 204 No Content, return null
     if (response.status === 204) {
       return null;
     }
-    
+
     return response.data;
   } catch (error) {
     // Extract error message from axios error object
@@ -49,12 +51,11 @@ export const apiCall = async (method: string, endpoint: string, data?: any) => {
           window.location.href = '/login';
         }
       }
-      
-      const errorMessage = error.response?.data?.message || 
-                          `API error: ${error.response?.status} ${error.response?.statusText}`;
+
+      const errorMessage = error.response?.data?.message || `API error: ${error.response?.status} ${error.response?.statusText}`;
       throw new Error(errorMessage);
     }
-    
+
     throw error;
   }
 };

@@ -1,0 +1,66 @@
+services:
+  ollama:
+    image: ollama/ollama:latest
+    container_name: ollama
+    hostname: ollama
+    restart: always
+    volumes:
+      - /RAID1/ollama:/root/.ollama
+    environment:
+      - NVIDIA_VISIBLE_DEVICES=all
+      - NVIDIA_DRIVER_CAPABILITIES=compute,utility
+    networks:
+      - peng
+    ports:
+      - 11434:11434
+    runtime: nvidia
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+    labels:
+      - traefik.enable=false
+    profiles: ["prod", "ollama"]
+
+  open-webui:
+    image: ghcr.io/open-webui/open-webui:main
+    container_name: open-webui
+    restart: always
+    depends_on:
+      - ollama
+    environment:
+      - OLLAMA_BASE_URL=http://ollama:11434
+    networks:
+      - peng
+    volumes:
+      - /RAID1/docker/open-webui:/app/backend/data
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.open-webui.rule=Host(`chat.tenawalcott.com`)
+      - traefik.http.routers.open-webui.entrypoints=websecure
+      - traefik.http.routers.open-webui.service=open-webui
+      - traefik.http.services.open-webui.loadbalancer.server.port=8080
+    profiles: ["prod", "ollama"]
+
+  qdrant:
+    image: qdrant/qdrant:latest
+    container_name: qdrant
+    restart: always
+    networks:
+      - peng
+    ports:
+      - 6333:6333
+    volumes:
+      - /RAID1/docker/qdrant:/qdrant/storage
+    labels:
+      - traefik.enable=false
+    profiles: ["prod", "ollama"]
+
+networks:
+  peng:
+    driver: bridge
+    name: peng
+    external: true

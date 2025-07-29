@@ -8,8 +8,7 @@ interface ChatRequest {
   config: {
     operator: string;
     base_model: string;
-    collection_name: string;
-    web_search: boolean;
+    tools_name: string[];
     short_term_memory: string[];
     long_term_memory: string[];
   };
@@ -20,21 +19,17 @@ export const useChatApi = () => {
   const [error, setError] = useState<string | null>(null);
   const [isStreaming, setIsStreaming] = useState(false);
 
-  const sendMessage = async (
-    request: ChatRequest,
-    onChunk: (chunk: string) => void,
-    onComplete?: () => void
-  ): Promise<void> => {
+  const sendMessage = async (request: ChatRequest, onChunk: (chunk: string, type: string) => void, onComplete?: () => void): Promise<void> => {
     setIsLoading(true);
     setIsStreaming(true);
     setError(null);
-    
+
     try {
       await ChatService.sendMessage(
         request,
-        // On each chunk
-        (chunk: string) => {
-          onChunk(chunk);
+        // On each chunk with type
+        (chunk: string, type: string) => {
+          onChunk(chunk, type);
         },
         // On complete
         () => {

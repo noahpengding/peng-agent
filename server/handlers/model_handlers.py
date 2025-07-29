@@ -32,7 +32,13 @@ def _save_local_models(models: list[ModelConfig]):
 
 def get_model():
     mysql = MysqlConnect()
-    return mysql.read_records("model")
+    operator_record = mysql.read_records("operator")
+    operator = [op["operator"] for op in operator_record if isinstance(op, dict)]
+    models = mysql.read_records("model")
+    model_order = {val: i for i, val in enumerate(operator)}
+    models.sort(key=lambda x: model_order.get(x["operator"], float("inf")))
+    mysql.close()
+    return models
 
 
 def _check_new_model(
@@ -161,8 +167,26 @@ def flip_avaliable(model_name: int):
 def avaliable_models(type: str):
     mysql = MysqlConnect()
     if type == "embedding":
-        return mysql.read_record_v2("model", {"type=": "embedding", "isAvailable=": 1})
-    return mysql.read_record_v2("model", {"type<>": "embedding", "isAvailable=": 1})
+        models = mysql.read_record_v2(
+            "model", {"type=": "embedding", "isAvailable=": 1}
+        )
+    else:
+        models = mysql.read_record_v2(
+            "model", {"type<>": "embedding", "isAvailable=": 1}
+        )
+    operator = mysql.read_records("operator")
+    operator_dict = {
+        op["operator"]: i for i, op in enumerate(operator) if isinstance(op, dict)
+    }
+    models.sort(
+        key=lambda x: (
+            operator_dict.get(x["operator"], float("inf")),
+            x["type"],
+            x["model_name"],
+        )
+    )
+    mysql.close()
+    return models
 
 
 def check_multimodal(model_name: str) -> bool:

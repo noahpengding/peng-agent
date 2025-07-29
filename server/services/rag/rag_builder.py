@@ -1,6 +1,6 @@
 from langchain_community.document_loaders import PyPDFLoader
 from langchain.text_splitter import RecursiveCharacterTextSplitter
-from services.qdrant_api import Qdrant
+from services.rag.qdrant_api import Qdrant
 from handlers.model_utils import get_embedding_instance_by_operator
 from config.config import config
 from utils.minio_connection import MinioStorage

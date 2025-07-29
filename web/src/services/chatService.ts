@@ -5,8 +5,7 @@ interface ChatRequest {
   config: {
     operator: string;
     base_model: string;
-    collection_name: string;
-    web_search: boolean;
+    tools_name: string[];
     short_term_memory: string[];
     long_term_memory: string[];
   };
@@ -14,45 +13,45 @@ interface ChatRequest {
 
 export const ChatService = {
   async sendMessage(
-    request: ChatRequest, 
-    onChunk: (chunk: string) => void,
+    request: ChatRequest,
+    onChunk: (chunk: string, type: string) => void,
     onComplete: () => void,
     onError: (error: Error) => void
   ): Promise<void> {
     try {
       const apiUrl = `/proxy/chat`;
-      
+
       // Get auth token from localStorage
       const token = localStorage.getItem('access_token');
-      
+
       const response = await fetch(apiUrl, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
         },
         body: JSON.stringify(request),
         credentials: 'include', // Include cookies
       });
-      
+
       if (!response.ok) {
         const errorText = await response.text();
         throw new Error(`API error (${response.status}): ${errorText}`);
       }
-      
+
       if (!response.body) {
         throw new Error('Response body is null');
       }
 
       const reader = response.body.getReader();
       const decoder = new TextDecoder();
-      
+
       let buffer = '';
       let isCompleted = false; // Flag to prevent duplicate completion calls
-      
+
       while (true) {
         const { done, value } = await reader.read();
-        
+
         if (done) {
           if (!isCompleted) {
             isCompleted = true;
@@ -60,19 +59,20 @@ export const ChatService = {
           }
           break;
         }
-        
+
         buffer += decoder.decode(value, { stream: true });
-        
+
         // Process any complete JSON lines in the buffer
         const lines = buffer.split('\n');
         buffer = lines.pop() || ''; // Keep the last incomplete line in the buffer
-        
+
         for (const line of lines) {
           if (line.trim()) {
             try {
               const data = JSON.parse(line);
               if (!data.done) {
-                onChunk(data.chunk);
+                // pass chunk and its type
+                onChunk(data.chunk, data.type);
               } else {
                 if (!isCompleted) {
                   isCompleted = true;
@@ -93,5 +93,5 @@ export const ChatService = {
         onError(new Error(String(error)));
       }
     }
-  }
+  },
 };

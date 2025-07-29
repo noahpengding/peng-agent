@@ -12,11 +12,8 @@ from typing import AsyncIterator
 
 
 def _generate_prompt_params(message: str, image: str, chat_config: ChatConfig):
-    """Generate prompt parameters for both streaming and completion handlers."""
     prompt = prompt_generator.prompt_template(
         model_name=chat_config.base_model,
-        has_document=chat_config.collection_name != "default",
-        has_websearch=chat_config.web_search,
     )
     params = prompt_generator.base_prompt_generate(
         message=message,
@@ -28,17 +25,6 @@ def _generate_prompt_params(message: str, image: str, chat_config: ChatConfig):
         params=params,
         image=image,
     )
-    if chat_config.web_search:
-        params = prompt_generator.add_websearch_to_prompt(
-            params=params,
-            query=message,
-        )
-    if chat_config.collection_name != "default":
-        params = prompt_generator.add_document_to_prompt(
-            params=params,
-            query=message,
-            collection_name=chat_config.collection_name,
-        )
     return prompt, params
 
 
@@ -49,6 +35,8 @@ async def chat_handler(
         f"Streaming chat for User: {user_name}, Message: {message}, Image: {image}, Config: {chat_config}",
         "debug",
     )
+
+    prompt, params = _generate_prompt_params(message, image, chat_config)
 
     base_model_ins = get_model_instance_by_operator(
         chat_config.operator,
@@ -61,23 +49,68 @@ async def chat_handler(
         )
         return
 
-    prompt, params = _generate_prompt_params(message, image, chat_config)
+    if chat_config.tools_name != []:
+        from services.tools.tools_routers import tools_routers
+        from langgraph.prebuilt import create_react_agent
 
-    full_response = ""
-    async for chunk in base_model_ins.astream(prompt.invoke(params)):
-        if chunk:
-            chunk = response_formatter_main(chat_config.operator, chunk.content)
-            full_response += chunk
-            yield json.dumps({"chunk": chunk, "done": False}) + "\n"
+        tools = tools_routers(chat_config.tools_name)
+        llm_with_tools = base_model_ins.bind_tools(tools)
+        agent = create_react_agent(
+            model=llm_with_tools,
+            tools=tools,
+        )
+        full_response = ""
+        async for chunk in agent.astream(
+            prompt.invoke(params),
+            {"recursion_limit": config.recursion_limit},
+            stream_mode="updates",
+        ):
+            if chunk:
+                chunk_type = "unknown"
+                if "agent" in chunk and "messages" in chunk["agent"]:
+                    chunk_content = chunk["agent"]["messages"][0].content
+                    chunk_type = "agent"
+                elif "tools" in chunk and "messages" in chunk["tools"]:
+                    chunk_content = chunk["tools"]["messages"][0].content
+                    chunk_type = "tools"
+                else:
+                    chunk_content = ""
+                    continue
+                chunk_content = response_formatter_main(
+                    chat_config.operator, chunk_content
+                )
+                yield (
+                    json.dumps(
+                        {"chunk": chunk_content, "type": chunk_type, "done": False}
+                    )
+                    + "\n"
+                )
+                full_response += chunk_content
+                _save_chat(
+                    user_name,
+                    chunk_type,
+                    chat_config.base_model,
+                    message,
+                    chunk_content,
+                )
+    else:
+        full_response = ""
+        async for chunk in base_model_ins.astream(prompt.invoke(params)):
+            if chunk:
+                chunk = response_formatter_main(chat_config.operator, chunk.content)
+                full_response += chunk
+                yield (
+                    json.dumps({"chunk": chunk, "type": "assistant", "done": False})
+                    + "\n"
+                )
+        _save_chat(
+            user_name,
+            "assistant",
+            chat_config.base_model,
+            message,
+            full_response,
+        )
 
-    _save_chat(
-        user_name,
-        message,
-        full_response,
-        chat_config.base_model,
-        config.embedding_model,
-        chat_config.collection_name,
-    )
     yield json.dumps({"chunk": "", "done": True}) + "\n"
 
 
@@ -97,6 +130,9 @@ async def chat_completions_handler(
         f"Chat Completion for User: {user_name}, Message: {message}, Image: {image}, Config: {chat_config}",
         "debug",
     )
+
+    prompt, params = _generate_prompt_params(message, image, chat_config)
+
     base_model_ins = get_model_instance_by_operator(
         chat_config.operator,
         chat_config.base_model,
@@ -104,19 +140,44 @@ async def chat_completions_handler(
     if base_model_ins is None:
         return "Error: Model instance not found."
 
-    prompt, params = _generate_prompt_params(message, image, chat_config)
+    if chat_config.tools_name != []:
+        from services.tools.tools_routers import tools_routers
+        from langgraph.prebuilt import create_react_agent
 
-    full_response = await base_model_ins.ainvoke(prompt.invoke(params))
-    full_response = response_formatter_main(chat_config.operator, full_response.content)
-    _save_chat(
-        user_name,
-        message,
-        full_response,
-        chat_config.base_model,
-        config.embedding_model,
-        chat_config.collection_name,
-    )
-
+        tools = tools_routers(chat_config.tools_name)
+        llm_with_tools = base_model_ins.bind_tools(tools)
+        agent = create_react_agent(
+            model=llm_with_tools,
+            tools=tools,
+        )
+        response = await agent.ainvoke(prompt.invoke(params))
+        full_response = []
+        for response_message in response["messages"]:
+            if response_message.content:
+                formatted_response = response_formatter_main(
+                    chat_config.operator, response_message.content
+                )
+                full_response.append(f"{response_message.type}: {formatted_response}")
+                _save_chat(
+                    user_name,
+                    response_message.type,
+                    chat_config.base_model,
+                    message,
+                    formatted_response,
+                )
+        full_response = "||\n".join(full_response)
+    else:
+        full_response = await base_model_ins.ainvoke(prompt.invoke(params))
+        full_response = response_formatter_main(
+            chat_config.operator, full_response.content
+        )
+        _save_chat(
+            user_name,
+            "assistant",
+            chat_config.base_model,
+            message,
+            full_response,
+        )
     return full_response
 
 
@@ -159,11 +220,10 @@ def create_batch_response(
     for message, response in zip(messages, reponses):
         _save_chat(
             user_name,
+            "assistant",
+            chat_config.base_model,
             message,
             response,
-            chat_config.base_model,
-            config.embedding_model,
-            chat_config.collection_name,
         )
     return JSONResponse(
         content=reponses,
@@ -172,23 +232,28 @@ def create_batch_response(
 
 
 def _save_chat(
-    user_name, message, response, base_model, embedding_model, collection_name
+    user_name,
+    chat_type,
+    base_model,
+    human_input,
+    ai_response,
 ):
+    if ai_response is None or ai_response.strip() == "":
+        return
     mysql = MysqlConnect()
     try:
         mysql.create_record(
             "chat",
             {
                 "user_name": user_name,
+                "type": chat_type,
                 "base_model": base_model,
-                "embedding_model": embedding_model,
-                "human_input": message[: config.input_max_length]
-                if len(message) > config.input_max_length
-                else message,
-                "ai_response": response[: config.output_max_length]
-                if len(response) > config.output_max_length
-                else response,
-                "knowledge_base": collection_name,
+                "human_input": human_input[: config.input_max_length]
+                if len(human_input) > config.input_max_length
+                else human_input,
+                "ai_response": ai_response[: config.output_max_length]
+                if len(ai_response) > config.output_max_length
+                else ai_response,
                 "created_at": datetime.now(),
                 "expire_at": datetime.now() + timedelta(days=7),
             },

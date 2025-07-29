@@ -1,5 +1,5 @@
 from utils.mysql_connect import MysqlConnect
-from services.rag_builder import RagBuilder
+from services.rag.rag_builder import RagBuilder
 from utils.log import output_log
 from utils.minio_connection import MinioStorage
 

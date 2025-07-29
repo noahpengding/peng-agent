@@ -9,5 +9,5 @@ export const MemoryService = {
     } catch (error) {
       throw error;
     }
-  }
+  },
 };

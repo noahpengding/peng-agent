@@ -57,6 +57,12 @@ class Qdrant:
         self._remove_document(local_path)
         self.qdrant_vector.add_texts(texts)
 
+    def get_all_collections(self):
+        collections = self.client.get_collections()
+        print(collections.collections)
+        collection_names = [collection.name for collection in collections.collections]
+        return collection_names
+
     def _remove_document(self, source):
         output_log(f"Removing document with source {source}...", "info")
         point_filter = models.Filter(

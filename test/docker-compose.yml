@@ -1,0 +1,22 @@
+services:
+  qdrant:
+    image: qdrant/qdrant:latest
+    container_name: qdrant
+    restart: always
+    ports:
+      - "6333:6333"
+    volumes:
+      - ./data/qdrant:/qdrant/storage
+
+  peng-agent-mysql:
+    image: mysql:lts
+    container_name: peng-agent-mysql
+    hostname: peng-agent
+    # restart: always
+    ports:
+      - "3306:3306"
+    env_file:
+      - ./.env
+    # volumes:
+    #   - ./data/mysql:/var/lib/mysql
+
