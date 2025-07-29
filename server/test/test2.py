@@ -1,14 +1,11 @@
 import os
 import sys
 from dotenv import load_dotenv
-from services.chat_models.openai_response import CustomOpenAIResponse
 from services.tools.search_tools import tavily_search_tool
 
 # from services.rag_tools import rag_usage_tool
 # from services.web_page_tools import requests_tools
 # from services.smtp_tools import email_send_tool
-from langgraph.prebuilt import create_react_agent
-from langchain_core.messages import HumanMessage
 
 # Load environment variables from .env file
 dotenv_path = os.path.join(
@@ -22,7 +19,7 @@ sys.path.append(os.path.dirname(SCRIPT_DIR + "../"))
 
 tools = [tavily_search_tool]
 
-'''
+"""
 llm_with_tools = llm.bind_tools(tools)
 
 agent = create_react_agent(
@@ -46,4 +43,4 @@ for chunk in agent.stream(input_prompt):
             print(chunk.agent.messages[0].content, end="", flush=True)
         elif hasattr(chunk, "tools"):
             print(chunk.tools[0].result.content, end="", flush=True)
-            '''
+            """
