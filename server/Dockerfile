@@ -11,6 +11,8 @@ RUN pip install --no-cache-dir playwright
 
 RUN playwright install chromium
 
+RUN playwright install-deps
+
 RUN pip uninstall -y playwright
 
 RUN pip install --no-cache-dir uv
