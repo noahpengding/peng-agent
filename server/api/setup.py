@@ -81,16 +81,18 @@ def set_up():
             "name": "VARCHAR(64)",
             "type": "VARCHAR(64)",
             "url": "TEXT",
-        }
+        },
     )
     mysql.close()
-    
+
     phoenix_setup()
+
 
 def phoenix_setup():
     from phoenix.otel import register
-    tracer_provider = register(
+
+    register(
         project_name=config.phoenix_project,
         endpoint=config.phoenix_endpoint,
-        auto_instrument=True
+        auto_instrument=True,
     )

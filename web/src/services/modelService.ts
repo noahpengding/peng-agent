@@ -45,5 +45,5 @@ export const ModelService = {
     } catch (error) {
       throw error;
     }
-  }
+  },
 };

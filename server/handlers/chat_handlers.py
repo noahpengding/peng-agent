@@ -48,10 +48,11 @@ async def chat_handler(
             + "\n"
         )
         return
-    
+
     if chat_config.tools_name != []:
         from services.tools.tools_routers import tools_routers
         from langgraph.prebuilt import create_react_agent
+
         tools = tools_routers(chat_config.tools_name)
         llm_with_tools = base_model_ins.bind_tools(tools)
         agent = create_react_agent(
@@ -62,7 +63,7 @@ async def chat_handler(
         async for chunk in agent.astream(
             prompt.invoke(params),
             {"recursion_limit": config.recursion_limit},
-            stream_mode="updates"
+            stream_mode="updates",
         ):
             if chunk:
                 chunk_type = "unknown"
@@ -75,8 +76,15 @@ async def chat_handler(
                 else:
                     chunk_content = ""
                     continue
-                chunk_content = response_formatter_main(chat_config.operator, chunk_content)
-                yield json.dumps({"chunk": chunk_content, "type": chunk_type, "done": False}) + "\n"
+                chunk_content = response_formatter_main(
+                    chat_config.operator, chunk_content
+                )
+                yield (
+                    json.dumps(
+                        {"chunk": chunk_content, "type": chunk_type, "done": False}
+                    )
+                    + "\n"
+                )
                 full_response += chunk_content
                 _save_chat(
                     user_name,
@@ -91,7 +99,10 @@ async def chat_handler(
             if chunk:
                 chunk = response_formatter_main(chat_config.operator, chunk.content)
                 full_response += chunk
-                yield json.dumps({"chunk": chunk, "type": "assisstent", "done": False}) + "\n"
+                yield (
+                    json.dumps({"chunk": chunk, "type": "assisstent", "done": False})
+                    + "\n"
+                )
         _save_chat(
             user_name,
             "assistant",
@@ -100,7 +111,6 @@ async def chat_handler(
             full_response,
         )
 
-    
     yield json.dumps({"chunk": "", "done": True}) + "\n"
 
 
@@ -129,10 +139,11 @@ async def chat_completions_handler(
     )
     if base_model_ins is None:
         return "Error: Model instance not found."
-    
+
     if chat_config.tools_name != []:
         from services.tools_routers import tools_routers
         from langgraph.prebuilt import create_react_agent
+
         tools = tools_routers(chat_config.tools_name)
         llm_with_tools = base_model_ins.bind_tools(tools)
         agent = create_react_agent(
@@ -143,7 +154,9 @@ async def chat_completions_handler(
         full_response = []
         for response_message in response["messages"]:
             if response_message.content:
-                formatted_response = response_formatter_main(chat_config.operator, response_message.content)
+                formatted_response = response_formatter_main(
+                    chat_config.operator, response_message.content
+                )
                 full_response.append(f"{response_message.type}: {formatted_response}")
                 _save_chat(
                     user_name,
@@ -155,7 +168,9 @@ async def chat_completions_handler(
         full_response = "||\n".join(full_response)
     else:
         full_response = await base_model_ins.ainvoke(prompt.invoke(params))
-        full_response = response_formatter_main(chat_config.operator, full_response.content)
+        full_response = response_formatter_main(
+            chat_config.operator, full_response.content
+        )
         _save_chat(
             user_name,
             "assistant",
@@ -217,7 +232,11 @@ def create_batch_response(
 
 
 def _save_chat(
-    user_name, chat_type, base_model, human_input, ai_response,
+    user_name,
+    chat_type,
+    base_model,
+    human_input,
+    ai_response,
 ):
     if ai_response is None or ai_response.strip() == "":
         return

@@ -35,34 +35,34 @@ const ChatbotUI = () => {
     // folded indicates tool messages should be initially collapsed
     folded?: boolean;
   }
-  
+
   const [messages, setMessages] = useState<Message[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [image, setImage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  
+
   // Create ref for file input
   const fileInputRef = useRef<HTMLInputElement>(null);
   // Ref for textarea to focus after certain actions
   const textareaRef = useRef<HTMLTextAreaElement>(null);
-  
+
   // Initialize the chat API hook
   const { sendMessage, error: apiError } = useChatApi();
   // Initialize the tool API hook
   const { getAllTools, updateTools, isLoading: toolsLoading, error: toolsError } = useToolApi();
   // Get authentication context
   const { user } = useAuth();
-  
+
   // State for available base models
   const [availableBaseModels, setAvailableBaseModels] = useState<ModelInfo[]>([]);
   // Loading states for model lists
   const [baseModelsLoading, setBaseModelsLoading] = useState(false);
-  
+
   // Tool selection states
   const [availableTools, setAvailableTools] = useState<Tool[]>([]);
   const [selectedToolNames, setSelectedToolNames] = useState<string[]>([]);
   const [isToolPopupOpen, setIsToolPopupOpen] = useState(false);
-  
+
   // Map UI selections to backend config
   useEffect(() => {
     if (apiError) {
@@ -83,8 +83,8 @@ const ChatbotUI = () => {
       // Fetch base models
       setBaseModelsLoading(true);
       try {
-        const data = await apiCall('POST', '/avaliable_model', { type: "base" });
-        
+        const data = await apiCall('POST', '/avaliable_model', { type: 'base' });
+
         if (Array.isArray(data) && data.length > 0) {
           setAvailableBaseModels(data);
           // Set default to first available model's model_name
@@ -94,22 +94,22 @@ const ChatbotUI = () => {
         setError(`Failed to fetch base models: ${error instanceof Error ? error.message : String(error)}`);
         // Fallback to default models as simple strings to maintain compatibility
         setAvailableBaseModels([
-          { id: "1", operator: "openai", type: "base", model_name: "gpt-4", isAvailable: true },
-          { id: "2", operator: "openai", type: "base", model_name: "gpt-3.5-turbo", isAvailable: true },
-          { id: "3", operator: "anthropic", type: "base", model_name: "claude-3-opus", isAvailable: true },
-          { id: "4", operator: "anthropic", type: "base", model_name: "claude-3-sonnet", isAvailable: true }
+          { id: '1', operator: 'openai', type: 'base', model_name: 'gpt-4', isAvailable: true },
+          { id: '2', operator: 'openai', type: 'base', model_name: 'gpt-3.5-turbo', isAvailable: true },
+          { id: '3', operator: 'anthropic', type: 'base', model_name: 'claude-3-opus', isAvailable: true },
+          { id: '4', operator: 'anthropic', type: 'base', model_name: 'claude-3-sonnet', isAvailable: true },
         ]);
       } finally {
         setBaseModelsLoading(false);
       }
     };
-    
+
     fetchAvailableModels();
   }, []);
 
   // State for backend config
   const [username, setUsername] = useState('default_user');
-  
+
   // Update username from auth context when available
   useEffect(() => {
     if (user) {
@@ -132,9 +132,9 @@ const ChatbotUI = () => {
         const formattedMemories: string[] = [];
         // Prepare initial messages to display in chat
         const memoryMessages: Message[] = [];
-        parsedMemories.forEach(memory => {
-          formattedMemories.push("human: " + memory.human_input);
-          formattedMemories.push("assistant: " + memory.ai_response);
+        parsedMemories.forEach((memory) => {
+          formattedMemories.push('human: ' + memory.human_input);
+          formattedMemories.push('assistant: ' + memory.ai_response);
           // Add as chat messages
           memoryMessages.push({ role: 'user', content: memory.human_input });
           memoryMessages.push({ role: 'assistant', content: memory.ai_response });
@@ -153,12 +153,10 @@ const ChatbotUI = () => {
   // Function to determine operator based on model name
   const getOperatorForModel = (modelName: string): string => {
     // Find the model in available base models
-    const matchingModel = availableBaseModels.find(
-      model => model.model_name === modelName
-    );
-    
+    const matchingModel = availableBaseModels.find((model) => model.model_name === modelName);
+
     // Return the operator if found, or default to "openai"
-    return matchingModel?.operator || "openai";
+    return matchingModel?.operator || 'openai';
   };
 
   // Tool management functions
@@ -182,9 +180,9 @@ const ChatbotUI = () => {
 
   const handleToolSelection = (toolName: string, isSelected: boolean) => {
     if (isSelected) {
-      setSelectedToolNames(prev => [...prev, toolName]);
+      setSelectedToolNames((prev) => [...prev, toolName]);
     } else {
-      setSelectedToolNames(prev => prev.filter(name => name !== toolName));
+      setSelectedToolNames((prev) => prev.filter((name) => name !== toolName));
     }
   };
 
@@ -256,17 +254,17 @@ const ChatbotUI = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!input.trim() && !image) return;
-    
+
     // Add user message to chat
     const newMessages = [...messages, { role: 'user', content: input }];
     setMessages(newMessages);
     setIsLoading(true);
     setError(null);
-    
+
     // Add an empty assistant message that will be updated with streaming content
     const assistantMessageIndex = newMessages.length;
     setMessages([...newMessages, { role: 'assistant', content: '' }]);
-    
+
     try {
       // Configure the API request - only include fields expected by backend
       const config = {
@@ -282,9 +280,9 @@ const ChatbotUI = () => {
         user_name: username,
         message: input,
         image: image || undefined,
-        config: config
+        config: config,
       };
-      
+
       // Keep track of the full assistant response for memory
       let fullResponse = '';
       // Stream the message to get chunks (type-aware)
@@ -294,18 +292,17 @@ const ChatbotUI = () => {
         (chunk: string, type: string) => {
           if (type === 'tools') {
             // Add individual tool message chunk
-            setMessages(current => [
-              ...current,
-              { role: 'assistant', content: chunk, type: 'tools', folded: false }
-            ]);
+            setMessages((current) => [...current, { role: 'assistant', content: chunk, type: 'tools', folded: false }]);
           } else {
             // Accumulate assistant chunks
             fullResponse += chunk;
-            setMessages(currentMessages => {
+            setMessages((currentMessages) => {
               const updated = [...currentMessages];
               if (updated[assistantMessageIndex]) {
                 updated[assistantMessageIndex] = {
-                  role: 'assistant', content: fullResponse, type: 'assistant'
+                  role: 'assistant',
+                  content: fullResponse,
+                  type: 'assistant',
                 };
               }
               return updated;
@@ -315,13 +312,12 @@ const ChatbotUI = () => {
         // Handle completion
         () => {
           // Fold all tool messages
-          setMessages(current => current.map(m => m.type === 'tools' ? { ...m, folded: true } : m));
+          setMessages((current) => current.map((m) => (m.type === 'tools' ? { ...m, folded: true } : m)));
           // Add the full response to short-term memory
-          setShortTermMemory(prev => [...prev, 'human: ' + input, 'assistant: ' + fullResponse]);
+          setShortTermMemory((prev) => [...prev, 'human: ' + input, 'assistant: ' + fullResponse]);
           setIsLoading(false);
         }
       );
-      
     } catch (err) {
       // Error is already being handled in the next blocks
       if (err instanceof Error) {
@@ -329,19 +325,19 @@ const ChatbotUI = () => {
       } else {
         setError('An unknown error occurred.');
       }
-      
+
       // Update the assistant message to show an error
-      setMessages(currentMessages => {
+      setMessages((currentMessages) => {
         const updatedMessages = [...currentMessages];
         if (updatedMessages[assistantMessageIndex]) {
           updatedMessages[assistantMessageIndex] = {
             role: 'assistant',
-            content: 'Sorry, I encountered an error.'
+            content: 'Sorry, I encountered an error.',
           };
         }
         return updatedMessages;
       });
-      
+
       // Ensure loading state is cleared
       setIsLoading(false);
     } finally {
@@ -363,13 +359,8 @@ const ChatbotUI = () => {
     return (
       <div className="form-group">
         <label className="form-label">Base Model</label>
-        <select 
-          className="form-select" 
-          value={baseModel}
-          onChange={(e) => setbaseModel(e.target.value)}
-          disabled={baseModelsLoading}
-        >
-          {availableBaseModels.map(model => (
+        <select className="form-select" value={baseModel} onChange={(e) => setbaseModel(e.target.value)} disabled={baseModelsLoading}>
+          {availableBaseModels.map((model) => (
             <option key={model.id || model.model_name} value={model.model_name}>
               {model.model_name}
             </option>
@@ -379,7 +370,7 @@ const ChatbotUI = () => {
       </div>
     );
   };
-  
+
   return (
     <div className="chat-container">
       {/* Header */}
@@ -388,39 +379,52 @@ const ChatbotUI = () => {
           <h1 className="header-title">Peng's Agent</h1>
           <nav className="navigation">
             <ul className="nav-links">
-              <li><a href="/memory">Memory</a></li>
-              <li><a href="/model">Model</a></li>
-              <li><a href="/rag">RAG</a></li>
-              <li><a href="https://smith.langchain.com/o/a2c79940-6495-4c24-ab6b-10d0bb8534ee/projects/p/01304a5e-b6f3-4662-8b3e-0befd8886a5a?timeModel=%7B%22duration%22%3A%227d%22%7D" className="external-link">LangSmith</a></li>
-              <li><a href="https://github.com/Noahdingpeng/peng-agent" className="external-link">GitHub</a></li>
-              <li><a href="https://git.tenawalcott.com/peng-bot/peng-agent" className="external-link">GitLab</a></li>
+              <li>
+                <a href="/memory">Memory</a>
+              </li>
+              <li>
+                <a href="/model">Model</a>
+              </li>
+              <li>
+                <a href="/rag">RAG</a>
+              </li>
+              <li>
+                <a
+                  href="https://smith.langchain.com/o/a2c79940-6495-4c24-ab6b-10d0bb8534ee/projects/p/01304a5e-b6f3-4662-8b3e-0befd8886a5a?timeModel=%7B%22duration%22%3A%227d%22%7D"
+                  className="external-link"
+                >
+                  LangSmith
+                </a>
+              </li>
+              <li>
+                <a href="https://github.com/Noahdingpeng/peng-agent" className="external-link">
+                  GitHub
+                </a>
+              </li>
+              <li>
+                <a href="https://git.tenawalcott.com/peng-bot/peng-agent" className="external-link">
+                  GitLab
+                </a>
+              </li>
             </ul>
           </nav>
         </div>
-        {error && (
-          <div className="error-message">
-            {error}
-          </div>
-        )}
+        {error && <div className="error-message">{error}</div>}
       </header>
-      
+
       <div className="main-content">
         {/* Sidebar for Controls */}
         <div className="sidebar">
           <h2 className="sidebar-title">Configuration</h2>
-          
+
           {/* Model Selection - replaced with dynamic version */}
           {renderBaseModelSelection()}
-          
+
           {/* Tool Selection */}
           <div className="form-group">
             <div className="tool-section-header">
               <label className="form-label">Tools</label>
-              <button 
-                className="tool-add-button"
-                onClick={openToolPopup}
-                title="Add Tools"
-              >
+              <button className="tool-add-button" onClick={openToolPopup} title="Add Tools">
                 +
               </button>
             </div>
@@ -429,12 +433,7 @@ const ChatbotUI = () => {
                 {selectedToolNames.map((toolName, index) => (
                   <div key={index} className="selected-tool-item">
                     <span className="selected-tool-name">{toolName}</span>
-                    <button
-                      type="button"
-                      className="tool-remove-button"
-                      onClick={() => handleToolSelection(toolName, false)}
-                      title="Remove tool"
-                    >
+                    <button type="button" className="tool-remove-button" onClick={() => handleToolSelection(toolName, false)} title="Remove tool">
                       ×
                     </button>
                   </div>
@@ -444,23 +443,16 @@ const ChatbotUI = () => {
               <div className="no-tools-selected">No tools selected</div>
             )}
           </div>
-          
+
           {/* Memory Selection Link */}
           <div className="form-group">
-            <a 
-              href="/memory" 
-              className="memory-link"
-            >
+            <a href="/memory" className="memory-link">
               Memory Selection
             </a>
-            {shortTermMemory.length > 0 && (
-              <div className="selected-memories-count">
-                {shortTermMemory.length} short-term memories used
-              </div>
-            )}
+            {shortTermMemory.length > 0 && <div className="selected-memories-count">{shortTermMemory.length} short-term memories used</div>}
           </div>
         </div>
-        
+
         {/* Main Chat Area */}
         <div className="chat-area">
           {/* Messages Display */}
@@ -472,17 +464,10 @@ const ChatbotUI = () => {
             ) : (
               <div className="messages-list">
                 {messages.map((msg, index) => (
-                  <div 
-                    key={index} 
-                    className={`message ${msg.role === 'user' ? 'user-message' : 'assistant-message'}`}
-                  >
+                  <div key={index} className={`message ${msg.role === 'user' ? 'user-message' : 'assistant-message'}`}>
                     {msg.role === 'user' && msg.image && (
                       <div className="message-image-container">
-                        <img 
-                          src={msg.image} 
-                          alt="User uploaded" 
-                          className="message-image"
-                        />
+                        <img src={msg.image} alt="User uploaded" className="message-image" />
                       </div>
                     )}
                     {msg.type === 'tools' ? (
@@ -493,22 +478,17 @@ const ChatbotUI = () => {
                     ) : msg.role === 'assistant' ? (
                       <div className="message-text">
                         <div className="markdown-content">
-                          <ReactMarkdown 
+                          <ReactMarkdown
                             remarkPlugins={[remarkGfm, remarkMath]}
                             rehypePlugins={[rehypeKatex]}
                             components={{
-                              p: ({node, ...props}) => <p className="tight-paragraph" {...props} />,    
-                              li: ({node, ...props}) => <li className="tight-list-item" {...props} />,  
+                              p: ({ node, ...props }) => <p className="tight-paragraph" {...props} />,
+                              li: ({ node, ...props }) => <li className="tight-list-item" {...props} />,
                               code: (props: any) => {
                                 const { inline, className, children, ...rest } = props;
                                 const match = /language-(\w+)/.exec(className || '');
                                 return !inline && match ? (
-                                  <SyntaxHighlighter
-                                    style={vscDarkPlus as any}
-                                    language={match[1]}
-                                    PreTag="div"
-                                    {...rest}
-                                  >
+                                  <SyntaxHighlighter style={vscDarkPlus as any} language={match[1]} PreTag="div" {...rest}>
                                     {String(children).replace(/\n$/, '')}
                                   </SyntaxHighlighter>
                                 ) : (
@@ -516,10 +496,10 @@ const ChatbotUI = () => {
                                     {children}
                                   </code>
                                 );
-                              }
+                              },
                             }}
                           >
-                            {msg.content || (isLoading && index === messages.length - 1 ? "AI is thinking..." : "")}
+                            {msg.content || (isLoading && index === messages.length - 1 ? 'AI is thinking...' : '')}
                           </ReactMarkdown>
                         </div>
                       </div>
@@ -531,23 +511,15 @@ const ChatbotUI = () => {
               </div>
             )}
           </div>
-          
+
           {/* Input Area */}
           <div className="input-container">
             <form onSubmit={handleSubmit} className="input-form">
               {/* Display uploaded image preview if there is one */}
               {image && (
                 <div className="image-preview-container">
-                  <img 
-                    src={image} 
-                    alt="Upload preview" 
-                    className="image-preview"
-                  />
-                  <button 
-                    type="button"
-                    className="clear-image-button"
-                    onClick={handleClearImage}
-                  >
+                  <img src={image} alt="Upload preview" className="image-preview" />
+                  <button type="button" className="clear-image-button" onClick={handleClearImage}>
                     &times;
                   </button>
                 </div>
@@ -563,31 +535,40 @@ const ChatbotUI = () => {
                   onKeyDown={handleKeyDown}
                   onPaste={handlePaste}
                 />
-                
+
                 <div className="input-actions">
-                  <input
-                    ref={fileInputRef}
-                    type="file"
-                    accept="image/*"
-                    className="file-input"
-                    onChange={handleImageUpload}
-                    id="image-upload"
-                  />
+                  <input ref={fileInputRef} type="file" accept="image/*" className="file-input" onChange={handleImageUpload} id="image-upload" />
                   <label htmlFor="image-upload" className="upload-button">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
-                      <circle cx="8.5" cy="8.5" r="1.5"/>
-                      <polyline points="21 15 16 10 5 21"/>
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      width="22"
+                      height="22"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    >
+                      <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
+                      <circle cx="8.5" cy="8.5" r="1.5" />
+                      <polyline points="21 15 16 10 5 21" />
                     </svg>
                   </label>
-                  <button
-                    type="submit"
-                    className="send-button"
-                    disabled={isLoading || (!input.trim() && !image)}
-                  >
-                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <line x1="22" y1="2" x2="11" y2="13"/>
-                      <polygon points="22 2 15 22 11 13 2 9 22 2"/>
+                  <button type="submit" className="send-button" disabled={isLoading || (!input.trim() && !image)}>
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      width="24"
+                      height="24"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    >
+                      <line x1="22" y1="2" x2="11" y2="13" />
+                      <polygon points="22 2 15 22 11 13 2 9 22 2" />
                     </svg>
                   </button>
                 </div>
@@ -596,7 +577,7 @@ const ChatbotUI = () => {
           </div>
         </div>
       </div>
-      
+
       {/* Tool Selection Popup */}
       {isToolPopupOpen && (
         <div className="popup-overlay" onClick={closeToolPopup}>
@@ -604,11 +585,7 @@ const ChatbotUI = () => {
             <div className="popup-header">
               <h3>Select Tools</h3>
               <div className="popup-actions">
-                <button 
-                  className="update-button"
-                  onClick={handleUpdateTools}
-                  disabled={toolsLoading}
-                >
+                <button className="update-button" onClick={handleUpdateTools} disabled={toolsLoading}>
                   {toolsLoading ? 'Updating...' : 'Update'}
                 </button>
                 <button className="close-button" onClick={closeToolPopup}>

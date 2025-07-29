@@ -48,7 +48,9 @@ try:
         "log_level": os.environ.get("LOG_LEVEL") or "INFO",
         "host": os.environ.get("HOST") or "0.0.0.0",
         "port": int(os.environ.get("PORT")) if os.environ.get("PORT") else 8000,
-        "recursion_limit": int(os.environ.get("RECURSION_LIMIT")) if os.environ.get("RECURSION_LIMIT") else 100,
+        "recursion_limit": int(os.environ.get("RECURSION_LIMIT"))
+        if os.environ.get("RECURSION_LIMIT")
+        else 100,
         "s3_url": os.environ.get("S3_URL")
         if os.environ.get("S3_URL")
         else "http://localhost:9000",

@@ -13,24 +13,24 @@ export interface Memory {
 }
 
 export const useMemoryApi = () => {
-    const [isLoading, setIsLoading] = useState(false);
-    const [error, setError] = useState<string | null>(null);
-    
-    const fetchMemories = async (username: string): Promise<Memory[]> => {
-        setIsLoading(true);
-        setError(null);
-        
-        try {
-            const data = await MemoryService.fetchMemories(username);
-            return data;
-        } catch (err) {
-            const errorMessage = err instanceof Error ? err.message : 'Unknown error occurred';
-            setError(errorMessage);
-            throw err;
-        } finally {
-            setIsLoading(false);
-        }
-    };
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-    return { fetchMemories, isLoading, error };
-}
+  const fetchMemories = async (username: string): Promise<Memory[]> => {
+    setIsLoading(true);
+    setError(null);
+
+    try {
+      const data = await MemoryService.fetchMemories(username);
+      return data;
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Unknown error occurred';
+      setError(errorMessage);
+      throw err;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  return { fetchMemories, isLoading, error };
+};

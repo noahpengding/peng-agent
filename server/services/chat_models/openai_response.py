@@ -24,7 +24,6 @@ from langchain_core.tools import BaseTool
 from langchain_core.runnables import Runnable
 from langchain_core.language_models import LanguageModelInput
 
-import re
 import time
 
 
@@ -63,20 +62,22 @@ class CustomOpenAIResponse(BaseChatModel):
             "input": prompt_translated,
             "stream": False,
         }
-        tools = kwargs.get('tools')
-        tool_choice = kwargs.get('tool_choice')
+        tools = kwargs.get("tools")
+        tool_choice = kwargs.get("tool_choice")
         if tools:
             request_params["tools"] = []
             for tool in tools:
                 parameters = tool.get("function", {}).get("parameters", {})
-                parameters['additionalProperties'] = False
-                request_params["tools"].append({
-                    "type": "function",
-                    "name": tool.get("function", {}).get("name"),
-                    "description": tool.get("function", {}).get("description"),
-                    "parameters": parameters,
-                    "strict": False
-                })
+                parameters["additionalProperties"] = False
+                request_params["tools"].append(
+                    {
+                        "type": "function",
+                        "name": tool.get("function", {}).get("name"),
+                        "description": tool.get("function", {}).get("description"),
+                        "parameters": parameters,
+                        "strict": False,
+                    }
+                )
         if tool_choice:
             request_params["tool_choice"] = tool_choice
         responses = self.client.responses.create(**request_params)
@@ -128,23 +129,25 @@ class CustomOpenAIResponse(BaseChatModel):
             "input": prompt_translated,
             "stream": True,
         }
-        
-        tools = kwargs.get('tools')
-        tool_choice = kwargs.get('tool_choice')
-        tools = kwargs.get('tools')
-        tool_choice = kwargs.get('tool_choice')
+
+        tools = kwargs.get("tools")
+        tool_choice = kwargs.get("tool_choice")
+        tools = kwargs.get("tools")
+        tool_choice = kwargs.get("tool_choice")
         if tools:
             request_params["tools"] = []
             for tool in tools:
                 parameters = tool.get("function", {}).get("parameters", {})
-                parameters['additionalProperties'] = False
-                request_params["tools"].append({
-                    "type": "function",
-                    "name": tool.get("function", {}).get("name"),
-                    "description": tool.get("function", {}).get("description"),
-                    "parameters": parameters,
-                    "strict": False
-                })
+                parameters["additionalProperties"] = False
+                request_params["tools"].append(
+                    {
+                        "type": "function",
+                        "name": tool.get("function", {}).get("name"),
+                        "description": tool.get("function", {}).get("description"),
+                        "parameters": parameters,
+                        "strict": False,
+                    }
+                )
         if tool_choice:
             request_params["tool_choice"] = tool_choice
 
@@ -171,7 +174,6 @@ class CustomOpenAIResponse(BaseChatModel):
                     if run_manager:
                         run_manager.on_llm_new_token(token, chunk=chunk)
                     yield chunk
-
 
     def bind_tools(
         self,
@@ -243,16 +245,16 @@ class CustomOpenAIResponse(BaseChatModel):
                     }
                 )
             elif isinstance(message, HumanMessage):
-                if isinstance(message.content, str) and message.content.startswith("data:image"):
+                if isinstance(message.content, str) and message.content.startswith(
+                    "data:image"
+                ):
                     prompt_messages.append(
                         {
                             "role": "user",
                             "content": [
                                 {
                                     "type": "image_url",
-                                    "image_url": {
-                                        "url": message.content
-                                    },
+                                    "image_url": {"url": message.content},
                                 }
                             ],
                         }

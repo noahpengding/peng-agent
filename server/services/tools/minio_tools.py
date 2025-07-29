@@ -1,10 +1,12 @@
 from langchain_core.tools import StructuredTool
 from utils.minio_connection import MinioStorage
 
+
 def minio_file_upload_tool(file_content: str, file_name: str, content_type: str) -> str:
     minio_storage = MinioStorage()
     import io
-    file_content_encoded = io.BytesIO(file_content.encode('utf-8'))
+
+    file_content_encoded = io.BytesIO(file_content.encode("utf-8"))
     success = minio_storage.file_upload_from_string(
         file_content=file_content_encoded,
         file_name=file_name,
@@ -12,6 +14,7 @@ def minio_file_upload_tool(file_content: str, file_name: str, content_type: str)
         content_type=content_type,
     )
     return success
+
 
 minio_upload_tool = StructuredTool.from_function(
     func=minio_file_upload_tool,

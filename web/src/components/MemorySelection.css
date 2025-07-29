@@ -1,124 +1,128 @@
 .memory-selection-container {
-    padding: 1.5rem;
-    max-width: 1200px;
-    margin: 0 auto;
-    color: white;
+  padding: 1.5rem;
+  max-width: 1200px;
+  margin: 0 auto;
+  color: white;
 }
 
 .memory-selection-title {
-    margin-bottom: 1.5rem;
-    color: white;
-    font-size: 1.8rem;
+  margin-bottom: 1.5rem;
+  color: white;
+  font-size: 1.8rem;
 }
 
 /* Search bar styling */
 .search-container {
-    margin-bottom: 1rem;
+  margin-bottom: 1rem;
 }
 
 .search-input {
-    padding: 10px;
-    border: 1px solid #444;
-    border-radius: 4px;
-    width: 100%;
-    font-size: 1rem;
-    background-color: #374151;
-    color: white;
+  padding: 10px;
+  border: 1px solid #444;
+  border-radius: 4px;
+  width: 100%;
+  font-size: 1rem;
+  background-color: #374151;
+  color: white;
 }
 
 /* Search input placeholder color */
 .search-input::placeholder {
-    color: #9ca3af;
+  color: #9ca3af;
 }
 
 /* Action buttons */
 .action-buttons {
-    display: flex;
-    justify-content: flex-start;
-    margin-bottom: 1.5rem;
+  display: flex;
+  justify-content: flex-start;
+  margin-bottom: 1.5rem;
 }
 
 .primary-button {
-    padding: 10px 16px;
-    border: none;
-    border-radius: 4px;
-    cursor: pointer;
-    font-weight: 500;
-    background-color: #6d28d9;
-    color: white;
+  padding: 10px 16px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-weight: 500;
+  background-color: #6d28d9;
+  color: white;
 }
 
 .primary-button:hover {
-    background-color: #5b21b6;
+  background-color: #5b21b6;
 }
 
 /* Table styling */
 .memories-table-container {
-    overflow-x: auto;
-    margin-bottom: 1rem;
+  overflow-x: auto;
+  margin-bottom: 1rem;
 }
 
 .memories-table {
-    width: 100%;
-    border-collapse: collapse;
-    table-layout: fixed;
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: fixed;
 }
 
-.memories-table th, .memories-table td {
-    border: 1px solid #444;
-    padding: 12px 16px;  /* Increased padding for taller rows */
-    text-align: left;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-    color: white;
+.memories-table th,
+.memories-table td {
+  border: 1px solid #444;
+  padding: 12px 16px; /* Increased padding for taller rows */
+  text-align: left;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: white;
 }
 
 .memories-table th {
-    background-color: #333;
-    position: sticky;
-    top: 0;
+  background-color: #333;
+  position: sticky;
+  top: 0;
 }
 
 .select-column {
-    width: 60px;
+  width: 60px;
 }
 
 /* Column widths */
-.model-column, .kb-column {
-    width: 100px;
+.model-column,
+.kb-column {
+  width: 100px;
 }
 
 .human-input-column {
-    width: 35%;
+  width: 35%;
 }
 
 .ai-response-column {
-    width: 55%;  /* Make AI response column wider */
+  width: 55%; /* Make AI response column wider */
 }
 
 .memories-table tr {
-    background-color: #2f3237;
-    height: 60px;  /* Set explicit height for rows */
+  background-color: #2f3237;
+  height: 60px; /* Set explicit height for rows */
 }
 
 .memories-table tr:hover {
-    background-color: #3a3f48;
+  background-color: #3a3f48;
 }
 
 /* Error and loading states */
-.loading-indicator, .error-message, .no-memories {
-    padding: 1rem;
-    text-align: center;
+.loading-indicator,
+.error-message,
+.no-memories {
+  padding: 1rem;
+  text-align: center;
 }
 
 .error-message {
-    color: #f44336;
-    background-color: #ffebee;
-    border-radius: 4px;
+  color: #f44336;
+  background-color: #ffebee;
+  border-radius: 4px;
 }
 
 .selected-count {
-    margin-top: 1rem;
-    font-weight: bold;
+  margin-top: 1rem;
+  font-weight: bold;
 }

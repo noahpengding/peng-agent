@@ -2,17 +2,20 @@ from utils.mysql_connect import MysqlConnect
 from utils.minio_connection import MinioStorage
 from utils.log import output_log
 
+
 def get_all_tools():
     mysql = MysqlConnect()
     tools = mysql.read_records("tools")
     mysql.close()
     return tools if tools else []
 
+
 def get_tool_by_name(tool_name: str):
     mysql = MysqlConnect()
     tool = mysql.read_records("tools", {"name": tool_name})
     mysql.close()
     return tool[0] if tool else None
+
 
 def update_tools():
     minio = MinioStorage()

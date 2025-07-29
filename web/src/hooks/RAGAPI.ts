@@ -25,7 +25,7 @@ export const useRAGApi = () => {
   const getAllRAGDocuments = async (): Promise<RAGDocument[]> => {
     setIsLoading(true);
     setError(null);
-    
+
     try {
       const data = await RAGService.getAllRAGDocuments();
       return data || [];
@@ -38,18 +38,23 @@ export const useRAGApi = () => {
     }
   };
 
-  const indexDocument = async (username: string, filePath: string, collectionName: string, typeOfFile: 'standard' | 'handwriting'): Promise<string> => {
+  const indexDocument = async (
+    username: string,
+    filePath: string,
+    collectionName: string,
+    typeOfFile: 'standard' | 'handwriting'
+  ): Promise<string> => {
     setIsLoading(true);
     setError(null);
-    
+
     try {
       const request: IndexDocumentRequest = {
         user_name: username,
         file_path: filePath,
         collection_name: collectionName,
-        type_of_file: typeOfFile
+        type_of_file: typeOfFile,
       };
-      
+
       const message = await RAGService.indexDocument(request);
       return message;
     } catch (err) {

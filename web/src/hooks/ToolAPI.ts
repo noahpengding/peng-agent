@@ -16,7 +16,7 @@ export const useToolApi = () => {
   const getAllTools = async (): Promise<Tool[]> => {
     setIsLoading(true);
     setError(null);
-    
+
     try {
       const data = await ToolService.getAllTools();
       return data || [];
@@ -32,7 +32,7 @@ export const useToolApi = () => {
   const updateTools = async (): Promise<string> => {
     setIsLoading(true);
     setError(null);
-    
+
     try {
       const message = await ToolService.updateTools();
       return message;

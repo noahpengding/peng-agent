@@ -1,8 +1,11 @@
 from config.config import config
+from langchain_core.tools import StructuredTool
+
 
 def _rag_usage_tool(query: str, collection: str) -> str:
     from services.rag.rag_usage import RagUsage
     from langchain_core.prompts import ChatPromptTemplate
+
     prompt = [
         (
             "system",
@@ -32,36 +35,37 @@ def _rag_usage_tool(query: str, collection: str) -> str:
     )
     return context.content.strip()
 
-from langchain_core.tools import StructuredTool
 
 def get_all_collections() -> list:
     from services.rag.qdrant_api import Qdrant
+
     qdrant = Qdrant(
         host=config.qdrant_host,
         port=config.qdrant_port,
     )
     return qdrant.get_all_collections()
 
+
 all_collections = get_all_collections()
 
 rag_usage_tool = StructuredTool.from_function(
-    func = _rag_usage_tool,
-    name = "documentation_retrieval_tool",
-    description = "Retrieves information from the specified collection of professional document in the system.",
+    func=_rag_usage_tool,
+    name="documentation_retrieval_tool",
+    description="Retrieves information from the specified collection of professional document in the system.",
     args_schema={
         "type": "object",
         "properties": {
             "query": {
                 "type": "string",
-                "description": "The query to search in the collection."
+                "description": "The query to search in the collection.",
             },
             "collection": {
                 "type": "string",
                 "enum": all_collections,
-                "description": "The collection to search in."
-            }
+                "description": "The collection to search in.",
+            },
         },
-        "required": ["query", "collection"]
+        "required": ["query", "collection"],
     },
     return_direct=False,
 )

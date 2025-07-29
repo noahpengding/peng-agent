@@ -10,11 +10,11 @@ export const login = async (username: string, password: string) => {
 // Check if token is valid and not expired
 export const isTokenValid = (token: string | null): boolean => {
   if (!token) return false;
-  
+
   try {
     const decodedToken: any = jwtDecode(token);
     const currentTime = Date.now() / 1000;
-    
+
     // Check if token is expired
     return decodedToken.exp > currentTime;
   } catch (error) {

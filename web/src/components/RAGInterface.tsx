@@ -10,13 +10,13 @@ const RAGInterface: React.FC = () => {
   const [knowledgeBases, setKnowledgeBases] = useState<string[]>([]);
   const [selectedKnowledgeBase, setSelectedKnowledgeBase] = useState<string>('');
   const [error, setError] = useState<string | null>(null);
-  
+
   // State for adding new documents
   const [filePath, setFilePath] = useState<string>('');
   const [collectionName, setCollectionName] = useState<string>('');
   const [typeOfFile, setTypeOfFile] = useState<'standard' | 'handwriting'>('standard');
   const [indexResult, setIndexResult] = useState<string>('');
-  
+
   // Get API functions and state
   const { getAllRAGDocuments, indexDocument, isLoading } = useRAGApi();
   // Add navigate for routing
@@ -30,9 +30,7 @@ const RAGInterface: React.FC = () => {
   // Extract unique knowledge bases from documents
   useEffect(() => {
     if (documents.length > 0) {
-      const uniqueKnowledgeBases = Array.from(
-        new Set(documents.map((doc) => doc.knowledge_base))
-      );
+      const uniqueKnowledgeBases = Array.from(new Set(documents.map((doc) => doc.knowledge_base)));
       setKnowledgeBases(uniqueKnowledgeBases);
     }
   }, [documents]);
@@ -40,9 +38,7 @@ const RAGInterface: React.FC = () => {
   // Filter documents when filter changes
   useEffect(() => {
     if (selectedKnowledgeBase) {
-      setFilteredDocuments(
-        documents.filter((doc) => doc.knowledge_base === selectedKnowledgeBase)
-      );
+      setFilteredDocuments(documents.filter((doc) => doc.knowledge_base === selectedKnowledgeBase));
     } else {
       setFilteredDocuments(documents);
     }
@@ -62,20 +58,20 @@ const RAGInterface: React.FC = () => {
   // Handle indexing a new document
   const handleIndexDocument = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!filePath.trim() || !collectionName.trim()) {
       return;
     }
 
     setIndexResult('Loading...');
-    
+
     try {
-      const result = await indexDocument("peng", filePath, collectionName, typeOfFile);
+      const result = await indexDocument('peng', filePath, collectionName, typeOfFile);
       setIndexResult(result);
-      
+
       // Reload the documents to show the newly added one
       loadDocuments();
-      
+
       // Clear form fields
       setFilePath('');
       setCollectionName('');
@@ -97,15 +93,12 @@ const RAGInterface: React.FC = () => {
         {/* Sidebar for controls */}
         <div className="sidebar">
           {/* Home button */}
-          <button 
-            className="home-button"
-            onClick={() => navigate('/')}
-          >
+          <button className="home-button" onClick={() => navigate('/')}>
             Return to Home
           </button>
-          
+
           <h2 className="sidebar-title">Add New Document</h2>
-          
+
           <form onSubmit={handleIndexDocument} className="form">
             <div className="form-group">
               <label className="form-label">File Path</label>
@@ -117,7 +110,7 @@ const RAGInterface: React.FC = () => {
                 placeholder="Enter file path"
               />
             </div>
-            
+
             <div className="form-group">
               <label className="form-label">Knowledge Base</label>
               <input
@@ -128,7 +121,7 @@ const RAGInterface: React.FC = () => {
                 placeholder="Enter knowledge base name"
               />
             </div>
-            
+
             <div className="form-group">
               <label className="form-label">File Type</label>
               <div className="radio-group">
@@ -156,33 +149,25 @@ const RAGInterface: React.FC = () => {
                 </label>
               </div>
             </div>
-            
-            <button 
-              type="submit" 
-              className="index-button"
-              disabled={isLoading || !filePath.trim() || !collectionName.trim()}
-            >
+
+            <button type="submit" className="index-button" disabled={isLoading || !filePath.trim() || !collectionName.trim()}>
               Index Document
             </button>
           </form>
-          
+
           {indexResult && (
             <div className="index-result">
               <h3>Result:</h3>
               <p>{indexResult}</p>
             </div>
           )}
-          
+
           <div className="filters">
             <h3 className="filter-title">Filters</h3>
-            
+
             <div className="form-group">
               <label className="form-label">Knowledge Base</label>
-              <select
-                className="form-select"
-                value={selectedKnowledgeBase}
-                onChange={(e) => setSelectedKnowledgeBase(e.target.value)}
-              >
+              <select className="form-select" value={selectedKnowledgeBase} onChange={(e) => setSelectedKnowledgeBase(e.target.value)}>
                 <option value="">All Knowledge Bases</option>
                 {knowledgeBases.map((kb) => (
                   <option key={kb} value={kb}>
@@ -193,20 +178,16 @@ const RAGInterface: React.FC = () => {
             </div>
           </div>
         </div>
-        
+
         {/* Main area for documents table */}
         <div className="documents-area">
           <div className="documents-header">
             <h2>Available RAG Documents</h2>
-            <button 
-              className="refresh-button" 
-              onClick={loadDocuments}
-              disabled={isLoading}
-            >
+            <button className="refresh-button" onClick={loadDocuments} disabled={isLoading}>
               Refresh
             </button>
           </div>
-          
+
           {isLoading && !indexResult ? (
             <div className="loading">Loading documents...</div>
           ) : (

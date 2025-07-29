@@ -36,13 +36,13 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       try {
         const decodedToken: JwtPayload = jwtDecode(token);
         const currentTime = Date.now() / 1000;
-        
+
         if (decodedToken.exp < currentTime) {
           // Token has expired
           logout();
         } else {
           setIsAuthenticated(true);
-          
+
           // Extract username from token
           // Try to get username from standard fields, fallback to using the token itself
           const username = decodedToken.username || decodedToken.sub || token;
@@ -61,7 +61,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const login = (newToken: string) => {
     localStorage.setItem('access_token', newToken);
     setToken(newToken);
-    
+
     // User and authentication state will be updated by the useEffect
   };
 
@@ -73,11 +73,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     navigate('/login');
   };
 
-  return (
-    <AuthContext.Provider value={{ isAuthenticated, token, user, login, logout }}>
-      {children}
-    </AuthContext.Provider>
-  );
+  return <AuthContext.Provider value={{ isAuthenticated, token, user, login, logout }}>{children}</AuthContext.Provider>;
 };
 
 export const useAuth = () => {

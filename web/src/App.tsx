@@ -26,10 +26,8 @@ const AppRoutes: React.FC = () => {
   return (
     <Routes>
       {/* Public route */}
-      <Route path="/login" element={
-        isAuthenticated ? <Navigate to="/" replace /> : <Login />
-      } />
-      
+      <Route path="/login" element={isAuthenticated ? <Navigate to="/" replace /> : <Login />} />
+
       {/* Protected routes */}
       <Route element={<PrivateRoute />}>
         <Route path="/" element={<ChatbotUI />} />
@@ -38,11 +36,9 @@ const AppRoutes: React.FC = () => {
         <Route path="/rag" element={<RAGInterface />} />
         <Route path="/model" element={<ModelInterface />} />
       </Route>
-      
+
       {/* Catch all other routes and redirect to login or home */}
-      <Route path="*" element={
-        isAuthenticated ? <Navigate to="/" replace /> : <Navigate to="/login" replace />
-      } />
+      <Route path="*" element={isAuthenticated ? <Navigate to="/" replace /> : <Navigate to="/login" replace />} />
     </Routes>
   );
 };

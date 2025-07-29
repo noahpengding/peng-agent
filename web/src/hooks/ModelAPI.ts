@@ -18,7 +18,7 @@ export const useModelApi = () => {
   const getAllModels = async (): Promise<Model[]> => {
     setIsLoading(true);
     setError(null);
-    
+
     try {
       const data = await ModelService.getAllModels();
       return data || [];
@@ -34,7 +34,7 @@ export const useModelApi = () => {
   const toggleModelAvailability = async (modelName: string): Promise<string> => {
     setIsLoading(true);
     setError(null);
-    
+
     try {
       const message = await ModelService.toggleModelAvailability(modelName);
       return message;
@@ -66,7 +66,7 @@ export const useModelApi = () => {
   const refreshModels = async (): Promise<string> => {
     setIsLoading(true);
     setError(null);
-    
+
     try {
       const message = await ModelService.refreshModels();
       return message;

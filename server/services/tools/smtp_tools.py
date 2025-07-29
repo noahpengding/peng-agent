@@ -7,6 +7,8 @@ from email.mime.multipart import MIMEMultipart
 from typing import Dict, List, Optional, Any
 from config.config import config
 from utils.log import output_log
+from langchain_core.tools import StructuredTool
+
 
 class SmtpEmailSender:
     def __init__(self):
@@ -29,7 +31,10 @@ class SmtpEmailSender:
         Returns:
             bool: True if connection is successful, False otherwise
         """
-        output_log(f"Connecting to SMTP server {self.smtp_server} on port {self.smtp_port} with SSL {self.use_ssl} | Username: {self.username}; Password: {self.password}", "debug")
+        output_log(
+            f"Connecting to SMTP server {self.smtp_server} on port {self.smtp_port} with SSL {self.use_ssl} | Username: {self.username}; Password: {self.password}",
+            "debug",
+        )
         try:
             # Attempt to connect to SMTP server with retry logic
             for attempt in range(5):
@@ -83,7 +88,9 @@ class SmtpEmailSender:
             bool: True if email was sent successfully, False otherwise
         """
         if not self.connection:
-            output_log("No SMTP connection established, attempting to connect.", "debug")
+            output_log(
+                "No SMTP connection established, attempting to connect.", "debug"
+            )
             if not self.connect():
                 return False
 
@@ -135,14 +142,13 @@ class SmtpEmailSender:
         finally:
             self.disconnect()
         return False
-    
-from langchain_core.tools import StructuredTool
+
 
 def send_email_tool(
     to_address: str,
     subject: str,
     body: str,
-    attachments: Optional[List[Dict[str, Any]]] = None
+    attachments: Optional[List[Dict[str, Any]]] = None,
 ) -> bool:
     """Send an email using the SmtpEmailSender class.
 
@@ -159,6 +165,7 @@ def send_email_tool(
     sender.connect()
     return sender.send_email(to_address, subject, body, attachments)
 
+
 email_send_tool = StructuredTool.from_function(
     func=send_email_tool,
     name="email_send_tool",
@@ -166,7 +173,10 @@ email_send_tool = StructuredTool.from_function(
     args_schema={
         "type": "object",
         "properties": {
-            "to_address": {"type": "string", "description": "The recipient email address."},
+            "to_address": {
+                "type": "string",
+                "description": "The recipient email address.",
+            },
             "subject": {"type": "string", "description": "The subject of the email."},
             "body": {"type": "string", "description": "The body text of the email."},
             "attachments": {
@@ -174,15 +184,22 @@ email_send_tool = StructuredTool.from_function(
                 "items": {
                     "type": "object",
                     "properties": {
-                        "filename": {"type": "string", "description": "The name of the attachment file."},
-                        "content": {"type": "string", "format": "binary", "description": "The content of the attachment file."}
+                        "filename": {
+                            "type": "string",
+                            "description": "The name of the attachment file.",
+                        },
+                        "content": {
+                            "type": "string",
+                            "format": "binary",
+                            "description": "The content of the attachment file.",
+                        },
                     },
-                    "required": ["filename", "content"]
+                    "required": ["filename", "content"],
                 },
-                "description": "Optional list of attachments."
-            }
+                "description": "Optional list of attachments.",
+            },
         },
-        "required": ["to_address", "subject", "body"]
+        "required": ["to_address", "subject", "body"],
     },
     return_direct=True,
 )
