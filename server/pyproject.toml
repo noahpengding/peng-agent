@@ -45,6 +45,8 @@ dependencies = [
     "lxml>=6.0.0",
     "email-to>=0.1.0",
     "nest-asyncio>=1.6.0",
+    "arize-phoenix-otel>=0.12.1",
+    "openinference-instrumentation-langchain>=0.1.49",
 ]
 requires-python = ">=3.12"
 

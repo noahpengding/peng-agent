@@ -20,6 +20,8 @@ class Config(BaseModel):
     embedding_operator: str
     embedding_model: str
     embedding_size: int
+    phoenix_endpoint: str
+    phoenix_project: str
     mysql_host: str
     mysql_user: str
     mysql_password: str
@@ -80,6 +82,12 @@ try:
         "embedding_size": int(os.environ.get("EMBEDDING_SIZE"))
         if os.environ.get("EMBEDDING_SIZE")
         else 1536,
+        "phoenix_endpoint": os.environ.get("PHOENIX_COLLECTOR_ENDPOINT")
+        if os.environ.get("PHOENIX_COLLECTOR_ENDPOINT")
+        else "https://llm.aassdasdas.com/v1/traces",
+        "phoenix_project": os.environ.get("PHOENIX_PROJECT")
+        if os.environ.get("PHOENIX_PROJECT")
+        else "test",
         "input_max_length": int(os.environ.get("INPUT_MAX_LENGTH"))
         if os.environ.get("INPUT_MAX_LENGTH")
         else 4096,

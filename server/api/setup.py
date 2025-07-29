@@ -84,3 +84,13 @@ def set_up():
         }
     )
     mysql.close()
+    
+    phoenix_setup()
+
+def phoenix_setup():
+    from phoenix.otel import register
+    tracer_provider = register(
+        project_name=config.phoenix_project,
+        endpoint=config.phoenix_endpoint,
+        auto_instrument=True
+    )
