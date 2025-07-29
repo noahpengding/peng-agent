@@ -19,17 +19,10 @@ load_dotenv(dotenv_path)
 SCRIPT_DIR = os.path.dirname(os.path.realpath(__file__))
 sys.path.append(os.path.dirname(SCRIPT_DIR + "../"))
 
-llm = CustomOpenAIResponse(
-    api_key="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",
-    organization_id="org-fHyFTwdQ8F9LcQh0LrBWpsqt",
-    project_id="proj_w7jii5rOkDSn82XVBNp8te0n",
-    base_url="https://api.openai.com/v1/",
-    model="gpt-4.1",
-)
 
 tools = [tavily_search_tool]
 
-
+'''
 llm_with_tools = llm.bind_tools(tools)
 
 agent = create_react_agent(
@@ -53,3 +46,4 @@ for chunk in agent.stream(input_prompt):
             print(chunk.agent.messages[0].content, end="", flush=True)
         elif hasattr(chunk, "tools"):
             print(chunk.tools[0].result.content, end="", flush=True)
+            '''
