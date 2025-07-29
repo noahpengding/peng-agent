@@ -34,8 +34,6 @@ class RagUsage:
         )
         self.prompt = prompt_generator.prompt_template(
             config.default_base_model,
-            has_document=self.collection_name != "default",
-            has_websearch=False,
         )
         combine_docs_chain = create_stuff_documents_chain(self.llm, prompt)
         self.chain = create_retrieval_chain(retriever, combine_docs_chain)
