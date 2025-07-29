@@ -100,7 +100,7 @@ async def chat_handler(
                 chunk = response_formatter_main(chat_config.operator, chunk.content)
                 full_response += chunk
                 yield (
-                    json.dumps({"chunk": chunk, "type": "assisstent", "done": False})
+                    json.dumps({"chunk": chunk, "type": "assistant", "done": False})
                     + "\n"
                 )
         _save_chat(
@@ -141,7 +141,7 @@ async def chat_completions_handler(
         return "Error: Model instance not found."
 
     if chat_config.tools_name != []:
-        from services.tools_routers import tools_routers
+        from services.tools.tools_routers import tools_routers
         from langgraph.prebuilt import create_react_agent
 
         tools = tools_routers(chat_config.tools_name)
@@ -176,7 +176,7 @@ async def chat_completions_handler(
             "assistant",
             chat_config.base_model,
             message,
-            response,
+            full_response,
         )
     return full_response
 
