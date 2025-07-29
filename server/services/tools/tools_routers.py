@@ -11,7 +11,7 @@ def tools_routers(tools_name: List[str]):
             tools += [wikipedia_search_tool]
         elif tool_name == "current_date_tool":
             from services.tools.current_date_tool import date_tools
-            tools += [date_tools]
+            tools += date_tools
         elif tool_name == "rag_tool":
             from services.tools.rag_tools import rag_usage_tool
             tools += [rag_usage_tool]
@@ -24,8 +24,8 @@ def tools_routers(tools_name: List[str]):
         elif tool_name == "email_send_tool":
             from services.tools.smtp_tools import email_send_tool
             tools += [email_send_tool]
-
-    print("---" * 20)
-    print(tools)
+        elif tool_name == "minio_upload_tool":
+            from services.tools.minio_tools import minio_upload_tool
+            tools += [minio_upload_tool]
 
     return tools

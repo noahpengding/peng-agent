@@ -40,6 +40,19 @@ class MinioStorage:
             output_log(f"Error uploading file to Minio: {e}", "error")
             return False
         return True
+    
+    def file_upload_from_string(
+        self, file_content, file_name, file_length, content_type, bucket_name=config.s3_bucket
+    ):
+        try:
+            file_name = file_name.replace("\\", "/")
+            self.client.put_object(
+                bucket_name, file_name, file_content, file_length, content_type=content_type
+            )
+        except Exception as e:
+            output_log(f"Error uploading file to Minio: {e}", "error")
+            return False
+        return True
 
     def file_download(self, file_name, download_path, bucket_name=config.s3_bucket):
         try:

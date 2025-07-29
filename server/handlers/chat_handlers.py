@@ -59,7 +59,11 @@ async def chat_handler(
             tools=tools,
         )
         full_response = ""
-        async for chunk in agent.astream(prompt.invoke(params), stream_mode="updates"):
+        async for chunk in agent.astream(
+            prompt.invoke(params),
+            {"recursion_limit": config.recursion_limit},
+            stream_mode="updates"
+        ):
             if chunk:
                 chunk_type = "unknown"
                 if "agent" in chunk and "messages" in chunk["agent"]:
