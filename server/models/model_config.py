@@ -7,7 +7,7 @@ class ModelConfig(BaseModel):
     model_name: str = Field(default="gpt-3.5-turbo")
     isAvailable: bool = Field(default=False)
     isMultimodal: bool = Field(default=False)
-    reasoning_effect: str = Field(default="Not Reasoning Model")
+    reasoning_effect: str = Field(default="not a reasoning model")
 
     def to_dict(self):
         return self.model_dump()

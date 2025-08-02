@@ -83,6 +83,15 @@ class CustomOpenAIResponse(BaseChatModel):
                         "strict": False,
                     }
                 )
+        if self.model_name.find("deep-research") != -1:
+            if "tools" not in request_params:
+                request_params["tools"] = []
+            request_params["tools"].append(
+                {"type": "web_search_preview"},
+            )
+            request_params["tools"].append(
+                {"type": "code_interpreter", "container": {"type": "auto"}}
+            )
         if tool_choice:
             request_params["tool_choice"] = tool_choice
         responses = self.client.responses.create(**request_params)
@@ -141,8 +150,6 @@ class CustomOpenAIResponse(BaseChatModel):
             }
         tools = kwargs.get("tools")
         tool_choice = kwargs.get("tool_choice")
-        tools = kwargs.get("tools")
-        tool_choice = kwargs.get("tool_choice")
         if tools:
             request_params["tools"] = []
             for tool in tools:
@@ -157,9 +164,17 @@ class CustomOpenAIResponse(BaseChatModel):
                         "strict": False,
                     }
                 )
+        if self.model_name.find("deep-research") != -1:
+            if "tools" not in request_params:
+                request_params["tools"] = []
+            request_params["tools"].append(
+                {"type": "web_search_preview"},
+            )
+            request_params["tools"].append(
+                {"type": "code_interpreter", "container": {"type": "auto"}}
+            )
         if tool_choice:
             request_params["tool_choice"] = tool_choice
-
         stream = self.client.responses.create(**request_params)
         token_count = len(prompt)
         for event in stream:
