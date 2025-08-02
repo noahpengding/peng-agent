@@ -29,6 +29,7 @@ import time
 
 class CustomOpenAIResponse(BaseChatModel):
     model_name: str = Field(alias="model")
+    reasoning_effect: str = Field(default="not a reasoning model")
     temperature: Optional[float] = 1.0
     max_tokens: Optional[int] = config.output_max_length
     base_url: Optional[str]
@@ -62,6 +63,10 @@ class CustomOpenAIResponse(BaseChatModel):
             "input": prompt_translated,
             "stream": False,
         }
+        if self.reasoning_effect != "not a reasoning model":
+            request_params["reasoning"] = {
+                "effort": self.reasoning_effect,
+            }
         tools = kwargs.get("tools")
         tool_choice = kwargs.get("tool_choice")
         if tools:
@@ -129,7 +134,11 @@ class CustomOpenAIResponse(BaseChatModel):
             "input": prompt_translated,
             "stream": True,
         }
-
+        if self.reasoning_effect != "not a reasoning model":
+            request_params["reasoning"] = {
+                "effort": self.reasoning_effect,
+                "summary": "auto"
+            }
         tools = kwargs.get("tools")
         tool_choice = kwargs.get("tool_choice")
         tools = kwargs.get("tools")
@@ -212,6 +221,7 @@ class CustomOpenAIResponse(BaseChatModel):
         model_id: {self.model_name}
         temperature: {self.temperature}
         max_tokens: {self.max_tokens}
+        reasoning_effect: {self.reasoning_effect}
         """
 
     def set_parameters(self, name, value) -> str:

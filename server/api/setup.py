@@ -72,6 +72,7 @@ def set_up():
             "model_name": "TEXT",
             "isAvailable": "BOOL DEFAULT FALSE",
             "isMultimodal": "BOOL DEFAULT FALSE",
+            "reasoning_effect": "VARCHAR(64) DEFAULT 'not a reasoning model'",
         },
     )
     mysql.create_table(
