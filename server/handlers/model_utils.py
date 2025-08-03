@@ -16,6 +16,7 @@ def get_model_instance_by_operator(operator_name, model_name: str = ""):
         return None
     if operator.runtime == "openai_response":
         from services.chat_models.openai_response import CustomOpenAIResponse
+
         base_model_ins = CustomOpenAIResponse(
             base_url=operator.endpoint,
             api_key=operator.api_key,

@@ -54,7 +54,6 @@ class CustomOpenAIResponse(BaseChatModel):
         run_manager: Optional[CallbackManagerForLLMRun] = None,
         **kwargs: Any,
     ) -> ChatResult:
-        output_log(f"Chat completion request: {prompt}", "debug")
         now = time.time()
         prompt_translated = self._prompt_translate(prompt)
         output_log(f"Translated prompt: {prompt_translated}", "debug")
@@ -146,24 +145,8 @@ class CustomOpenAIResponse(BaseChatModel):
         if self.reasoning_effect != "not a reasoning model":
             request_params["reasoning"] = {
                 "effort": self.reasoning_effect,
-                "summary": "auto"
+                "summary": "auto",
             }
-        tools = kwargs.get("tools")
-        tool_choice = kwargs.get("tool_choice")
-        if tools:
-            request_params["tools"] = []
-            for tool in tools:
-                parameters = tool.get("function", {}).get("parameters", {})
-                parameters["additionalProperties"] = False
-                request_params["tools"].append(
-                    {
-                        "type": "function",
-                        "name": tool.get("function", {}).get("name"),
-                        "description": tool.get("function", {}).get("description"),
-                        "parameters": parameters,
-                        "strict": False,
-                    }
-                )
         if self.model_name.find("deep-research") != -1:
             if "tools" not in request_params:
                 request_params["tools"] = []
@@ -173,8 +156,6 @@ class CustomOpenAIResponse(BaseChatModel):
             request_params["tools"].append(
                 {"type": "code_interpreter", "container": {"type": "auto"}}
             )
-        if tool_choice:
-            request_params["tool_choice"] = tool_choice
         stream = self.client.responses.create(**request_params)
         token_count = len(prompt)
         for event in stream:

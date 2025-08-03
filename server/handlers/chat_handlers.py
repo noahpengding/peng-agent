@@ -79,20 +79,21 @@ async def chat_handler(
                 chunk_content = response_formatter_main(
                     chat_config.operator, chunk_content
                 )
-                yield (
-                    json.dumps(
-                        {"chunk": chunk_content, "type": chunk_type, "done": False}
+                if isinstance(chunk_content, str):
+                    yield (
+                        json.dumps(
+                            {"chunk": chunk_content, "type": chunk_type, "done": False}
+                        )
+                        + "\n"
                     )
-                    + "\n"
-                )
-                full_response += chunk_content
-                _save_chat(
-                    user_name,
-                    chunk_type,
-                    chat_config.base_model,
-                    message,
-                    chunk_content,
-                )
+                    full_response += chunk_content
+                    _save_chat(
+                        user_name,
+                        chunk_type,
+                        chat_config.base_model,
+                        message,
+                        chunk_content,
+                    )
     else:
         full_response = ""
         async for chunk in base_model_ins.astream(prompt.invoke(params)):

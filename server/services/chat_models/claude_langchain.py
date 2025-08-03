@@ -9,6 +9,7 @@ from langchain_core.messages import (
     AIMessageChunk,
     SystemMessage,
     HumanMessage,
+    ToolMessage,
     BaseMessage,
 )
 from langchain_core.messages.ai import UsageMetadata
@@ -17,11 +18,20 @@ from pydantic import Field
 from config.config import config
 from anthropic import Anthropic
 from utils.log import output_log
+
+from collections.abc import Sequence
+from typing import Callable, Literal, Union
+from langchain_core.tools import BaseTool
+from langchain_core.runnables import Runnable
+from langchain_core.language_models import LanguageModelInput
+
 import time
+import json
 
 
 class CustomClaude(BaseChatModel):
     model_name: str = Field(alias="model")
+    reasoning_effect: str = Field(default="not a reasoning model")
     temperature: Optional[float] = 1.0
     max_tokens: Optional[int] = config.output_max_length
     api_key: str
@@ -44,26 +54,69 @@ class CustomClaude(BaseChatModel):
         now = time.time()
         prompt_translated = self._prompt_translate(prompt)
         output_log(f"Translated prompt: {prompt_translated}", "debug")
-
-        # Place Need to Change for other Provider
-        responses = self.client.messages.create(
-            model=self.model_name,
-            messages=prompt_translated,
-            max_tokens=self.max_tokens,
-            temperature=self.temperature,
-        )
-        message = responses.content
-
+        request_params = {
+            "model": self.model_name,
+            "messages": prompt_translated,
+            "max_tokens": self.max_tokens,
+        }
+        if self.reasoning_effect != "not a reasoning model":
+            request_params["thinking"] = {
+                "type": "enabled",
+                "budget_tokens": 8192 * 0.8,
+            }
+        tools = kwargs.get("tools")
+        tool_choice = kwargs.get("tool_choice")
+        if tools:
+            request_params["tools"] = []
+            for tool in tools:
+                parameters = tool.get("function", {}).get("parameters", {})
+                parameters["additionalProperties"] = False
+                request_params["tools"].append(
+                    {
+                        "name": tool.get("function", {}).get("name"),
+                        "description": tool.get("function", {}).get("description"),
+                        "input_schema": parameters,
+                    }
+                )
+        if tool_choice:
+            request_params["tool_choice"] = tool_choice
+        responses = self.client.messages.create(**request_params)
+        additional_kwargs = {}
+        message_content = ""
+        for response in responses.content:
+            if response.type == "text":
+                message_content += response.text
+            if response.type == "tool_use":
+                message_content = [
+                    {
+                        "type": "tool_use",
+                        "id": response.id,
+                        "name": response.name,
+                        "input": response.input,
+                    }
+                ]
+                additional_kwargs = {
+                    "tool_calls": [
+                        {
+                            "id": response.id,
+                            "type": "function_call",
+                            "function": {
+                                "name": response.name,
+                                "arguments": json.dumps(response.input),
+                            },
+                        }
+                    ]
+                }
         generate_message = AIMessage(
-            content=message,
-            additional_kwargs={},
+            content=message_content,
+            additional_kwargs=additional_kwargs,
             response_metadata={
                 "time_in_seconds": time.time() - now,
             },
             metadata={
                 "input_tokens": len(prompt),
-                "output_tokens": len(message),
-                "total_tokens": len(prompt) + len(message),
+                "output_tokens": len(message_content),
+                "total_tokens": len(prompt) + len(message_content),
             },
         )
         generation = ChatGeneration(message=generate_message)
@@ -82,14 +135,18 @@ class CustomClaude(BaseChatModel):
         output_log(
             f"Requesting streaming response from model: {self.model_name}", "debug"
         )
-        # Place Need to Change for other Provider
+        request_params = {
+            "model": self.model_name,
+            "messages": prompt_translated,
+            "max_tokens": self.max_tokens,
+        }
+        if self.reasoning_effect != "not a reasoning model":
+            request_params["thinking"] = {
+                "type": "enabled",
+                "budget_tokens": 8192 * 0.8,
+            }
         token_count = len(prompt)
-        with self.client.messages.stream(
-            model=self.model_name,
-            messages=prompt_translated,
-            max_tokens=self.max_tokens,
-            temperature=self.temperature,
-        ) as stream:
+        with self.client.messages.stream(**request_params) as stream:
             for text in stream.text_stream:
                 output_log(f"Received event: {text}", "debug")
                 if text:
@@ -108,6 +165,35 @@ class CustomClaude(BaseChatModel):
                     if run_manager:
                         run_manager.on_llm_new_token(text, chunk=chunk)
                     yield chunk
+
+    def bind_tools(
+        self,
+        tools: Sequence[Union[dict[str, Any], type, Callable, BaseTool]],
+        *,
+        tool_choice: Optional[
+            Union[dict, str, Literal["auto", "none", "required", "any"], bool]
+        ] = None,
+        strict: Optional[bool] = None,
+        parallel_tool_calls: Optional[bool] = None,
+        **kwargs: Any,
+    ) -> Runnable[LanguageModelInput, BaseMessage]:
+        if parallel_tool_calls is not None:
+            kwargs["parallel_tool_calls"] = parallel_tool_calls
+        from langchain_core.utils.function_calling import convert_to_openai_tool
+
+        formatted_tools = [
+            convert_to_openai_tool(tool, strict=strict) for tool in tools
+        ]
+        tool_names = []
+        for tool in formatted_tools:
+            if "function" in tool:
+                tool_names.append(tool["function"]["name"])
+            elif "name" in tool:
+                tool_names.append(tool["name"])
+            else:
+                pass
+        kwargs["tools"] = formatted_tools
+        return super().bind(**kwargs)
 
     def list_models(self):
         # Place Need to Change for other Provider
@@ -135,7 +221,6 @@ class CustomClaude(BaseChatModel):
             output_log(f"Invalid parameter: {name}", "error")
             return f"Invalid parameter: {name}, {value}"
 
-    # Place Need to Change for other Provider
     def _prompt_translate(self, prompt: List[BaseMessage]) -> str:
         prompt_text = []
         for message in prompt:
@@ -153,6 +238,19 @@ class CustomClaude(BaseChatModel):
                     {
                         "role": "user",
                         "content": message.content,
+                    }
+                )
+            elif isinstance(message, ToolMessage):
+                prompt_text.append(
+                    {
+                        "role": "user",
+                        "content": [
+                            {
+                                "type": "tool_result",
+                                "tool_use_id": message.tool_call_id,
+                                "content": message.content,
+                            }
+                        ],
                     }
                 )
         return prompt_text

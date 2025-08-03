@@ -65,6 +65,7 @@ def refresh_models():
     for operator in get_all_operators():
         try:
             from handlers.model_utils import get_model_instance_by_operator
+
             model_ins = get_model_instance_by_operator(operator.operator)
             if model_ins is None:
                 continue
@@ -187,6 +188,7 @@ def get_all_multimodal_models():
     mysql = MysqlConnect()
     return mysql.read_record_v2("model", {"isMultimodal=": 1})
 
+
 def update_resoning_effect(model_name: str, reasoning_effect: str):
     mysql = MysqlConnect()
     model = mysql.read_records("model", {"model_name": model_name})
@@ -197,6 +199,7 @@ def update_resoning_effect(model_name: str, reasoning_effect: str):
         return f"Model {model_name}'s reasoning effect updated to {reasoning_effect}"
     mysql.close()
     return f"Model {model_name} not found"
+
 
 def get_reasoning_effect(model_name: str):
     mysql = MysqlConnect()
