@@ -1,0 +1,144 @@
+name: Cleanup Container Images
+
+on:
+  schedule:
+    # Run weekly at midnight on Sunday
+    - cron: '0 0 * * 1'
+  # Allow manual trigger
+  workflow_dispatch:
+
+env:
+  REGISTRY: ghcr.io
+  SERVER_IMAGE_PATH: ${{ github.repository }}/server
+  WEB_IMAGE_PATH: ${{ github.repository }}/front
+
+jobs:
+  cleanup-images:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      
+      - name: Set up GitHub CLI
+        run: |
+          # Install GitHub CLI
+          curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg | sudo dd of=/usr/share/keyrings/githubcli-archive-keyring.gpg
+          echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" | sudo tee /etc/apt/sources.list.d/github-cli.list > /dev/null
+          sudo apt update
+          sudo apt install gh
+      
+      - name: Cleanup Server Nightly Images
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          echo "Cleaning up old nightly server images..."
+          # List all server container versions
+          IMAGES=$(gh api \
+            -H "Accept: application/vnd.github+json" \
+            /orgs/${{ github.repository_owner }}/packages/container/${{ env.SERVER_IMAGE_PATH }}/versions \
+            --jq '.[] | select(.metadata.container.tags[] | test("-nightly$")) | .id')
+          
+          # Keep only the 3 most recent nightly images
+          if [ -n "$IMAGES" ]; then
+            IMAGES_TO_DELETE=$(echo "$IMAGES" | sort -r | tail -n +4)
+            
+            if [ -n "$IMAGES_TO_DELETE" ]; then
+              echo "Deleting old server nightly images..."
+              for IMAGE_ID in $IMAGES_TO_DELETE; do
+                echo "Deleting image ID: $IMAGE_ID"
+                gh api \
+                  --method DELETE \
+                  -H "Accept: application/vnd.github+json" \
+                  /orgs/${{ github.repository_owner }}/packages/container/${{ env.SERVER_IMAGE_PATH }}/versions/$IMAGE_ID
+              done
+            else
+              echo "No old server nightly images to delete"
+            fi
+          else
+            echo "No server nightly images found"
+          fi
+
+      - name: Cleanup Web Nightly Images
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          echo "Cleaning up old nightly web images..."
+          # List all web container versions
+          IMAGES=$(gh api \
+            -H "Accept: application/vnd.github+json" \
+            /orgs/${{ github.repository_owner }}/packages/container/${{ env.WEB_IMAGE_PATH }}/versions \
+            --jq '.[] | select(.metadata.container.tags[] | test("-nightly$")) | .id')
+          
+          # Keep only the 3 most recent nightly images
+          if [ -n "$IMAGES" ]; then
+            IMAGES_TO_DELETE=$(echo "$IMAGES" | sort -r | tail -n +4)
+            
+            if [ -n "$IMAGES_TO_DELETE" ]; then
+              echo "Deleting old web nightly images..."
+              for IMAGE_ID in $IMAGES_TO_DELETE; do
+                echo "Deleting image ID: $IMAGE_ID"
+                gh api \
+                  --method DELETE \
+                  -H "Accept: application/vnd.github+json" \
+                  /orgs/${{ github.repository_owner }}/packages/container/${{ env.WEB_IMAGE_PATH }}/versions/$IMAGE_ID
+              done
+            else
+              echo "No old web nightly images to delete"
+            fi
+          else
+            echo "No web nightly images found"
+          fi
+      
+      - name: Cleanup Untagged Images
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          echo "Cleaning up untagged server images..."
+          # List all untagged server container versions
+          UNTAGGED_SERVER=$(gh api \
+            -H "Accept: application/vnd.github+json" \
+            /orgs/${{ github.repository_owner }}/packages/container/${{ env.SERVER_IMAGE_PATH }}/versions \
+            --jq '.[] | select(.metadata.container.tags | length == 0) | .id')
+          
+          if [ -n "$UNTAGGED_SERVER" ]; then
+            echo "Deleting untagged server images..."
+            for IMAGE_ID in $UNTAGGED_SERVER; do
+              echo "Deleting untagged server image ID: $IMAGE_ID"
+              gh api \
+                --method DELETE \
+                -H "Accept: application/vnd.github+json" \
+                /orgs/${{ github.repository_owner }}/packages/container/${{ env.SERVER_IMAGE_PATH }}/versions/$IMAGE_ID
+            done
+          else
+            echo "No untagged server images found"
+          fi
+          
+          echo "Cleaning up untagged web images..."
+          # List all untagged web container versions
+          UNTAGGED_WEB=$(gh api \
+            -H "Accept: application/vnd.github+json" \
+            /orgs/${{ github.repository_owner }}/packages/container/${{ env.WEB_IMAGE_PATH }}/versions \
+            --jq '.[] | select(.metadata.container.tags | length == 0) | .id')
+          
+          if [ -n "$UNTAGGED_WEB" ]; then
+            echo "Deleting untagged web images..."
+            for IMAGE_ID in $UNTAGGED_WEB; do
+              echo "Deleting untagged web image ID: $IMAGE_ID"
+              gh api \
+                --method DELETE \
+                -H "Accept: application/vnd.github+json" \
+                /orgs/${{ github.repository_owner }}/packages/container/${{ env.WEB_IMAGE_PATH }}/versions/$IMAGE_ID
+            done
+          else
+            echo "No untagged web images found"
+          fi
