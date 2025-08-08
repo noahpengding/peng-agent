@@ -36,5 +36,9 @@ def tools_routers(tools_name: List[str]):
             from services.tools.minio_tools import minio_upload_tool
 
             tools += [minio_upload_tool]
+        elif tool_name.endswith("_sql"):
+            from services.tools.sql_tool import create_sql_tool
+
+            tools += create_sql_tool(tool_name)
 
     return tools

@@ -4,6 +4,7 @@ from utils.log import output_log
 from config.config import config
 import os
 import pickle
+from langchain_core.language_models import BaseLanguageModel
 
 
 def get_model_instance_by_operator(operator_name, model_name: str = ""):
@@ -120,3 +121,37 @@ def get_embedding_instance_by_operator(operator_name, model_name: str = ""):
             model=model_name,
         )
     return embedding_model_ins
+ 
+# New helper: convert a Chat LLM to a LanguageModel LLM if possible
+def convert_chat_model_to_llm(chat_model) -> BaseLanguageModel:
+    """
+    Converts a BaseChatModel instance to a BaseLanguageModel (LLM) if possible.
+    Currently supports CustomOpenAIResponse and CustomOpenAICompletion.
+    """
+    try:
+        from langchain_core.language_models import BaseLanguageModel
+        from services.chat_models.openai_response import CustomOpenAIResponse
+        from services.chat_models.openai_completion import CustomOpenAICompletion
+        from langchain_openai import OpenAI as OpenAILLM
+    except ImportError as e:
+        output_log(f"Import error during LLM conversion: {e}", "error")
+        return None
+
+    # Only OpenAI-based chat models are supported
+    if isinstance(chat_model, (CustomOpenAIResponse, CustomOpenAICompletion)):
+        # Map chat model parameters to LLM parameters
+        llm = OpenAILLM(
+            base_url=getattr(chat_model, "base_url", None),
+            api_key=chat_model.api_key,
+            organization_id=getattr(chat_model, "organization_id", None),
+            project_id=getattr(chat_model, "project_id", None),
+            model=getattr(chat_model, "model_name", None),
+            temperature=getattr(chat_model, "temperature", None),
+            max_tokens=getattr(chat_model, "max_tokens", None),
+        )
+        return llm
+
+    output_log(
+        f"Chat model {type(chat_model).__name__} not supported for LLM conversion", "error"
+    )
+    return None

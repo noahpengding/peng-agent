@@ -66,6 +66,10 @@ class CustomOpenAICompletion(BaseChatModel):
         }
         if self.reasoning_effect != "not a reasoning model":
             request_params["reasoning_effort"] = self.reasoning_effect
+        request_params["extra_headers"] = {
+            "HTTP-Referer": "https://agent.tenawalcott.com",
+            "X-Title": "Peng Agent",
+        }
         tools = kwargs.get("tools")
         tool_choice = kwargs.get("tool_choice")
         if tools:
