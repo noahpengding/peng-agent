@@ -65,11 +65,12 @@ async def chat_completions(
     output_log(request, "DEBUG")
     if request.message.strip() == "":
         raise HTTPException(status_code=400, detail="Empty message")
-    from handlers.chat_handlers import create_completion_response
+    from handlers.chat_handlers import chat_completions_handler
 
-    return await create_completion_response(
+    result = await chat_completions_handler(
         request.user_name, request.message, request.image, request.config
     )
+    return {"response": result}
 
 
 @app.options("/chat_batch")
