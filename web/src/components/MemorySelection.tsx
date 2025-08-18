@@ -32,7 +32,7 @@ const MemoryPage: React.FC = () => {
     if (user) {
       getMemories(user);
     }
-  }, [user]);
+  }, [user, fetchMemories]);
 
   // Filter memories based on search term
   useEffect(() => {

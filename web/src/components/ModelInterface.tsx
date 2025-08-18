@@ -23,11 +23,13 @@ const ModelInterface: React.FC = () => {
   // Load models on initial render
   useEffect(() => {
     fetchModels();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Apply filters when models or filter criteria change
   useEffect(() => {
     applyFilters();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [models, selectedOperator, selectedType, availabilityFilter, searchTerm]);
 
   // Extract unique operators and types for filters
@@ -85,9 +87,7 @@ const ModelInterface: React.FC = () => {
     try {
       await toggleModelReasoningEffect(modelName, reasoningEffect);
       setModels((prevModels) =>
-        prevModels.map((model) =>
-          model.model_name === modelName ? { ...model, reasoning_effect: reasoningEffect } : model
-        )
+        prevModels.map((model) => (model.model_name === modelName ? { ...model, reasoning_effect: reasoningEffect } : model))
       );
     } catch (error) {
       setError(`Failed to toggle reasoning effect for model ${modelName}: ${error}`);
