@@ -98,6 +98,9 @@ class CustomOpenAICompletion(BaseChatModel):
         for choice in responses.choices:
             if choice.finish_reason == "stop":
                 message_content = choice.message.content
+                additional_kwargs = {
+                    "type": "output_text",
+                }
             elif (
                 choice.finish_reason == "tool_calls"
                 or choice.finish_reason == "function_call"
@@ -118,7 +121,8 @@ class CustomOpenAICompletion(BaseChatModel):
                             },
                             "type": tool_call.type,
                         }
-                    ]
+                    ],
+                    "type": "tool_calls",
                 }
         generate_message = AIMessage(
             content=message_content,
@@ -153,29 +157,119 @@ class CustomOpenAICompletion(BaseChatModel):
         }
         if self.reasoning_effect != "not a reasoning model":
             request_params["reasoning_effort"] = self.reasoning_effect
+        tools = kwargs.get("tools")
+        tool_choice = kwargs.get("tool_choice")
+        if tools:
+            request_params["tools"] = []
+            for tool in tools:
+                parameters = tool.get("function", {}).get("parameters", {})
+                parameters["additionalProperties"] = False
+                request_params["tools"].append(
+                    {
+                        "type": "function",
+                        "function": {
+                            "name": tool.get("function", {}).get("name", ""),
+                            "description": tool.get("function", {}).get(
+                                "description", ""
+                            ),
+                            "parameters": parameters,
+                        },
+                        "strict": False,
+                    }
+                )
+        if tool_choice:
+            request_params["tool_choice"] = tool_choice
         stream = self.client.chat.completions.create(**request_params)
         token_count = len(prompt)
+        tool_calls_name = ""
+        tool_calls_args = ""
+        tool_calls_id = ""
+        tool_calls_type = ""
         for event in stream:
             output_log(f"Received event: {event}", "debug")
             choice = event.choices[0]
+            print(f"***** Choice: {choice} *****")
+            if choice.finish_reason == "tool_calls":
+                message_chunk = AIMessageChunk(
+                    content="",
+                    additional_kwargs={
+                        "tool_calls": [
+                            {
+                                "id": tool_calls_id,
+                                "function": {
+                                    "name": tool_calls_name,
+                                    "arguments": tool_calls_args,
+                                },
+                                "type": tool_calls_type,
+                            }
+                        ],
+                        "type": "tool_calls",
+                    },
+                    usage_metadata=UsageMetadata(
+                        {
+                            "input_tokens": len(prompt),
+                            "output_tokens": len(tool_calls_args) + 1,
+                            "total_tokens": token_count + len(tool_calls_args) + 1,
+                        }
+                    ),
+                )
+                chunk = ChatGenerationChunk(message=message_chunk)
+                yield chunk
             if choice.finish_reason is None:
-                token = choice.delta.content
-                if token:
-                    token_count += 1
+                token = choice.delta
+                if getattr(token, "tool_calls", None):
+                    tool_call = token.tool_calls[0]
+                    if tool_call.id:
+                        tool_calls_id = tool_call.id
+                    if tool_call.function.name:
+                        tool_calls_name = tool_call.function.name
+                    if tool_call.function.arguments:
+                        tool_calls_args += tool_call.function.arguments
+                    if tool_call.type:
+                        tool_calls_type = tool_call.type
+                    continue
+                elif getattr(token, "reasoning_content", None):
                     message_chunk = AIMessageChunk(
-                        content=token,
-                        additional_kwargs={},
+                        content=token.reasoning_content,
+                        additional_kwargs={"type": "reasoning_summary"},
                         usage_metadata=UsageMetadata(
                             {
                                 "input_tokens": len(prompt),
-                                "output_tokens": len(token),
-                                "total_tokens": token_count,
+                                "output_tokens": len(token.reasoning_content),
+                                "total_tokens": token_count
+                                + len(token.reasoning_content),
                             }
                         ),
                     )
                     chunk = ChatGenerationChunk(message=message_chunk)
-                    if run_manager:
-                        run_manager.on_llm_new_token(token, chunk=chunk)
+                    yield chunk
+                elif getattr(token, "reasoning", None):
+                    message_chunk = AIMessageChunk(
+                        content=token.reasoning,
+                        additional_kwargs={"type": "reasoning_summary"},
+                        usage_metadata=UsageMetadata(
+                            {
+                                "input_tokens": len(prompt),
+                                "output_tokens": len(token.reasoning),
+                                "total_tokens": token_count + len(token.reasoning),
+                            }
+                        ),
+                    )
+                    chunk = ChatGenerationChunk(message=message_chunk)
+                    yield chunk
+                elif getattr(token, "content", None):
+                    message_chunk = AIMessageChunk(
+                        content=token.content,
+                        additional_kwargs={"type": "output_text"},
+                        usage_metadata=UsageMetadata(
+                            {
+                                "input_tokens": len(prompt),
+                                "output_tokens": len(token.content),
+                                "total_tokens": token_count + len(token.content),
+                            }
+                        ),
+                    )
+                    chunk = ChatGenerationChunk(message=message_chunk)
                     yield chunk
 
     def bind_tools(

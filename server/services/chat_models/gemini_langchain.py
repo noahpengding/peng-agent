@@ -98,7 +98,8 @@ class CustomGemini(BaseChatModel):
                         },
                         "type": "function",
                     }
-                ]
+                ],
+                "type": "tool_calls",
             }
             message_content = [
                 {
@@ -109,6 +110,7 @@ class CustomGemini(BaseChatModel):
             ]
         else:
             message_content = responses.candidates[0].content.parts[0].text
+            additional_kwargs = {"type": "output_text"}
         generate_message = AIMessage(
             content=message_content,
             additional_kwargs=additional_kwargs,
@@ -134,36 +136,97 @@ class CustomGemini(BaseChatModel):
         output_log(f"Streaming chat completion request{prompt}", "debug")
         prompt_translated = self._prompt_translate(prompt)
         output_log(f"Translated prompt for streaming{prompt_translated}", "debug")
-        output_log(
-            f"Requesting streaming response from model: {self.model_name}", "debug"
-        )
+        request_params = {
+            "max_output_tokens": self.max_tokens,
+            "temperature": self.temperature,
+        }
+        if self.reasoning_effect != "not a reasoning model":
+            request_params["thinking_config"] = types.ThinkingConfig(
+                thinking_budget=-1, include_thoughts=True
+            )
+        tools = kwargs.get("tools")
+        if tools:
+            request_params["tools"] = []
+            for tool in tools:
+                request_params["tools"].append(
+                    {
+                        "name": tool.get("function", {}).get("name"),
+                        "description": tool.get("function", {}).get("description"),
+                        "parameters": tool.get("function", {}).get("parameters", {}),
+                    }
+                )
+            request_params["tools"] = [
+                types.Tool(function_declarations=request_params["tools"])
+            ]
         stream = self.client.models.generate_content_stream(
             model=self.model_name,
             contents=prompt_translated,
-            config=types.GenerateContentConfig(
-                max_output_tokens=self.max_tokens, temperature=self.temperature
-            ),
+            config=types.GenerateContentConfig(**request_params),
         )
         token_count = len(prompt)
         for event in stream:
             output_log(f"Received event: {event}", "debug")
-            token = event.text
-            if token:
-                message_chunk = AIMessageChunk(
-                    content=token,
-                    additional_kwargs={},
-                    usage_metadata=UsageMetadata(
-                        {
-                            "input_tokens": len(prompt),
-                            "output_tokens": len(token),
-                            "total_tokens": token_count,
-                        }
-                    ),
-                )
-                chunk = ChatGenerationChunk(message=message_chunk)
-                if run_manager:
-                    run_manager.on_llm_new_token(token, chunk=chunk)
-                yield chunk
+            if event.candidates is None:
+                continue
+            token = event.candidates[0]
+            if token.finish_reason is None or token.finish_reason == "STOP":
+                part = token.content.parts[0]
+                if getattr(part, "function_call", None):
+                    fc = part.function_call
+                    import uuid
+
+                    fc.id = f"function_call_{uuid.uuid4()}"
+                    message_chunk = AIMessageChunk(
+                        content="",
+                        additional_kwargs={
+                            "tool_calls": [
+                                {
+                                    "id": fc.id,
+                                    "function": {
+                                        "name": fc.name,
+                                        "arguments": json.dumps(fc.args),
+                                    },
+                                    "type": "function",
+                                }
+                            ],
+                            "type": "tool_calls",
+                        },
+                    )
+                    chunk = ChatGenerationChunk(message=message_chunk)
+                    yield chunk
+                elif getattr(part, "thought", None):
+                    message_chunk = AIMessageChunk(
+                        content=part.text,
+                        additional_kwargs={"type": "reasoning_summary"},
+                        usage_metadata=UsageMetadata(
+                            {
+                                "input_tokens": len(prompt),
+                                "output_tokens": len(part.text),
+                                "total_tokens": token_count + len(part.text),
+                            }
+                        ),
+                    )
+                    chunk = ChatGenerationChunk(message=message_chunk)
+                    yield chunk
+                elif getattr(part, "text", None):
+                    try:
+                        text = part.text
+                        message_chunk = AIMessageChunk(
+                            content=text,
+                            additional_kwargs={"type": "output_text"},
+                            usage_metadata=UsageMetadata(
+                                {
+                                    "input_tokens": len(prompt),
+                                    "output_tokens": len(text),
+                                    "total_tokens": token_count + len(text),
+                                }
+                            ),
+                        )
+                        chunk = ChatGenerationChunk(message=message_chunk)
+                        yield chunk
+                    except Exception as e:
+                        output_log(f"Error processing token: {e}", "debug")
+                        continue
 
     def bind_tools(
         self,

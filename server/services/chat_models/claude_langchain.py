@@ -143,28 +143,106 @@ class CustomClaude(BaseChatModel):
         if self.reasoning_effect != "not a reasoning model":
             request_params["thinking"] = {
                 "type": "enabled",
-                "budget_tokens": 8192 * 0.8,
+                "budget_tokens": int(8192 * 0.8),
             }
+        tools = kwargs.get("tools")
+        tool_choice = kwargs.get("tool_choice")
+        if tools:
+            request_params["tools"] = []
+            for tool in tools:
+                parameters = tool.get("function", {}).get("parameters", {})
+                parameters["additionalProperties"] = False
+                request_params["tools"].append(
+                    {
+                        "name": tool.get("function", {}).get("name"),
+                        "description": tool.get("function", {}).get("description"),
+                        "input_schema": parameters,
+                    }
+                )
+        if tool_choice:
+            request_params["tool_choice"] = tool_choice
         token_count = len(prompt)
         with self.client.messages.stream(**request_params) as stream:
-            for text in stream.text_stream:
-                output_log(f"Received event: {text}", "debug")
-                if text:
+            tool_calls_id = ""
+            tool_calls_name = ""
+            tool_calls_input = ""
+            for event in stream:
+                print(f"Received event: {event}")
+                if event.type == "content_block_start" and event.content_block.type in (
+                    "server_tool_use",
+                    "tool_use",
+                ):
+                    tool_calls_id = event.content_block.id
+                    tool_calls_name = event.content_block.name
+                elif event.type == "content_block_stop" and tool_calls_id != "":
                     message_chunk = AIMessageChunk(
-                        content=text,
-                        additional_kwargs={},
+                        content=[
+                            {
+                                "type": "tool_use",
+                                "id": tool_calls_id,
+                                "name": tool_calls_name,
+                                "input": json.loads(tool_calls_input),
+                            }
+                        ],
+                        additional_kwargs={
+                            "tool_calls": [
+                                {
+                                    "id": tool_calls_id,
+                                    "type": "function_call",
+                                    "function": {
+                                        "name": tool_calls_name,
+                                        "arguments": tool_calls_input,
+                                    },
+                                },
+                            ],
+                            "type": "tool_calls",
+                        },
                         usage_metadata=UsageMetadata(
                             {
                                 "input_tokens": len(prompt),
-                                "output_tokens": len(text),
+                                "output_tokens": 0,
                                 "total_tokens": token_count,
                             }
                         ),
                     )
                     chunk = ChatGenerationChunk(message=message_chunk)
-                    if run_manager:
-                        run_manager.on_llm_new_token(text, chunk=chunk)
                     yield chunk
+                    tool_calls_id = ""
+                    tool_calls_name = ""
+                    tool_calls_input = ""
+                elif event.type == "content_block_delta":
+                    if event.delta.type == "input_json_delta":
+                        tool_calls_input += event.delta.partial_json
+                        continue
+                    elif event.delta.type == "thinking_delta":
+                        message_chunk = AIMessageChunk(
+                            content=event.delta.thinking,
+                            additional_kwargs={"type": "reasoning_summary"},
+                            usage_metadata=UsageMetadata(
+                                {
+                                    "input_tokens": len(prompt),
+                                    "output_tokens": len(event.delta.thinking),
+                                    "total_tokens": token_count
+                                    + len(event.delta.thinking),
+                                }
+                            ),
+                        )
+                        chunk = ChatGenerationChunk(message=message_chunk)
+                        yield chunk
+                    elif event.delta.type == "text_delta":
+                        message_chunk = AIMessageChunk(
+                            content=event.delta.text,
+                            additional_kwargs={"type": "output_text"},
+                            usage_metadata=UsageMetadata(
+                                {
+                                    "input_tokens": len(prompt),
+                                    "output_tokens": len(event.delta.text),
+                                    "total_tokens": token_count + len(event.delta.text),
+                                }
+                            ),
+                        )
+                        chunk = ChatGenerationChunk(message=message_chunk)
+                        yield chunk
 
     def bind_tools(
         self,
@@ -223,6 +301,7 @@ class CustomClaude(BaseChatModel):
 
     def _prompt_translate(self, prompt: List[BaseMessage]) -> str:
         prompt_text = []
+
         for message in prompt:
             if message.content == "":
                 continue

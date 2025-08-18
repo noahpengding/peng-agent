@@ -18,6 +18,17 @@ def set_up():
         },
     )
     mysql.create_table(
+        "tool_call",
+        {
+            "id": "INT AUTO_INCREMENT PRIMARY KEY",
+            "call_id": "VARCHAR(128)",
+            "tools_name": "VARCHAR(128)",
+            "tools_argument": "TEXT",
+            "problem": "TEXT",
+            "created_at": "TIMESTAMP DEFAULT CURRENT_TIMESTAMP",
+        },
+    )
+    mysql.create_table(
         "knowledge_base",
         {
             "id": "INT AUTO_INCREMENT PRIMARY KEY",

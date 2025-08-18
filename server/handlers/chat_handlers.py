@@ -38,80 +38,50 @@ async def chat_handler(
 
     prompt, params = _generate_prompt_params(message, image, chat_config)
 
-    base_model_ins = get_model_instance_by_operator(
-        chat_config.operator,
-        chat_config.base_model,
+    from services.peng_agent import PengAgent, AgentState
+
+    agent = PengAgent(
+        operater=chat_config.operator,
+        model=chat_config.base_model,
+        tools=chat_config.tools_name,
     )
-    if base_model_ins is None:
-        yield (
-            json.dumps({"chunk": "Error: Model instance not found.", "done": True})
-            + "\n"
-        )
-        return
 
-    if chat_config.tools_name != []:
-        from services.tools.tools_routers import tools_routers
-        from langgraph.prebuilt import create_react_agent
-
-        tools = tools_routers(chat_config.tools_name)
-        llm_with_tools = base_model_ins.bind_tools(tools)
-        agent = create_react_agent(
-            model=llm_with_tools,
-            tools=tools,
-        )
-        full_response = ""
-        async for chunk in agent.astream(
-            prompt.invoke(params),
-            {"recursion_limit": config.recursion_limit},
-            stream_mode="updates",
-        ):
-            if chunk:
-                chunk_type = "unknown"
-                if "agent" in chunk and "messages" in chunk["agent"]:
-                    chunk_content = chunk["agent"]["messages"][0].content
-                    chunk_type = "agent"
-                elif "tools" in chunk and "messages" in chunk["tools"]:
-                    chunk_content = chunk["tools"]["messages"][0].content
-                    chunk_type = "tools"
-                else:
-                    chunk_content = ""
-                    continue
-                chunk_content = response_formatter_main(
-                    chat_config.operator, chunk_content
+    full_response = ""
+    async for chunk in agent.astream(AgentState(prompt.invoke(params))):
+        output_log(f"Received chunk: {chunk}", "INFO")
+        if chunk:
+            chunk_type = "unknown"
+            if "call_model" in chunk and "messages" in chunk["call_model"]:
+                chunk_content = str(chunk["call_model"]["messages"].content)
+                chunk_type = chunk["call_model"]["messages"].additional_kwargs.get(
+                    "type", "output_text"
                 )
-                if isinstance(chunk_content, str):
-                    yield (
-                        json.dumps(
-                            {"chunk": chunk_content, "type": chunk_type, "done": False}
-                        )
-                        + "\n"
-                    )
-                    full_response += chunk_content
-                    _save_chat(
-                        user_name,
-                        chunk_type,
-                        chat_config.base_model,
-                        message,
-                        chunk_content,
-                    )
-    else:
-        full_response = ""
-        async for chunk in base_model_ins.astream(prompt.invoke(params)):
-            if chunk:
-                chunk = response_formatter_main(chat_config.operator, chunk.content)
-                full_response += chunk
+            elif "call_tools" in chunk and "messages" in chunk["call_tools"]:
+                chunk_content = chunk["call_tools"]["messages"]
+                if isinstance(chunk_content, list):
+                    chunk_content = chunk_content[0].content
+                else:
+                    chunk_content = chunk_content.content
+                chunk_type = "tool_calls"
+            else:
+                chunk_content = ""
+                continue
+            chunk_content = response_formatter_main(chat_config.operator, chunk_content)
+            if isinstance(chunk_content, str):
                 yield (
-                    json.dumps({"chunk": chunk, "type": "assistant", "done": False})
+                    json.dumps(
+                        {"chunk": chunk_content, "type": chunk_type, "done": False}
+                    )
                     + "\n"
                 )
-        _save_chat(
-            user_name,
-            "assistant",
-            chat_config.base_model,
-            message,
-            full_response,
-        )
-
+                full_response += chunk_content
+                _save_chat(
+                    user_name,
+                    chunk_type,
+                    chat_config.base_model,
+                    message,
+                    chunk_content,
+                )
     yield json.dumps({"chunk": "", "done": True}) + "\n"
 
 
@@ -134,51 +104,25 @@ async def chat_completions_handler(
 
     prompt, params = _generate_prompt_params(message, image, chat_config)
 
-    base_model_ins = get_model_instance_by_operator(
-        chat_config.operator,
-        chat_config.base_model,
+    from services.peng_agent import PengAgent
+
+    agent = PengAgent(
+        operater=chat_config.operator,
+        model=chat_config.base_model,
+        tools=chat_config.tools_name,
     )
-    if base_model_ins is None:
-        return "Error: Model instance not found."
-
-    if chat_config.tools_name != []:
-        from services.tools.tools_routers import tools_routers
-        from langgraph.prebuilt import create_react_agent
-
-        tools = tools_routers(chat_config.tools_name)
-        llm_with_tools = base_model_ins.bind_tools(tools)
-        agent = create_react_agent(
-            model=llm_with_tools,
-            tools=tools,
-        )
-        response = await agent.ainvoke(prompt.invoke(params))
-        full_response = []
-        for response_message in response["messages"]:
-            if response_message.content:
-                formatted_response = response_formatter_main(
-                    chat_config.operator, response_message.content
-                )
-                full_response.append(f"{response_message.type}: {formatted_response}")
-                _save_chat(
-                    user_name,
-                    response_message.type,
-                    chat_config.base_model,
-                    message,
-                    formatted_response,
-                )
-        full_response = "||\n".join(full_response)
-    else:
-        full_response = await base_model_ins.ainvoke(prompt.invoke(params))
-        full_response = response_formatter_main(
-            chat_config.operator, full_response.content
-        )
-        _save_chat(
-            user_name,
-            "assistant",
-            chat_config.base_model,
-            message,
-            full_response,
-        )
+    response = await agent.ainvoke(prompt.invoke(params))
+    full_response = response_formatter_main(
+        chat_config.operator,
+        response["messages"][-1].content if "messages" in response else str(response),
+    )
+    _save_chat(
+        user_name,
+        "assistant",
+        chat_config.base_model,
+        message,
+        full_response,
+    )
     return full_response
 
 

@@ -1,8 +1,10 @@
 from typing import List
+from utils.log import output_log
 
 
 def tools_routers(tools_name: List[str]):
     tools = []
+    output_log(f"Initializing tools: {tools_name}", "DEBUG")
     for tool_name in tools_name:
         if tool_name == "tavily_search_tool":
             from services.tools.search_tools import tavily_search_tool
