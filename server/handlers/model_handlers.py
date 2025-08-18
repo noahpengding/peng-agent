@@ -189,7 +189,7 @@ def get_all_multimodal_models():
     return mysql.read_record_v2("model", {"isMultimodal=": 1})
 
 
-def update_resoning_effect(model_name: str, reasoning_effect: str):
+def update_reasoning_effect(model_name: str, reasoning_effect: str):
     mysql = MysqlConnect()
     model = mysql.read_records("model", {"model_name": model_name})
     if model:

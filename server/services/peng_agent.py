@@ -168,8 +168,6 @@ class PengAgent:
 
     def should_continue(self, state: AgentState) -> str:
         last_message = list(state["messages"])[-1]
-        print(f"Last message: {last_message}")
-        print(getattr(last_message, "tool_calls", None))
         if isinstance(last_message, AIMessage) and getattr(
             last_message, "tool_calls", None
         ):

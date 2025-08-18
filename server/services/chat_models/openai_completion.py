@@ -188,7 +188,6 @@ class CustomOpenAICompletion(BaseChatModel):
         for event in stream:
             output_log(f"Received event: {event}", "debug")
             choice = event.choices[0]
-            print(f"***** Choice: {choice} *****")
             if choice.finish_reason == "tool_calls":
                 message_chunk = AIMessageChunk(
                     content="",

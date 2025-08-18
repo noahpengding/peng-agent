@@ -83,7 +83,7 @@ const ModelInterface: React.FC = () => {
     }
   };
 
-  const handleModelReasoingEffect = async (modelName: string, reasoningEffect: string) => {
+  const handleModelReasoningEffect = async (modelName: string, reasoningEffect: string) => {
     try {
       await toggleModelReasoningEffect(modelName, reasoningEffect);
       setModels((prevModels) =>
@@ -236,7 +236,7 @@ const ModelInterface: React.FC = () => {
                           <select
                             className="reasoning-effect-select"
                             value={model.reasoning_effect}
-                            onChange={(e) => handleModelReasoingEffect(model.model_name, e.target.value)}
+                            onChange={(e) => handleModelReasoningEffect(model.model_name, e.target.value)}
                           >
                             <option value="not a reasoning model">Not a Reasoning Model</option>
                             <option value="low">Low</option>

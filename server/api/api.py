@@ -154,9 +154,9 @@ async def flip_model_multimodal(
 async def update_model_reasoning_effect(
     request: dict, auth: dict = Depends(authenticate_request)
 ):
-    from handlers.model_handlers import update_resoning_effect
+    from handlers.model_handlers import update_reasoning_effect
 
-    return update_resoning_effect(request["model_name"], request["reasoning_effect"])
+    return update_reasoning_effect(request["model_name"], request["reasoning_effect"])
 
 
 @app.get("/model_reasoning_effect")
