@@ -50,7 +50,6 @@ async def chat_handler(
     async for chunk in agent.astream(AgentState(prompt.invoke(params))):
         output_log(f"Received chunk: {chunk}", "INFO")
         if chunk:
-            chunk_type = "unknown"
             if "call_model" in chunk and "messages" in chunk["call_model"]:
                 chunk_content = str(chunk["call_model"]["messages"].content)
                 chunk_type = chunk["call_model"]["messages"].additional_kwargs.get(
