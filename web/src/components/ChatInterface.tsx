@@ -483,20 +483,15 @@ const ChatbotUI = () => {
               </li>
               <li>
                 <a
-                  href="https://smith.langchain.com/o/a2c79940-6495-4c24-ab6b-10d0bb8534ee/projects/p/01304a5e-b6f3-4662-8b3e-0befd8886a5a?timeModel=%7B%22duration%22%3A%227d%22%7D"
+                  href="https://llm.tenawalcott.com/projects/UHJvamVjdDoz/spans"
                   className="external-link"
                 >
-                  LangSmith
+                  Phoenix Observability
                 </a>
               </li>
               <li>
                 <a href="https://github.com/Noahdingpeng/peng-agent" className="external-link">
                   GitHub
-                </a>
-              </li>
-              <li>
-                <a href="https://git.tenawalcott.com/peng-bot/peng-agent" className="external-link">
-                  GitLab
                 </a>
               </li>
             </ul>

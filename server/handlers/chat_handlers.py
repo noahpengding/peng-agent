@@ -1,12 +1,10 @@
 from models.chat_config import ChatConfig
-from config.config import config
-from utils.mysql_connect import MysqlConnect
+from services.peng_agent import save_chat, PengAgent, AgentState
 from utils.log import output_log
 from services.response_formatter import response_formatter_main
 import services.prompt_generator as prompt_generator
 from handlers.model_utils import get_model_instance_by_operator
 from fastapi.responses import StreamingResponse, JSONResponse
-from datetime import datetime, timedelta
 import json
 from typing import AsyncIterator
 
@@ -38,17 +36,16 @@ async def chat_handler(
 
     prompt, params = _generate_prompt_params(message, image, chat_config)
 
-    from services.peng_agent import PengAgent, AgentState
-
     agent = PengAgent(
-        operater=chat_config.operator,
-        model=chat_config.base_model,
-        tools=chat_config.tools_name,
+        user_name,
+        chat_config.operator,
+        chat_config.base_model,
+        chat_config.tools_name,
     )
 
     full_response = ""
     async for chunk in agent.astream(AgentState(prompt.invoke(params))):
-        output_log(f"Received chunk: {chunk}", "INFO")
+        output_log(f"Received chunk: {chunk}", "DEBUG")
         if chunk:
             if "call_model" in chunk and "messages" in chunk["call_model"]:
                 chunk_content = str(chunk["call_model"]["messages"].content)
@@ -74,13 +71,6 @@ async def chat_handler(
                     + "\n"
                 )
                 full_response += chunk_content
-                _save_chat(
-                    user_name,
-                    chunk_type,
-                    chat_config.base_model,
-                    message,
-                    chunk_content,
-                )
     yield json.dumps({"chunk": "", "done": True}) + "\n"
 
 
@@ -103,24 +93,16 @@ async def chat_completions_handler(
 
     prompt, params = _generate_prompt_params(message, image, chat_config)
 
-    from services.peng_agent import PengAgent
-
     agent = PengAgent(
         operater=chat_config.operator,
         model=chat_config.base_model,
         tools=chat_config.tools_name,
+        user_name=user_name,
     )
     response = await agent.ainvoke(prompt.invoke(params))
     full_response = response_formatter_main(
         chat_config.operator,
         response["messages"][-1].content if "messages" in response else str(response),
-    )
-    _save_chat(
-        user_name,
-        "assistant",
-        chat_config.base_model,
-        message,
-        full_response,
     )
     return full_response
 
@@ -162,7 +144,7 @@ def create_batch_response(
         for response in full_response
     ]
     for message, response in zip(messages, reponses):
-        _save_chat(
+        save_chat(
             user_name,
             "assistant",
             chat_config.base_model,
@@ -173,36 +155,3 @@ def create_batch_response(
         content=reponses,
         media_type="application/json",
     )
-
-
-def _save_chat(
-    user_name,
-    chat_type,
-    base_model,
-    human_input,
-    ai_response,
-):
-    if ai_response is None or ai_response.strip() == "":
-        return
-    mysql = MysqlConnect()
-    try:
-        mysql.create_record(
-            "chat",
-            {
-                "user_name": user_name,
-                "type": chat_type,
-                "base_model": base_model,
-                "human_input": human_input[: config.input_max_length]
-                if len(human_input) > config.input_max_length
-                else human_input,
-                "ai_response": ai_response[: config.output_max_length]
-                if len(ai_response) > config.output_max_length
-                else ai_response,
-                "created_at": datetime.now(),
-                "expire_at": datetime.now() + timedelta(days=7),
-            },
-        )
-    except Exception as e:
-        output_log(f"Error saving chat: {e}", "error")
-    finally:
-        mysql.close()

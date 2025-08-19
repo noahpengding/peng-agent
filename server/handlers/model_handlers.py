@@ -52,6 +52,7 @@ def _check_new_model(
             model_name=model_name,
             isAvailable=False,
             isMultimodal=False,
+            reasoning_effect="not a reasoning model",
         )
     return None
 
@@ -59,9 +60,12 @@ def _check_new_model(
 # Refersh will check all operators and sync local model changes
 def refresh_models():
     update_operator()
-    models = get_model()
+    server_model_dicts = get_model()
+    server_models = [
+        ModelConfig(**model) for model in server_model_dicts if isinstance(model, dict)
+    ]
     local_models = _get_local_models()
-    responses = local_models.copy() if local_models else []
+    responses = server_models.copy()
     for operator in get_all_operators():
         try:
             from handlers.model_utils import get_model_instance_by_operator
@@ -76,16 +80,16 @@ def refresh_models():
             )
             continue
         for model in models.split("\n"):
-            local_match = next(
+            server_match = next(
                 (
-                    local_model
-                    for local_model in local_models
-                    if local_model.model_name == model
+                    server_model
+                    for server_model in server_models
+                    if server_model.model_name == model
                 ),
                 None,
             )
             # no-dd-sa:python-best-practices/nested-blocks
-            if local_match:
+            if server_match:
                 continue
             else:
                 # Check new model based on priority patterns
@@ -105,16 +109,11 @@ def refresh_models():
                     if new_model:
                         responses.append(new_model)
                         break
-    for response in responses:
-        model = models.get(response.model_name) if isinstance(models, dict) else None
-        if model:
-            response.isAvailable = model.get("isAvailable", False)
-            response.isMultimodal = model.get("isMultimodal", False)
-            response.reasoning_effect = model.get("reasoning_effect", "")
-        else:
-            response.isAvailable = False
-            response.isMultimodal = False
-            response.reasoning_effect = "not a reasoning model"
+    for local_model in local_models:
+        if not any(
+            local_model.model_name == response.model_name for response in responses
+        ):
+            responses.append(local_model)
     _save_local_models(responses)
     mysql = MysqlConnect()
     try:

@@ -28,6 +28,8 @@ from langchain_core.language_models import LanguageModelInput
 import time
 import json
 
+THINKING_BUDGET_TOKENS = int(8192 * 0.8)
+
 
 class CustomClaude(BaseChatModel):
     model_name: str = Field(alias="model")
@@ -42,7 +44,6 @@ class CustomClaude(BaseChatModel):
         self.client = Anthropic(
             api_key=self.api_key,
         )
-        self.THINKING_BUDGET_TOKENS = int(8192 * 0.8)
 
     def _generate(
         self,
@@ -63,7 +64,7 @@ class CustomClaude(BaseChatModel):
         if self.reasoning_effect != "not a reasoning model":
             request_params["thinking"] = {
                 "type": "enabled",
-                "budget_tokens": self.THINKING_BUDGET_TOKENS,
+                "budget_tokens": THINKING_BUDGET_TOKENS,
             }
         tools = kwargs.get("tools")
         tool_choice = kwargs.get("tool_choice")
@@ -144,7 +145,7 @@ class CustomClaude(BaseChatModel):
         if self.reasoning_effect != "not a reasoning model":
             request_params["thinking"] = {
                 "type": "enabled",
-                "budget_tokens": self.THINKING_BUDGET_TOKENS,
+                "budget_tokens": THINKING_BUDGET_TOKENS,
             }
         tools = kwargs.get("tools")
         tool_choice = kwargs.get("tool_choice")

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import { MemoryService } from '../services/memoryService';
 
 // Export the Memory interface from the hook file
@@ -16,7 +16,7 @@ export const useMemoryApi = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const fetchMemories = async (username: string): Promise<Memory[]> => {
+  const fetchMemories = useCallback(async (username: string): Promise<Memory[]> => {
     setIsLoading(true);
     setError(null);
 
@@ -30,7 +30,7 @@ export const useMemoryApi = () => {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, []); // Empty dependency array since this function doesn't depend on any props or state
 
   return { fetchMemories, isLoading, error };
 };

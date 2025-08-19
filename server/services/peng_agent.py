@@ -12,6 +12,10 @@ from langchain_core.messages import (
 from langgraph.graph import StateGraph, END
 from langgraph.graph.message import add_messages
 from langgraph.config import get_stream_writer
+from config.config import config
+from utils.log import output_log
+from utils.mysql_connect import MysqlConnect
+from datetime import datetime, timedelta
 
 
 class AgentState(TypedDict):
@@ -24,9 +28,67 @@ class ToolCall(TypedDict):
     id: str
 
 
+def save_chat(
+    user_name,
+    chat_type,
+    base_model,
+    human_input,
+    ai_response,
+):
+    if ai_response is None or ai_response.strip() == "":
+        return
+    mysql = MysqlConnect()
+    try:
+        mysql.create_record(
+            "chat",
+            {
+                "user_name": user_name,
+                "type": chat_type,
+                "base_model": base_model,
+                "human_input": human_input[: config.input_max_length]
+                if len(human_input) > config.input_max_length
+                else human_input,
+                "ai_response": ai_response[: config.output_max_length]
+                if len(ai_response) > config.output_max_length
+                else ai_response,
+                "created_at": datetime.now(),
+                "expire_at": datetime.now() + timedelta(days=7),
+            },
+        )
+    except Exception as e:
+        output_log(f"Error saving chat: {e}", "error")
+    finally:
+        mysql.close()
+
+
+def save_tool_call(
+    call_id: str,
+    tools_name: str,
+    tools_argument: dict,
+    problem: str,
+):
+    mysql = MysqlConnect()
+    try:
+        mysql.create_record(
+            "tool_call",
+            {
+                "call_id": str(call_id),
+                "tools_name": str(tools_name),
+                "tools_argument": str(tools_argument),
+                "problem": str(problem),
+                "created_at": datetime.now(),
+            },
+        )
+    except Exception as e:
+        output_log(f"Error saving tool call: {e}", "error")
+    finally:
+        mysql.close()
+
+
 class PengAgent:
-    def __init__(self, operater: str, model: str, tools: list[str]):
+    def __init__(self, user_name: str, operater: str, model: str, tools: list[str]):
         self.operator = operater
+        self.user_name = user_name
         self.model = model
         self.tools = self.init_tools(tools)
         self.graph = self.init_agent_graph()
@@ -85,6 +147,13 @@ class PengAgent:
             writer({"call_model": {"messages": response}})
         full_response = AIMessage(
             content=full_response, additional_kwargs={"type": "reasoning_final"}
+        )
+        save_chat(
+            self.user_name,
+            "assistant",
+            self.model,
+            "|\n".join([str(msg.content) for msg in list(state["messages"])[1:-1]]),
+            full_response.content,
         )
         return {"messages": [full_response, response]}
 
@@ -168,9 +237,16 @@ class PengAgent:
 
     def should_continue(self, state: AgentState) -> str:
         last_message = list(state["messages"])[-1]
+        input_message = list(state["messages"])[1:-1]
         if isinstance(last_message, AIMessage) and getattr(
             last_message, "tool_calls", None
         ):
+            save_tool_call(
+                call_id=last_message.tool_calls[0].get("id", ""),
+                tools_name=last_message.tool_calls[0].get("name", ""),
+                tools_argument=last_message.tool_calls[0].get("args", {}),
+                problem="|\n".join([str(msg.content) for msg in input_message]),
+            )
             return "call_tools"
         if (
             isinstance(last_message, AIMessage)
