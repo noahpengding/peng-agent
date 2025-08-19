@@ -60,7 +60,7 @@ def _check_new_model(
 # Refersh will check all operators and sync local model changes
 def refresh_models():
     update_operator()
-    server_model_dicts  = get_model()
+    server_model_dicts = get_model()
     server_models = [
         ModelConfig(**model) for model in server_model_dicts if isinstance(model, dict)
     ]
