@@ -79,7 +79,7 @@ export const ChatService = {
                   onComplete();
                 }
               }
-            } catch (e) {
+            } catch {
               // Silently handle JSON parsing errors to avoid console warnings
               // This can happen with incomplete streaming data
             }

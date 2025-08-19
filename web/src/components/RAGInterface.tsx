@@ -25,6 +25,7 @@ const RAGInterface: React.FC = () => {
   // Load documents on component mount
   useEffect(() => {
     loadDocuments();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Extract unique knowledge bases from documents

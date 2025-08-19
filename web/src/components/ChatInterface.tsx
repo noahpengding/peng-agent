@@ -30,10 +30,12 @@ const ChatbotUI = () => {
     role: string;
     content: string;
     image?: string;
-    // type distinguishes tool vs assistant/agent messages
-    type?: string;
-    // folded indicates tool messages should be initially collapsed
+    // type distinguishes different message types: tool_calls, reasoning_summary, output_text
+    type?: 'tool_calls' | 'reasoning_summary' | 'output_text' | 'user' | 'assistant';
+    // folded indicates messages should be initially collapsed
     folded?: boolean;
+    // messageId to track related messages
+    messageId?: string;
   }
 
   const [messages, setMessages] = useState<Message[]>([]);
@@ -256,14 +258,13 @@ const ChatbotUI = () => {
     if (!input.trim() && !image) return;
 
     // Add user message to chat
-    const newMessages = [...messages, { role: 'user', content: input }];
+    const newMessages = [...messages, { role: 'user', content: input, type: 'user' as const }];
     setMessages(newMessages);
     setIsLoading(true);
     setError(null);
 
-    // Add an empty assistant message that will be updated with streaming content
-    const assistantMessageIndex = newMessages.length;
-    setMessages([...newMessages, { role: 'assistant', content: '' }]);
+    // Generate a unique message ID for this conversation turn
+    const messageId = Date.now().toString();
 
     try {
       // Configure the API request - only include fields expected by backend
@@ -283,38 +284,131 @@ const ChatbotUI = () => {
         config: config,
       };
 
-      // Keep track of the full assistant response for memory
-      let fullResponse = '';
+      // Keep track of accumulated content for each type in a more straightforward way
+      let outputContent = '';
+      let lastReasoningContent = '';
+      let allToolCallsContent: string[] = [];
+
       // Stream the message to get chunks (type-aware)
       await sendMessage(
         request,
         // Handle each chunk with its type
         (chunk: string, type: string) => {
-          if (type === 'tools') {
-            // Add individual tool message chunk
-            setMessages((current) => [...current, { role: 'assistant', content: chunk, type: 'tools', folded: false }]);
-          } else {
-            // Accumulate assistant chunks
-            fullResponse += chunk;
+          // Skip empty chunks
+          if (!chunk.trim()) return;
+
+          if (type === 'tool_calls') {
+            // Add individual tool message chunk as a separate message
+            const toolMessage: Message = {
+              role: 'assistant',
+              content: chunk,
+              type: 'tool_calls',
+              folded: false,
+              messageId,
+            };
+            setMessages((current) => [...current, toolMessage]);
+            // Track tool calls content for memory
+            allToolCallsContent.push(chunk);
+            // Reset reasoning tracking for new sequence
+            lastReasoningContent = '';
+          } else if (type === 'reasoning_summary') {
             setMessages((currentMessages) => {
               const updated = [...currentMessages];
-              if (updated[assistantMessageIndex]) {
-                updated[assistantMessageIndex] = {
-                  role: 'assistant',
-                  content: fullResponse,
-                  type: 'assistant',
+              // Check if this is continuation of the same reasoning sequence
+              const lastMessage = updated[updated.length - 1];
+              const isContinuation = lastMessage && lastMessage.type === 'reasoning_summary' && lastMessage.messageId === messageId;
+
+              if (isContinuation) {
+                // Update the last reasoning message
+                lastReasoningContent += chunk;
+                updated[updated.length - 1] = {
+                  ...updated[updated.length - 1],
+                  content: lastReasoningContent,
                 };
+                return updated;
+              } else {
+                // Start a new reasoning message
+                lastReasoningContent = chunk;
+                const reasoningMessage: Message = {
+                  role: 'assistant',
+                  content: chunk,
+                  type: 'reasoning_summary',
+                  folded: false,
+                  messageId,
+                };
+                return [...updated, reasoningMessage];
               }
-              return updated;
+            });
+          } else if (type === 'output_text') {
+            // Accumulate output content
+            outputContent += chunk;
+
+            setMessages((currentMessages) => {
+              const updated = [...currentMessages];
+              // Check if there's already an output message for this messageId
+              const existingOutputIndex = updated.findIndex((msg) => msg.messageId === messageId && msg.type === 'output_text');
+
+              if (existingOutputIndex >= 0) {
+                // Update existing output message
+                updated[existingOutputIndex] = {
+                  ...updated[existingOutputIndex],
+                  content: outputContent,
+                };
+                return updated;
+              } else {
+                // Create new output message
+                const outputMessage: Message = {
+                  role: 'assistant',
+                  content: outputContent,
+                  type: 'output_text',
+                  folded: false,
+                  messageId,
+                };
+                return [...updated, outputMessage];
+              }
             });
           }
         },
         // Handle completion
         () => {
-          // Fold all tool messages
-          setMessages((current) => current.map((m) => (m.type === 'tools' ? { ...m, folded: true } : m)));
-          // Add the full response to short-term memory
-          setShortTermMemory((prev) => [...prev, 'human: ' + input, 'assistant: ' + fullResponse]);
+          // Fold tool_calls and reasoning_summary messages, keep output_text unfolded
+          setMessages((current) =>
+            current.map((m) => {
+              if (m.messageId === messageId) {
+                if (m.type === 'tool_calls' || m.type === 'reasoning_summary') {
+                  return { ...m, folded: true };
+                }
+              }
+              return m;
+            })
+          );
+
+          // Add each type of content as separate entries to short-term memory
+          setShortTermMemory((prev) => {
+            const newMemories = [...prev];
+
+            // Add the human input first
+            newMemories.push('human: ' + input);
+
+            // Add tool calls if any
+            if (allToolCallsContent.length > 0) {
+              const toolCallsText = allToolCallsContent.join('\n');
+              newMemories.push('assistant: Tool Calls: ' + toolCallsText);
+            }
+
+            // Add reasoning if any
+            if (lastReasoningContent.trim()) {
+              newMemories.push('assistant: Reasoning: ' + lastReasoningContent.trim());
+            }
+
+            // Add output text if any
+            if (outputContent.trim()) {
+              newMemories.push('assistant: Response: ' + outputContent.trim());
+            }
+
+            return newMemories;
+          });
+
           setIsLoading(false);
         }
       );
@@ -326,17 +420,16 @@ const ChatbotUI = () => {
         setError('An unknown error occurred.');
       }
 
-      // Update the assistant message to show an error
-      setMessages((currentMessages) => {
-        const updatedMessages = [...currentMessages];
-        if (updatedMessages[assistantMessageIndex]) {
-          updatedMessages[assistantMessageIndex] = {
-            role: 'assistant',
-            content: 'Sorry, I encountered an error.',
-          };
-        }
-        return updatedMessages;
-      });
+      // Add error message
+      setMessages((currentMessages) => [
+        ...currentMessages,
+        {
+          role: 'assistant',
+          content: 'Sorry, I encountered an error.',
+          type: 'output_text',
+          messageId,
+        },
+      ]);
 
       // Ensure loading state is cleared
       setIsLoading(false);
@@ -470,10 +563,15 @@ const ChatbotUI = () => {
                         <img src={msg.image} alt="User uploaded" className="message-image" />
                       </div>
                     )}
-                    {msg.type === 'tools' ? (
+                    {msg.type === 'tool_calls' ? (
                       <details className="tool-details" open={!msg.folded}>
                         <summary className="tool-summary">Tool Calls</summary>
-                        <p className="message-text tool-text">{msg.content}</p>
+                        <div className="message-text tool-text">{msg.content}</div>
+                      </details>
+                    ) : msg.type === 'reasoning_summary' ? (
+                      <details className="tool-details" open={!msg.folded}>
+                        <summary className="tool-summary">Reasoning</summary>
+                        <div className="message-text tool-text">{msg.content}</div>
                       </details>
                     ) : msg.role === 'assistant' ? (
                       <div className="message-text">
@@ -482,13 +580,18 @@ const ChatbotUI = () => {
                             remarkPlugins={[remarkGfm, remarkMath]}
                             rehypePlugins={[rehypeKatex]}
                             components={{
-                              p: ({ node, ...props }) => <p className="tight-paragraph" {...props} />,
-                              li: ({ node, ...props }) => <li className="tight-list-item" {...props} />,
-                              code: (props: any) => {
+                              p: ({ ...props }) => <p className="tight-paragraph" {...props} />,
+                              li: ({ ...props }) => <li className="tight-list-item" {...props} />,
+                              code: (props: { inline?: boolean; className?: string; children?: React.ReactNode }) => {
                                 const { inline, className, children, ...rest } = props;
                                 const match = /language-(\w+)/.exec(className || '');
                                 return !inline && match ? (
-                                  <SyntaxHighlighter style={vscDarkPlus as any} language={match[1]} PreTag="div" {...rest}>
+                                  <SyntaxHighlighter
+                                    style={vscDarkPlus as Record<string, React.CSSProperties>}
+                                    language={match[1]}
+                                    PreTag="div"
+                                    {...rest}
+                                  >
                                     {String(children).replace(/\n$/, '')}
                                   </SyntaxHighlighter>
                                 ) : (

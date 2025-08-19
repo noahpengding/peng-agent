@@ -1,4 +1,5 @@
 from handlers.operator_handlers import get_operator
+from handlers.model_handlers import get_reasoning_effect
 from utils.log import output_log
 from config.config import config
 import os
@@ -22,6 +23,7 @@ def get_model_instance_by_operator(operator_name, model_name: str = ""):
             organization_id=operator.org_id,
             project_id=operator.project_id,
             model=model_name,
+            reasoning_effect=get_reasoning_effect(model_name),
         )
     elif operator.runtime == "openai_completion":
         from services.chat_models.openai_completion import CustomOpenAICompletion
@@ -32,6 +34,7 @@ def get_model_instance_by_operator(operator_name, model_name: str = ""):
             organization_id=operator.org_id,
             project_id=operator.project_id,
             model=model_name,
+            reasoning_effect=get_reasoning_effect(model_name),
         )
     elif operator.runtime == "gemini":
         from services.chat_models.gemini_langchain import CustomGemini
@@ -39,6 +42,7 @@ def get_model_instance_by_operator(operator_name, model_name: str = ""):
         base_model_ins = CustomGemini(
             api_key=operator.api_key,
             model=model_name,
+            reasoning_effect=get_reasoning_effect(model_name),
         )
     elif operator.runtime == "claude":
         from services.chat_models.claude_langchain import CustomClaude
@@ -46,6 +50,7 @@ def get_model_instance_by_operator(operator_name, model_name: str = ""):
         base_model_ins = CustomClaude(
             api_key=operator.api_key,
             model=model_name,
+            reasoning_effect=get_reasoning_effect(model_name),
         )
     elif operator.runtime == "huggingface":
         from langchain_huggingface import ChatHuggingFace, HuggingFacePipeline

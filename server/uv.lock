@@ -573,7 +573,7 @@ wheels = [
 
 [[package]]
 name = "google-genai"
-version = "1.8.0"
+version = "1.30.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "anyio" },
@@ -581,12 +581,13 @@ dependencies = [
     { name = "httpx" },
     { name = "pydantic" },
     { name = "requests" },
+    { name = "tenacity" },
     { name = "typing-extensions" },
     { name = "websockets" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/c8/f5/1a94a9f9c188acd442a035fa287c7163db011e9549312a3cbda707f169f2/google_genai-1.8.0.tar.gz", hash = "sha256:bafd935275e18ab189adeddfe0e6e67a154a5868fa1e146182d8af36a69a58d9", size = 147073 }
+sdist = { url = "https://files.pythonhosted.org/packages/24/f7/2dc4c106cb0e42aec8562ee1b62df1d858f269239c10948108a5984a6429/google_genai-1.30.0.tar.gz", hash = "sha256:90dad6a9a895f30d0cbd5754462c82d3c060afcc2c3c9dccbcef4ff54019ef3f", size = 230937 }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/b1/87/9ce47ede79878962f2f162e1d56e40bfbc9cf7a364963d72930589c3c62e/google_genai-1.8.0-py3-none-any.whl", hash = "sha256:b44bd67aa158313ab679d499e4e1666ca7b6363beb24f0d2149983c09460811a", size = 145696 },
+    { url = "https://files.pythonhosted.org/packages/44/81/b413aa382eeeae41d2fdedd19a2c43d9580059eebccef5321d7d64b1d910/google_genai-1.30.0-py3-none-any.whl", hash = "sha256:52955e79284899991bf2fef36b30f375b0736030ba3d089ca39002c18aa95c01", size = 229330 },
 ]
 
 [[package]]
@@ -1648,7 +1649,7 @@ wheels = [
 
 [[package]]
 name = "peng-agent"
-version = "2.1.2"
+version = "2.2.0"
 source = { editable = "." }
 dependencies = [
     { name = "anthropic" },
@@ -1684,12 +1685,14 @@ dependencies = [
     { name = "pydantic" },
     { name = "pyjwt" },
     { name = "pymupdf" },
+    { name = "pymysql" },
     { name = "pypdf" },
     { name = "pytest-playwright" },
     { name = "python-dotenv" },
     { name = "python-multipart" },
     { name = "qdrant-client" },
     { name = "requests" },
+    { name = "sqlalchemy" },
     { name = "uvicorn" },
     { name = "wikipedia" },
 ]
@@ -1703,7 +1706,7 @@ requires-dist = [
     { name = "bs4", specifier = ">=0.0.2" },
     { name = "email-to", specifier = ">=0.1.0" },
     { name = "fastapi", specifier = ">=0.115.11" },
-    { name = "google-genai", specifier = ">=1.8.0" },
+    { name = "google-genai", specifier = ">=1.30.0" },
     { name = "importlib", specifier = ">=1.0.4" },
     { name = "langchain", extras = ["openai"], specifier = ">=0.3.20" },
     { name = "langchain-community", specifier = ">=0.3.19" },
@@ -1729,12 +1732,14 @@ requires-dist = [
     { name = "pydantic", specifier = ">=2.10.6" },
     { name = "pyjwt", specifier = ">=2.10.1" },
     { name = "pymupdf", specifier = ">=1.25.5" },
+    { name = "pymysql", specifier = ">=1.1.1" },
     { name = "pypdf", specifier = ">=5.3.1" },
     { name = "pytest-playwright", specifier = ">=0.7.0" },
     { name = "python-dotenv", specifier = ">=1.0.1" },
     { name = "python-multipart", specifier = ">=0.0.20" },
     { name = "qdrant-client", specifier = ">=1.13.3" },
     { name = "requests", specifier = ">=2.32.3" },
+    { name = "sqlalchemy", specifier = ">=2.0.39" },
     { name = "uvicorn", specifier = ">=0.34.0" },
     { name = "wikipedia", specifier = ">=1.4.0" },
 ]
@@ -2078,6 +2083,15 @@ wheels = [
     { url = "https://files.pythonhosted.org/packages/bd/db/b4edec9e731ea7c2b74bf28b9091ed4e919d5c7f889ef86352b7fd416197/pymupdf-1.25.5-cp39-abi3-musllinux_1_2_x86_64.whl", hash = "sha256:6ed7fc25271004d6d3279c20a80cb2bb4cda3efa9f9088dcc07cd790eca0bc63", size = 21293562 },
     { url = "https://files.pythonhosted.org/packages/ec/47/682a8ddce650e09f5de6809c9bce926b2493a19b7f9537d80d4646989670/pymupdf-1.25.5-cp39-abi3-win32.whl", hash = "sha256:65e18ddb37fe8ec4edcdbebe9be3a8486b6a2f42609d0a142677e42f3a0614f8", size = 15110464 },
     { url = "https://files.pythonhosted.org/packages/71/c2/a9059607f80dcaf2392f991748cfc53456820392c0220cff02572653512a/pymupdf-1.25.5-cp39-abi3-win_amd64.whl", hash = "sha256:7f44bc3d03ea45b2f68c96464f96105e8c7908896f2fb5e8c04f1fb8dae7981e", size = 16579671 },
+]
+
+[[package]]
+name = "pymysql"
+version = "1.1.1"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/b3/8f/ce59b5e5ed4ce8512f879ff1fa5ab699d211ae2495f1adaa5fbba2a1eada/pymysql-1.1.1.tar.gz", hash = "sha256:e127611aaf2b417403c60bf4dc570124aeb4a57f5f37b8e95ae399a42f904cd0", size = 47678 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/0c/94/e4181a1f6286f545507528c78016e00065ea913276888db2262507693ce5/PyMySQL-1.1.1-py3-none-any.whl", hash = "sha256:4de15da4c61dc132f4fb9ab763063e693d521a80fd0e87943b9a453dd4c19d6c", size = 44972 },
 ]
 
 [[package]]

@@ -2,7 +2,6 @@ from utils.mysql_connect import MysqlConnect
 from models.model_config import ModelConfig
 from utils.log import output_log
 from utils.minio_connection import MinioStorage
-from handlers.model_utils import get_model_instance_by_operator
 from handlers.operator_handlers import get_all_operators, update_operator
 import re
 import pandas as pd
@@ -60,14 +59,13 @@ def _check_new_model(
 # Refersh will check all operators and sync local model changes
 def refresh_models():
     update_operator()
-    avaliable_models = get_all_available_models()
-    multimodal_models = get_all_multimodal_models()
+    models = get_model()
     local_models = _get_local_models()
-    responses = local_models.copy()
-    if responses is None:
-        responses = []
+    responses = local_models.copy() if local_models else []
     for operator in get_all_operators():
         try:
+            from handlers.model_utils import get_model_instance_by_operator
+
             model_ins = get_model_instance_by_operator(operator.operator)
             if model_ins is None:
                 continue
@@ -89,55 +87,34 @@ def refresh_models():
             # no-dd-sa:python-best-practices/nested-blocks
             if local_match:
                 continue
-            ## Order Matters: Embedding > Image > Audio > Video > Chatdock
-            elif _check_new_model(
-                operator.operator, model, operator.embedding_pattern, "embedding"
-            ):
-                responses.append(
-                    _check_new_model(
+            else:
+                # Check new model based on priority patterns
+                for pattern_attr, model_type in [
+                    ("embedding_pattern", "embedding"),
+                    ("image_pattern", "image"),
+                    ("audio_pattern", "audio"),
+                    ("video_pattern", "video"),
+                    ("chat_pattern", "chat"),
+                ]:
+                    new_model = _check_new_model(
                         operator.operator,
                         model,
-                        operator.embedding_pattern,
-                        "embedding",
+                        getattr(operator, pattern_attr),
+                        model_type,
                     )
-                )
-            elif _check_new_model(
-                operator.operator, model, operator.image_pattern, "image"
-            ):
-                responses.append(
-                    _check_new_model(
-                        operator.operator, model, operator.image_pattern, "image"
-                    )
-                )
-            elif _check_new_model(
-                operator.operator, model, operator.audio_pattern, "audio"
-            ):
-                responses.append(
-                    _check_new_model(
-                        operator.operator, model, operator.audio_pattern, "audio"
-                    )
-                )
-            elif _check_new_model(
-                operator.operator, model, operator.video_pattern, "video"
-            ):
-                responses.append(
-                    _check_new_model(
-                        operator.operator, model, operator.video_pattern, "video"
-                    )
-                )
-            elif _check_new_model(
-                operator.operator, model, operator.chat_pattern, "chat"
-            ):
-                responses.append(
-                    _check_new_model(
-                        operator.operator, model, operator.chat_pattern, "chat"
-                    )
-                )
+                    if new_model:
+                        responses.append(new_model)
+                        break
     for response in responses:
-        if response.model_name in [model["model_name"] for model in avaliable_models]:
-            response.isAvailable = True
-        if response.model_name in [model["model_name"] for model in multimodal_models]:
-            response.isMultimodal = True
+        model = models.get(response.model_name) if isinstance(models, dict) else None
+        if model:
+            response.isAvailable = model.get("isAvailable", False)
+            response.isMultimodal = model.get("isMultimodal", False)
+            response.reasoning_effect = model.get("reasoning_effect", "")
+        else:
+            response.isAvailable = False
+            response.isMultimodal = False
+            response.reasoning_effect = "not a reasoning model"
     _save_local_models(responses)
     mysql = MysqlConnect()
     try:
@@ -210,3 +187,24 @@ def get_all_available_models():
 def get_all_multimodal_models():
     mysql = MysqlConnect()
     return mysql.read_record_v2("model", {"isMultimodal=": 1})
+
+
+def update_reasoning_effect(model_name: str, reasoning_effect: str):
+    mysql = MysqlConnect()
+    model = mysql.read_records("model", {"model_name": model_name})
+    if model:
+        mysql.update_record(
+            "model", {"reasoning_effect": reasoning_effect}, {"model_name": model_name}
+        )
+        return f"Model {model_name}'s reasoning effect updated to {reasoning_effect}"
+    mysql.close()
+    return f"Model {model_name} not found"
+
+
+def get_reasoning_effect(model_name: str):
+    mysql = MysqlConnect()
+    model = mysql.read_records("model", {"model_name": model_name})
+    if model:
+        return model[0]["reasoning_effect"]
+    mysql.close()
+    return "not a reasoning model"

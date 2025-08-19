@@ -2,28 +2,22 @@ import js from '@eslint/js';
 import globals from 'globals';
 import reactHooks from 'eslint-plugin-react-hooks';
 import reactRefresh from 'eslint-plugin-react-refresh';
+import tseslint from '@typescript-eslint/eslint-plugin';
 import parser from '@typescript-eslint/parser';
-import tsplugin from '@typescript-eslint/eslint-plugin';
-import prettierPlugin from 'eslint-plugin-prettier';
 
 export default [
   { ignores: ['dist'] },
-  js.configs.recommended,
-  { 
-    files: ['**/*.{ts,tsx}'],
-    ...tsplugin.configs.recommended,
-    rules: { ...tsplugin.configs.recommended.rules }
-  },
+
+  // Base JavaScript config
   {
-    files: ['**/*.{js,ts,tsx}'],
-    ...prettierPlugin.configs.recommended,
-    rules: { ...prettierPlugin.configs.recommended.rules }
+    files: ['**/*.{js,mjs,cjs}'],
+    ...js.configs.recommended,
+    languageOptions: {
+      globals: globals.browser,
+    },
   },
-  {
-    files: ['**/*.{js,ts,tsx}'],
-    ...reactHooks.configs.recommended,
-    rules: { ...reactHooks.configs.recommended.rules }
-  },
+
+  // TypeScript config
   {
     files: ['**/*.{ts,tsx}'],
     languageOptions: {
@@ -31,20 +25,34 @@ export default [
       parserOptions: {
         ecmaVersion: 2020,
         sourceType: 'module',
-        project: './tsconfig.json',
       },
       globals: globals.browser,
     },
     plugins: {
+      '@typescript-eslint': tseslint,
+    },
+    rules: {
+      ...tseslint.configs.recommended.rules,
+    },
+  },
+
+  // React config
+  {
+    files: ['**/*.{js,ts,tsx}'],
+    languageOptions: {
+      globals: {
+        ...globals.browser,
+        ...globals.node,
+      },
+    },
+    plugins: {
       'react-hooks': reactHooks,
       'react-refresh': reactRefresh,
-      prettier: prettierPlugin,
     },
     rules: {
       ...reactHooks.configs.recommended.rules,
       'react-refresh/only-export-components': ['warn', { allowConstantExport: true }],
       'no-console': process.env.NODE_ENV === 'production' ? 'error' : 'warn',
-      'prettier/prettier': 'error',
     },
   },
 ];

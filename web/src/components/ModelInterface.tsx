@@ -5,7 +5,7 @@ import './ModelInterface.css';
 
 const ModelInterface: React.FC = () => {
   const navigate = useNavigate();
-  const { getAllModels, toggleModelAvailability, toggleModelMultimodal, refreshModels, isLoading } = useModelApi();
+  const { getAllModels, toggleModelAvailability, toggleModelMultimodal, toggleModelReasoningEffect, refreshModels, isLoading } = useModelApi();
 
   const [models, setModels] = useState<Model[]>([]);
   const [filteredModels, setFilteredModels] = useState<Model[]>([]);
@@ -23,11 +23,13 @@ const ModelInterface: React.FC = () => {
   // Load models on initial render
   useEffect(() => {
     fetchModels();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Apply filters when models or filter criteria change
   useEffect(() => {
     applyFilters();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [models, selectedOperator, selectedType, availabilityFilter, searchTerm]);
 
   // Extract unique operators and types for filters
@@ -78,6 +80,17 @@ const ModelInterface: React.FC = () => {
       );
     } catch (error) {
       setError(`Failed to toggle multimodal for model ${modelName}: ${error}`);
+    }
+  };
+
+  const handleModelReasoningEffect = async (modelName: string, reasoningEffect: string) => {
+    try {
+      await toggleModelReasoningEffect(modelName, reasoningEffect);
+      setModels((prevModels) =>
+        prevModels.map((model) => (model.model_name === modelName ? { ...model, reasoning_effect: reasoningEffect } : model))
+      );
+    } catch (error) {
+      setError(`Failed to toggle reasoning effect for model ${modelName}: ${error}`);
     }
   };
 
@@ -194,6 +207,7 @@ const ModelInterface: React.FC = () => {
                       <th>Model Name</th>
                       <th>Available</th>
                       <th>Multimodal</th>
+                      <th>Reasoning Effect</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -217,6 +231,18 @@ const ModelInterface: React.FC = () => {
                             checked={model.isMultimodal}
                             onChange={() => handleModelMultimodal(model.model_name)}
                           />
+                        </td>
+                        <td>
+                          <select
+                            className="reasoning-effect-select"
+                            value={model.reasoning_effect}
+                            onChange={(e) => handleModelReasoningEffect(model.model_name, e.target.value)}
+                          >
+                            <option value="not a reasoning model">Not a Reasoning Model</option>
+                            <option value="low">Low</option>
+                            <option value="medium">Medium</option>
+                            <option value="high">High</option>
+                          </select>
                         </td>
                       </tr>
                     ))}

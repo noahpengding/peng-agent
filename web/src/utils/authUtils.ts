@@ -12,12 +12,12 @@ export const isTokenValid = (token: string | null): boolean => {
   if (!token) return false;
 
   try {
-    const decodedToken: any = jwtDecode(token);
+    const decodedToken: { exp: number } = jwtDecode(token);
     const currentTime = Date.now() / 1000;
 
     // Check if token is expired
     return decodedToken.exp > currentTime;
-  } catch (error) {
+  } catch {
     return false;
   }
 };

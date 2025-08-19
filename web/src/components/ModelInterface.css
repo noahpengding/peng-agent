@@ -225,3 +225,19 @@
   height: 1.25rem;
   cursor: pointer;
 }
+
+.reasoning-effect-select {
+  width: 100%;
+  padding: 0.5rem;
+  border: 1px solid #4b5563;
+  border-radius: 0.25rem;
+  background-color: #374151;
+  color: white;
+  appearance: auto;
+  cursor: pointer;
+}
+
+.reasoning-effect-select option {
+  background-color: #1f2937;
+  color: white;
+}

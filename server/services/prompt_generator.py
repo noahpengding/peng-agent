@@ -12,7 +12,13 @@ def prompt_template(model_name):
     base_result = [
         (
             "system",
-            "You are a helpful assistant. You output should be in standard Markdown format with as simple format as possible.",
+            """You are a helpful assistant. 
+            IMPORTANT: 
+            1. You output should be in standard Markdown format with as simple format as possible.
+            2. When you have tools to use, you should use them to solve tasks step by step.
+            3. If you've already tried a tool call, don't repeat it. i.e. When you have sufficient information, provide your final answer
+            4.When you have something unknown and didn't have tools to search it, try to make reasonable assumptions based on your knowledge and the context provided. Mention the assumptions in your response.
+            """,
         ),
         ("placeholder", "{long_term_memory}"),
         ("placeholder", "{short_term_memory}"),

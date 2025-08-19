@@ -3,7 +3,7 @@ import axios from 'axios';
 /**
  * Make an API call with the specified method and endpoint
  */
-export const apiCall = async (method: string, endpoint: string, data?: any) => {
+export const apiCall = async (method: string, endpoint: string, data?: Record<string, unknown>) => {
   // Use the proxy path instead of the full backend URL
   const url = `/proxy${endpoint}`;
 

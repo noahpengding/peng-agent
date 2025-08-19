@@ -13,7 +13,7 @@ export const RAGService = {
 
   async indexDocument(request: IndexDocumentRequest): Promise<string> {
     try {
-      const response = await apiCall('POST', '/rag', request);
+      const response = await apiCall('POST', '/rag', request as unknown as Record<string, unknown>);
       return response.message;
     } catch (error) {
       throw error;

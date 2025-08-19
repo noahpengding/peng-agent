@@ -9,6 +9,7 @@ export interface Model {
   model_name: string;
   isAvailable: boolean;
   isMultimodal: boolean;
+  reasoning_effect: string;
 }
 
 export const useModelApi = () => {
@@ -63,6 +64,22 @@ export const useModelApi = () => {
     }
   };
 
+  const toggleModelReasoningEffect = async (modelName: string, reasoning_effect: string): Promise<string> => {
+    setIsLoading(true);
+    setError(null);
+
+    try {
+      const message = await ModelService.toggleModelReasoningEffect(modelName, reasoning_effect);
+      return message;
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Unknown error occurred';
+      setError(errorMessage);
+      throw err;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const refreshModels = async (): Promise<string> => {
     setIsLoading(true);
     setError(null);
@@ -83,6 +100,7 @@ export const useModelApi = () => {
     getAllModels,
     toggleModelAvailability,
     toggleModelMultimodal,
+    toggleModelReasoningEffect,
     refreshModels,
     isLoading,
     error,

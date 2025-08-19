@@ -29,6 +29,7 @@ import time
 
 class CustomOpenAIResponse(BaseChatModel):
     model_name: str = Field(alias="model")
+    reasoning_effect: str = Field(default="not a reasoning model")
     temperature: Optional[float] = 1.0
     max_tokens: Optional[int] = config.output_max_length
     base_url: Optional[str]
@@ -53,7 +54,6 @@ class CustomOpenAIResponse(BaseChatModel):
         run_manager: Optional[CallbackManagerForLLMRun] = None,
         **kwargs: Any,
     ) -> ChatResult:
-        output_log(f"Chat completion request: {prompt}", "debug")
         now = time.time()
         prompt_translated = self._prompt_translate(prompt)
         output_log(f"Translated prompt: {prompt_translated}", "debug")
@@ -62,6 +62,10 @@ class CustomOpenAIResponse(BaseChatModel):
             "input": prompt_translated,
             "stream": False,
         }
+        if self.reasoning_effect != "not a reasoning model":
+            request_params["reasoning"] = {
+                "effort": self.reasoning_effect,
+            }
         tools = kwargs.get("tools")
         tool_choice = kwargs.get("tool_choice")
         if tools:
@@ -78,6 +82,15 @@ class CustomOpenAIResponse(BaseChatModel):
                         "strict": False,
                     }
                 )
+        if self.model_name.find("deep-research") != -1:
+            if "tools" not in request_params:
+                request_params["tools"] = []
+            request_params["tools"].append(
+                {"type": "web_search_preview"},
+            )
+            request_params["tools"].append(
+                {"type": "code_interpreter", "container": {"type": "auto"}}
+            )
         if tool_choice:
             request_params["tool_choice"] = tool_choice
         responses = self.client.responses.create(**request_params)
@@ -86,6 +99,7 @@ class CustomOpenAIResponse(BaseChatModel):
         for response in responses.output:
             if response.type == "message":
                 message_content = response.content[0].text
+                additional_kwargs = {"type": "output_text"}
             elif response.type == "function_call":
                 additional_kwargs = {
                     "tool_calls": [
@@ -97,7 +111,8 @@ class CustomOpenAIResponse(BaseChatModel):
                             },
                             "type": response.type,
                         }
-                    ]
+                    ],
+                    "type": "tool_calls",
                 }
         generate_message = AIMessage(
             content=message_content,
@@ -129,9 +144,11 @@ class CustomOpenAIResponse(BaseChatModel):
             "input": prompt_translated,
             "stream": True,
         }
-
-        tools = kwargs.get("tools")
-        tool_choice = kwargs.get("tool_choice")
+        if self.reasoning_effect != "not a reasoning model":
+            request_params["reasoning"] = {
+                "effort": self.reasoning_effect,
+                "summary": "auto",
+            }
         tools = kwargs.get("tools")
         tool_choice = kwargs.get("tool_choice")
         if tools:
@@ -148,20 +165,29 @@ class CustomOpenAIResponse(BaseChatModel):
                         "strict": False,
                     }
                 )
+        if self.model_name.find("deep-research") != -1:
+            if "tools" not in request_params:
+                request_params["tools"] = []
+            request_params["tools"].append(
+                {"type": "web_search_preview"},
+            )
+            request_params["tools"].append(
+                {"type": "code_interpreter", "container": {"type": "auto"}}
+            )
         if tool_choice:
             request_params["tool_choice"] = tool_choice
-
         stream = self.client.responses.create(**request_params)
         token_count = len(prompt)
         for event in stream:
-            output_log(f"Received event: {event}", "debug")
             if event.type == "response.output_text.delta":
                 token = event.delta
                 if token:
                     token_count += 1
                     message_chunk = AIMessageChunk(
                         content=token,
-                        additional_kwargs={},
+                        additional_kwargs={
+                            "type": "output_text",
+                        },
                         usage_metadata=UsageMetadata(
                             {
                                 "input_tokens": len(prompt),
@@ -171,8 +197,51 @@ class CustomOpenAIResponse(BaseChatModel):
                         ),
                     )
                     chunk = ChatGenerationChunk(message=message_chunk)
-                    if run_manager:
-                        run_manager.on_llm_new_token(token, chunk=chunk)
+                    yield chunk
+            elif event.type == "response.reasoning_summary_text.delta":
+                token = event.delta
+                if token:
+                    token_count += 1
+                    message_chunk = AIMessageChunk(
+                        content=token,
+                        additional_kwargs={"type": "reasoning_summary"},
+                        usage_metadata=UsageMetadata(
+                            {
+                                "input_tokens": len(prompt),
+                                "output_tokens": len(token),
+                                "total_tokens": token_count,
+                            }
+                        ),
+                    )
+                    chunk = ChatGenerationChunk(message=message_chunk)
+                    yield chunk
+            elif event.type == "response.output_item.done":
+                token = event.item
+                if token and token.type == "function_call":
+                    message_chunk = AIMessageChunk(
+                        content="",
+                        additional_kwargs={
+                            "tool_calls": [
+                                {
+                                    "id": token.call_id,
+                                    "function": {
+                                        "name": token.name,
+                                        "arguments": token.arguments,
+                                    },
+                                    "type": token.type,
+                                }
+                            ],
+                            "type": "tool_calls",
+                        },
+                        usage_metadata=UsageMetadata(
+                            {
+                                "input_tokens": len(prompt),
+                                "output_tokens": len(token.arguments),
+                                "total_tokens": token_count + len(token.arguments),
+                            }
+                        ),
+                    )
+                    chunk = ChatGenerationChunk(message=message_chunk)
                     yield chunk
 
     def bind_tools(
@@ -212,6 +281,7 @@ class CustomOpenAIResponse(BaseChatModel):
         model_id: {self.model_name}
         temperature: {self.temperature}
         max_tokens: {self.max_tokens}
+        reasoning_effect: {self.reasoning_effect}
         """
 
     def set_parameters(self, name, value) -> str:

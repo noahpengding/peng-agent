@@ -383,3 +383,9 @@ $RECYCLE.BIN/
 *.xlsx
 *.csv
 *.pdf
+
+# CodeQL analysis files
+*-db/
+*.sarif
+codeql-db/
+.codeql/

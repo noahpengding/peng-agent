@@ -38,6 +38,15 @@ export const ModelService = {
     }
   },
 
+  async toggleModelReasoningEffect(modelName: string, reasoning_effect: string): Promise<string> {
+    try {
+      const response = await apiCall('POST', '/model_reasoning_effect', { model_name: modelName, reasoning_effect });
+      return response.message;
+    } catch (error) {
+      throw error;
+    }
+  },
+
   async refreshModels(): Promise<string> {
     try {
       const response = await apiCall('GET', '/model_refresh', {});

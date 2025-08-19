@@ -1,8 +1,10 @@
 from typing import List
+from utils.log import output_log
 
 
 def tools_routers(tools_name: List[str]):
     tools = []
+    output_log(f"Initializing tools: {tools_name}", "DEBUG")
     for tool_name in tools_name:
         if tool_name == "tavily_search_tool":
             from services.tools.search_tools import tavily_search_tool
@@ -36,5 +38,9 @@ def tools_routers(tools_name: List[str]):
             from services.tools.minio_tools import minio_upload_tool
 
             tools += [minio_upload_tool]
+        elif tool_name.endswith("_sql"):
+            from services.tools.sql_tool import create_sql_tool
+
+            tools += create_sql_tool(tool_name)
 
     return tools
