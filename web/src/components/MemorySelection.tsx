@@ -16,7 +16,7 @@ const MemoryPage: React.FC = () => {
   const navigate = useNavigate();
   const { fetchMemories, isLoading } = useMemoryApi();
   const { user } = useAuth();
-
+  
   // Fetch memories on component mount
   useEffect(() => {
     const getMemories = async (username: string) => {
@@ -28,11 +28,12 @@ const MemoryPage: React.FC = () => {
         setError(`Failed to fetch memories: ${error}`);
       }
     };
+
     // Only fetch after user is available
     if (user) {
       getMemories(user);
     }
-  }, [user, fetchMemories]);
+  }, [user, fetchMemories]); // Now we can safely include fetchMemories
 
   // Filter memories based on search term
   useEffect(() => {

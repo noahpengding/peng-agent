@@ -8,6 +8,7 @@ import pickle
 
 def get_model_instance_by_operator(operator_name, model_name: str = ""):
     operator = get_operator(operator_name)
+    base_model_ins = None
     if operator is None:
         output_log(
             f"Operator {operator_name} not found in the database.",
@@ -76,6 +77,7 @@ def get_model_instance_by_operator(operator_name, model_name: str = ""):
 
 def get_embedding_instance_by_operator(operator_name, model_name: str = ""):
     operator = get_operator(operator_name)
+    embedding_model_ins = None
     if operator is None:
         output_log(
             f"Operator {operator_name} not found in the database.",
