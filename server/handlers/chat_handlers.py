@@ -37,10 +37,10 @@ async def chat_handler(
     prompt, params = _generate_prompt_params(message, image, chat_config)
 
     agent = PengAgent(
-        operater=chat_config.operator,
-        model=chat_config.base_model,
-        tools=chat_config.tools_name,
-        user_name=user_name,
+        user_name,
+        chat_config.operator,
+        chat_config.base_model,
+        chat_config.tools_name,
     )
 
     full_response = ""
@@ -155,4 +155,3 @@ def create_batch_response(
         content=reponses,
         media_type="application/json",
     )
-

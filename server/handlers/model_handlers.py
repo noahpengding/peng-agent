@@ -60,10 +60,12 @@ def _check_new_model(
 # Refersh will check all operators and sync local model changes
 def refresh_models():
     update_operator()
-    server_models = get_model()
-    server_models = [ModelConfig(**model) for model in server_models if isinstance(model, dict)]
+    server_model_dicts  = get_model()
+    server_models = [
+        ModelConfig(**model) for model in server_model_dicts if isinstance(model, dict)
+    ]
     local_models = _get_local_models()
-    responses = server_models.copy() if isinstance(server_models, list) else []
+    responses = server_models.copy()
     for operator in get_all_operators():
         try:
             from handlers.model_utils import get_model_instance_by_operator

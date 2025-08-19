@@ -41,7 +41,12 @@ def file_operator_image(local_file_path: str):
             base64_images.append(base64.b64encode(buffer.read()).decode("utf-8"))
         return base64_images
     with open(local_file_path, "rb") as f:
-        return [base64.b64encode(f.read())]
+        try:
+            return [base64.b64encode(f.read()).decode("utf-8")]
+        except Exception as e:
+            return [f"Error reading file {local_file_path}: {str(e)}"]
+        finally:
+            f.close()
 
 
 def file_extention(local_file_path: str) -> bool:

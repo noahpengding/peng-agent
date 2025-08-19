@@ -30,6 +30,7 @@ import json
 
 THINKING_BUDGET_TOKENS = int(8192 * 0.8)
 
+
 class CustomClaude(BaseChatModel):
     model_name: str = Field(alias="model")
     reasoning_effect: str = Field(default="not a reasoning model")

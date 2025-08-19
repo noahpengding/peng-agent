@@ -27,6 +27,7 @@ class ToolCall(TypedDict):
     args: dict
     id: str
 
+
 def save_chat(
     user_name,
     chat_type,
@@ -59,6 +60,7 @@ def save_chat(
     finally:
         mysql.close()
 
+
 def save_tool_call(
     call_id: str,
     tools_name: str,
@@ -81,6 +83,7 @@ def save_tool_call(
         output_log(f"Error saving tool call: {e}", "error")
     finally:
         mysql.close()
+
 
 class PengAgent:
     def __init__(self, user_name: str, operater: str, model: str, tools: list[str]):
@@ -149,9 +152,7 @@ class PengAgent:
             self.user_name,
             "assistant",
             self.model,
-            "|\n".join(
-                [str(msg.content) for msg in list(state["messages"])[1:-1]]
-            ),
+            "|\n".join([str(msg.content) for msg in list(state["messages"])[1:-1]]),
             full_response.content,
         )
         return {"messages": [full_response, response]}
@@ -244,9 +245,7 @@ class PengAgent:
                 call_id=last_message.tool_calls[0].get("id", ""),
                 tools_name=last_message.tool_calls[0].get("name", ""),
                 tools_argument=last_message.tool_calls[0].get("args", {}),
-                problem="|\n".join(
-                    [str(msg.content) for msg in input_message]
-                )
+                problem="|\n".join([str(msg.content) for msg in input_message]),
             )
             return "call_tools"
         if (
