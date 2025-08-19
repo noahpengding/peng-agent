@@ -45,7 +45,7 @@ jobs:
           # List all server container versions
           IMAGES=$(gh api \
             -H "Accept: application/vnd.github+json" \
-            /orgs/${{ github.repository_owner }}/packages/container/${{ env.SERVER_IMAGE_PATH }}/versions \
+            /users/${{ github.repository_owner }}/packages/container/${{ env.SERVER_IMAGE_PATH }}/versions \
             --jq '.[] | select(.metadata.container.tags[] | test("-nightly$")) | .id')
           
           # Keep only the 3 most recent nightly images
@@ -59,7 +59,7 @@ jobs:
                 gh api \
                   --method DELETE \
                   -H "Accept: application/vnd.github+json" \
-                  /orgs/${{ github.repository_owner }}/packages/container/${{ env.SERVER_IMAGE_PATH }}/versions/$IMAGE_ID
+                  /users/${{ github.repository_owner }}/packages/container/${{ env.SERVER_IMAGE_PATH }}/versions/$IMAGE_ID
               done
             else
               echo "No old server nightly images to delete"
@@ -76,7 +76,7 @@ jobs:
           # List all web container versions
           IMAGES=$(gh api \
             -H "Accept: application/vnd.github+json" \
-            /orgs/${{ github.repository_owner }}/packages/container/${{ env.WEB_IMAGE_PATH }}/versions \
+            /users/${{ github.repository_owner }}/packages/container/${{ env.WEB_IMAGE_PATH }}/versions \
             --jq '.[] | select(.metadata.container.tags[] | test("-nightly$")) | .id')
           
           # Keep only the 3 most recent nightly images
@@ -90,7 +90,7 @@ jobs:
                 gh api \
                   --method DELETE \
                   -H "Accept: application/vnd.github+json" \
-                  /orgs/${{ github.repository_owner }}/packages/container/${{ env.WEB_IMAGE_PATH }}/versions/$IMAGE_ID
+                  /users/${{ github.repository_owner }}/packages/container/${{ env.WEB_IMAGE_PATH }}/versions/$IMAGE_ID
               done
             else
               echo "No old web nightly images to delete"
@@ -107,7 +107,7 @@ jobs:
           # List all untagged server container versions
           UNTAGGED_SERVER=$(gh api \
             -H "Accept: application/vnd.github+json" \
-            /orgs/${{ github.repository_owner }}/packages/container/${{ env.SERVER_IMAGE_PATH }}/versions \
+            /users/${{ github.repository_owner }}/packages/container/${{ env.SERVER_IMAGE_PATH }}/versions \
             --jq '.[] | select(.metadata.container.tags | length == 0) | .id')
           
           if [ -n "$UNTAGGED_SERVER" ]; then
@@ -117,7 +117,7 @@ jobs:
               gh api \
                 --method DELETE \
                 -H "Accept: application/vnd.github+json" \
-                /orgs/${{ github.repository_owner }}/packages/container/${{ env.SERVER_IMAGE_PATH }}/versions/$IMAGE_ID
+                /users/${{ github.repository_owner }}/packages/container/${{ env.SERVER_IMAGE_PATH }}/versions/$IMAGE_ID
             done
           else
             echo "No untagged server images found"
@@ -127,7 +127,7 @@ jobs:
           # List all untagged web container versions
           UNTAGGED_WEB=$(gh api \
             -H "Accept: application/vnd.github+json" \
-            /orgs/${{ github.repository_owner }}/packages/container/${{ env.WEB_IMAGE_PATH }}/versions \
+            /users/${{ github.repository_owner }}/packages/container/${{ env.WEB_IMAGE_PATH }}/versions \
             --jq '.[] | select(.metadata.container.tags | length == 0) | .id')
           
           if [ -n "$UNTAGGED_WEB" ]; then
@@ -137,7 +137,7 @@ jobs:
               gh api \
                 --method DELETE \
                 -H "Accept: application/vnd.github+json" \
-                /orgs/${{ github.repository_owner }}/packages/container/${{ env.WEB_IMAGE_PATH }}/versions/$IMAGE_ID
+                /users/${{ github.repository_owner }}/packages/container/${{ env.WEB_IMAGE_PATH }}/versions/$IMAGE_ID
             done
           else
             echo "No untagged web images found"
