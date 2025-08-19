@@ -48,7 +48,7 @@ async def chat_handler(
 
     full_response = ""
     async for chunk in agent.astream(AgentState(prompt.invoke(params))):
-        output_log(f"Received chunk: {chunk}", "INFO")
+        output_log(f"Received chunk: {chunk}", "DEBUG")
         if chunk:
             if "call_model" in chunk and "messages" in chunk["call_model"]:
                 chunk_content = str(chunk["call_model"]["messages"].content)
