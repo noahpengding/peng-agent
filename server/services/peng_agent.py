@@ -93,7 +93,7 @@ class PengAgent:
         self.tools = self.init_tools(tools)
         self.graph = self.init_agent_graph()
         self.tool_call_history: list[ToolCall] = []
-        self.total_tool_calls = 10
+        self.total_tool_calls = 25 if operater == "anthropic" else 10
 
     def init_agent_graph(self) -> Any:
         graph = StateGraph(AgentState)
@@ -157,17 +157,9 @@ class PengAgent:
         )
         return {"messages": [full_response, response]}
 
-    def call_tools(self, state: AgentState):
+    async def call_tools(self, state: AgentState):
         writer = get_stream_writer()
         self.total_tool_calls -= 1
-        if self.total_tool_calls == 0:
-            message = "Tool call limit reached. No more tool calls can be made. Try to generate the final response based on the history."
-            return {
-                "messages": ToolMessage(
-                    content=message, name="tool_call_error_detector", tool_call_id=""
-                )
-            }
-
         last_message = list(state["messages"])[-1]
         if not isinstance(last_message, AIMessage):
             message = "Not an AI message to call tools."
@@ -187,6 +179,13 @@ class PengAgent:
 
         newmessages = []
         for tc in tool_calls:
+            if self.total_tool_calls == 0:
+                message = "Tool call limit reached. No more tool calls can be made. Try to generate the final response based on the history."
+                return {
+                    "messages": ToolMessage(
+                        content=message, name="tool_call_error_detector", tool_call_id=tc.get("id", "")
+                    )
+                }
             name = tc.get("name") if isinstance(tc, dict) else getattr(tc, "name", None)
             args = (
                 tc.get("args", {}) if isinstance(tc, dict) else getattr(tc, "args", {})
@@ -202,12 +201,15 @@ class PengAgent:
                     ToolMessage(
                         content=message,
                         name="tool_call_error_detector",
-                        tool_call_id="",
+                        tool_call_id=tc.get("id"),
                     )
                 )
             else:
                 tool = self.tools[name]
-                observation = tool.invoke(args)
+                try:
+                    observation = await tool.ainvoke(args)
+                except Exception as e:
+                    observation = f"Error calling tool '{name}': {e}"
                 newmessages.append(
                     ToolMessage(
                         content=str(observation),

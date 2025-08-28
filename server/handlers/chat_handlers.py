@@ -42,6 +42,7 @@ async def chat_handler(
         chat_config.base_model,
         chat_config.tools_name,
     )
+    yield (json.dumps({"chunk": "Agent Created\n", "type": "output_text", "done": False}) + "\n")
 
     full_response = ""
     async for chunk in agent.astream(AgentState(prompt.invoke(params))):

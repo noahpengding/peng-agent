@@ -1,6 +1,7 @@
 from utils.mysql_connect import MysqlConnect
 from utils.minio_connection import MinioStorage
 from utils.log import output_log
+from config.config import config
 
 
 def get_all_tools():
@@ -19,7 +20,7 @@ def get_tool_by_name(tool_name: str):
 
 def update_tools():
     minio = MinioStorage()
-    minio.file_download("peng-bot/peng-agent/tools.xlsx", "tools.xlsx")
+    minio.file_download(f"{config.s3_base_path}/tools.xlsx", "tools.xlsx")
     import pandas as pd
 
     tools = pd.read_excel("tools.xlsx")

@@ -134,9 +134,6 @@ class CustomClaude(BaseChatModel):
         output_log(f"Streaming chat completion request{prompt}", "debug")
         prompt_translated = self._prompt_translate(prompt)
         output_log(f"Translated prompt for streaming{prompt_translated}", "debug")
-        output_log(
-            f"Requesting streaming response from model: {self.model_name}", "debug"
-        )
         request_params = {
             "model": self.model_name,
             "messages": prompt_translated,
@@ -176,13 +173,14 @@ class CustomClaude(BaseChatModel):
                     tool_calls_id = event.content_block.id
                     tool_calls_name = event.content_block.name
                 elif event.type == "content_block_stop" and tool_calls_id != "":
+                    output_log(f"Tool call detected: {tool_calls_name} with input {tool_calls_input}", "debug")
                     message_chunk = AIMessageChunk(
                         content=[
                             {
                                 "type": "tool_use",
                                 "id": tool_calls_id,
                                 "name": tool_calls_name,
-                                "input": json.loads(tool_calls_input),
+                                "input": json.loads(tool_calls_input) if tool_calls_input != "" else {},
                             }
                         ],
                         additional_kwargs={
@@ -321,6 +319,7 @@ class CustomClaude(BaseChatModel):
                     }
                 )
             elif isinstance(message, ToolMessage):
+                output_log(f"Tool message detected: {message.tool_call_id}", "debug")
                 prompt_text.append(
                     {
                         "role": "user",
