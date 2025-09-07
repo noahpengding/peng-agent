@@ -93,6 +93,7 @@ def set_up():
             "name": "VARCHAR(64)",
             "type": "VARCHAR(64)",
             "url": "TEXT",
+            "headers": "TEXT",
         },
     )
     mysql.close()
