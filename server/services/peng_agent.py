@@ -159,7 +159,7 @@ class PengAgent:
                 full_response += str(chunk)
             writer({"call_model": {"messages": response}})
         full_response = AIMessage(
-            content=full_response, additional_kwargs={"type": "reasoning_final"}
+            content=full_response, additional_kwargs={"type": "output_text"}
         )
         save_chat(
             self.user_name,

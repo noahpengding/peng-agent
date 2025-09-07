@@ -117,7 +117,7 @@ async def chat_completions_handler(
     response = await agent.ainvoke(prompt.invoke(params))
     full_response = response_formatter_main(
         chat_config.operator,
-        response["messages"][-1].content if "messages" in response else str(response),
+        response["messages"][-2].content if "messages" in response else str(response),
     )
     return full_response
 
