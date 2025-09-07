@@ -196,7 +196,9 @@ class PengAgent:
                 message = "Tool call limit reached. No more tool calls can be made. Try to generate the final response based on the history."
                 return {
                     "messages": ToolMessage(
-                        content=message, name="tool_call_error_detector", tool_call_id=tc.get("id", "")
+                        content=message,
+                        name="tool_call_error_detector",
+                        tool_call_id=tc.get("id", ""),
                     )
                 }
             name = tc.get("name") if isinstance(tc, dict) else getattr(tc, "name", None)

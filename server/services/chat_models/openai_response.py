@@ -266,7 +266,7 @@ class CustomOpenAIResponse(BaseChatModel):
                 tool_names.append(tool["function"]["name"])
             elif "name" in tool:
                 tool_names.append(tool["name"])
-                
+
             if "properties" not in tool:
                 formatted_tools[index]["function"]["parameters"]["properties"] = {}
                 formatted_tools[index]["function"]["parameters"]["required"] = []

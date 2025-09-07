@@ -31,7 +31,7 @@ async def tools_routers(tools_name: List[str]):
             from services.tools.web_page_tools import async_playwright_tools
 
             tools += async_playwright_tools
-        
+
         elif tool_name == "email_send_tool":
             from services.tools.smtp_tools import email_send_tool
 
@@ -68,6 +68,8 @@ async def tools_routers(tools_name: List[str]):
             from handlers.tool_handlers import get_tool_by_name
 
             tool_info = get_tool_by_name(tool_name)
-            tools += await create_mcp_tools(tool_name, tool_info["url"], tool_info["headers"])
+            tools += await create_mcp_tools(
+                tool_name, tool_info["url"], tool_info["headers"]
+            )
 
     return tools

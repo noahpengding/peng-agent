@@ -16,7 +16,7 @@ const MemoryPage: React.FC = () => {
   const navigate = useNavigate();
   const { fetchMemories, isLoading } = useMemoryApi();
   const { user } = useAuth();
-  
+
   // Fetch memories on component mount
   useEffect(() => {
     const getMemories = async (username: string) => {

@@ -42,7 +42,10 @@ async def chat_handler(
         chat_config.base_model,
         chat_config.tools_name,
     )
-    yield (json.dumps({"chunk": "Agent Created\n", "type": "output_text", "done": False}) + "\n")
+    yield (
+        json.dumps({"chunk": "Agent Created\n", "type": "output_text", "done": False})
+        + "\n"
+    )
 
     full_response = ""
     try:
@@ -64,7 +67,9 @@ async def chat_handler(
                 else:
                     chunk_content = ""
                     continue
-                chunk_content = response_formatter_main(chat_config.operator, chunk_content)
+                chunk_content = response_formatter_main(
+                    chat_config.operator, chunk_content
+                )
                 if isinstance(chunk_content, str):
                     yield (
                         json.dumps(
@@ -75,7 +80,12 @@ async def chat_handler(
                     full_response += chunk_content
     except Exception as e:
         output_log(f"Error during streaming: {e}", "error")
-        yield (json.dumps({"chunk": f"Error: {str(e)}", "type": "output_text", "done": False}) + "\n")
+        yield (
+            json.dumps(
+                {"chunk": f"Error: {str(e)}", "type": "output_text", "done": False}
+            )
+            + "\n"
+        )
     yield json.dumps({"chunk": "", "done": True}) + "\n"
 
 

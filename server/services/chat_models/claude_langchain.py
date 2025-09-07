@@ -173,14 +173,19 @@ class CustomClaude(BaseChatModel):
                     tool_calls_id = event.content_block.id
                     tool_calls_name = event.content_block.name
                 elif event.type == "content_block_stop" and tool_calls_id != "":
-                    output_log(f"Tool call detected: {tool_calls_name} with input {tool_calls_input}", "debug")
+                    output_log(
+                        f"Tool call detected: {tool_calls_name} with input {tool_calls_input}",
+                        "debug",
+                    )
                     message_chunk = AIMessageChunk(
                         content=[
                             {
                                 "type": "tool_use",
                                 "id": tool_calls_id,
                                 "name": tool_calls_name,
-                                "input": json.loads(tool_calls_input) if tool_calls_input != "" else {},
+                                "input": json.loads(tool_calls_input)
+                                if tool_calls_input != ""
+                                else {},
                             }
                         ],
                         additional_kwargs={

@@ -6,9 +6,12 @@ from utils.minio_connection import MinioStorage
 from config.config import config
 from io import StringIO
 
+
 def _establish_ssh_connection(hostname: str):
     minio = MinioStorage()
-    minio.file_download(f"{config.s3_base_path}/ssh_connection.json", "ssh_connection.json")
+    minio.file_download(
+        f"{config.s3_base_path}/ssh_connection.json", "ssh_connection.json"
+    )
     with open("ssh_connection.json", "r") as f:
         ssh_config = json.load(f)
     os.remove("ssh_connection.json")
@@ -32,6 +35,7 @@ def _establish_ssh_connection(hostname: str):
             return ssh
     return None
 
+
 def execute_ssh_command(hostname: str, command: str):
     ssh = _establish_ssh_connection(hostname)
     if ssh is None:
@@ -48,6 +52,7 @@ def execute_ssh_command(hostname: str, command: str):
         return {"output": output}
     except Exception as e:
         return {"error": str(e)}
+
 
 def get_ssh_tool(hostname: str) -> StructuredTool:
     return StructuredTool.from_function(
@@ -67,11 +72,12 @@ def get_ssh_tool(hostname: str) -> StructuredTool:
         return_direct=True,
     )
 
+
 def get_general_ssh_tool(hostname) -> StructuredTool:
     return StructuredTool.from_function(
         func=lambda command: execute_ssh_command(hostname, command),
-        name=f"ssh_tool_general",
-        description=f"This is a general-purpose Linux Environment to run any SSH shell commands for calculation, code execution, or file manipulation. You are allowed to install any tools if needed. Use this tool to run commands and retrieve their output.",
+        name="ssh_tool_general",
+        description="This is a general-purpose Linux Environment to run any SSH shell commands for calculation, code execution, or file manipulation. You are allowed to install any tools if needed. Use this tool to run commands and retrieve their output.",
         args_schema={
             "type": "object",
             "properties": {
