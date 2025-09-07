@@ -113,7 +113,6 @@ const MemoryPage: React.FC = () => {
               <tr>
                 <th className="select-column">Select</th>
                 <th className="model-column">Model</th>
-                <th className="kb-column">Type</th>
                 <th className="human-input-column">Human Input</th>
                 <th className="ai-response-column">AI Response</th>
               </tr>
@@ -126,7 +125,6 @@ const MemoryPage: React.FC = () => {
                       <input type="checkbox" checked={selectedMemoryIds.includes(memory.id)} onChange={() => handleCheckboxChange(memory.id)} />
                     </td>
                     <td>{memory.base_model}</td>
-                    <td>{memory.type}</td>
                     <td title={memory.human_input}>{truncateText(memory.human_input)}</td>
                     <td title={memory.ai_response}>{truncateText(memory.ai_response, 600)}</td>
                   </tr>

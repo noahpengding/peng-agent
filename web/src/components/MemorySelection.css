@@ -1,6 +1,6 @@
 .memory-selection-container {
   padding: 1.5rem;
-  max-width: 1200px;
+  max-width: 2000px;
   margin: 0 auto;
   color: white;
 }
@@ -81,11 +81,9 @@
   top: 0;
 }
 
-.select-column {
-  width: 60px;
-}
 
 /* Column widths */
+.select-column,
 .model-column,
 .kb-column {
   width: 100px;
