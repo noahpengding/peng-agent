@@ -14,7 +14,10 @@ def minio_file_upload_tool(file_content: str, file_name: str, content_type: str)
         file_length=len(file_content),
         content_type=content_type,
     )
-    return success
+    if success:
+        return f"File '{file_name}' uploaded successfully to Minio."
+    else:
+        return f"Failed to upload file '{file_name}' to Minio."    
 
 def minio_file_download_tool(file_name: str) -> str:
     minio_storage = MinioStorage()
