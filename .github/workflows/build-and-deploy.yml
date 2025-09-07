@@ -7,7 +7,7 @@ env:
   REGISTRY: ghcr.io
   SERVER_IMAGE: ghcr.io/${{ github.repository }}/server
   WEB_IMAGE: ghcr.io/${{ github.repository }}/front
-  VERSION: v2.2.1
+  VERSION: v2.2.2
 
 jobs:
   # Code quality check - runs on all branches
