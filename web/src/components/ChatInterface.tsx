@@ -482,10 +482,7 @@ const ChatbotUI = () => {
                 <a href="/rag">RAG</a>
               </li>
               <li>
-                <a
-                  href="https://llm.tenawalcott.com/projects/UHJvamVjdDoz/spans"
-                  className="external-link"
-                >
+                <a href="https://llm.tenawalcott.com/projects/UHJvamVjdDoz/spans" className="external-link">
                   Phoenix Observability
                 </a>
               </li>

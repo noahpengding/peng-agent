@@ -13,6 +13,7 @@ class Config(BaseModel):
     s3_bucket: str
     s3_access_key: str
     s3_secret_key: str
+    s3_base_path: str
     qdrant_host: str
     qdrant_port: int
     default_operator: str
@@ -63,6 +64,9 @@ try:
         "s3_secret_key": os.environ.get("S3_SECRET_KEY")
         if os.environ.get("S3_SECRET_KEY")
         else "minioadmin",
+        "s3_base_path": os.environ.get("S3_BASE_PATH")
+        if os.environ.get("S3_BASE_PATH")
+        else "files",
         "qdrant_host": os.environ.get("QDRANT_HOST")
         if os.environ.get("QDRANT_HOST")
         else "localhost",

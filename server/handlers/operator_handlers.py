@@ -1,6 +1,7 @@
 from utils.mysql_connect import MysqlConnect
 from utils.minio_connection import MinioStorage
 from models.operator_config import OperatorConfig
+from config.config import config
 
 
 def get_operator(operator_name: str) -> OperatorConfig:
@@ -12,7 +13,7 @@ def get_operator(operator_name: str) -> OperatorConfig:
 
 def update_operator() -> None:
     minio = MinioStorage()
-    minio.file_download("peng-bot/peng-agent/operator.xlsx", "operator.xlsx")
+    minio.file_download(f"{config.s3_base_path}/operator.xlsx", "operator.xlsx")
     import pandas as pd
 
     operators = pd.read_excel("operator.xlsx")

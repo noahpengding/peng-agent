@@ -86,14 +86,17 @@ def save_tool_call(
 
 
 class PengAgent:
-    def __init__(self, user_name: str, operater: str, model: str, tools: list[str]):
+    def __init__(self, user_name: str, operater: str, model: str, tools: list[Any]):
         self.operator = operater
         self.user_name = user_name
         self.model = model
-        self.tools = self.init_tools(tools)
+        # Defer async tool initialization; store input and init later in async entrypoints
+        self._tools_input = tools
+        self.tools: dict[str, Any] = {}
+        self._tools_ready = False
         self.graph = self.init_agent_graph()
         self.tool_call_history: list[ToolCall] = []
-        self.total_tool_calls = 10
+        self.total_tool_calls = 25 if operater == "anthropic" else 10
 
     def init_agent_graph(self) -> Any:
         graph = StateGraph(AgentState)
@@ -108,34 +111,44 @@ class PengAgent:
         graph.set_entry_point("call_model")
         return graph.compile()
 
-    def init_tools(self, tools):
-        if tools == []:
+    async def init_tools(self, tools: list[Any]):
+        if not tools:
             return {}
         from services.tools.tools_routers import tools_routers
 
-        tool_instances = tools_routers(tools)
+        tool_instances = await tools_routers(tools)
         return {t.name: t for t in tool_instances} if tool_instances else {}
+
+    async def _ensure_tools(self) -> None:
+        if self._tools_ready:
+            return
+        self.tools = await self.init_tools(self._tools_input)
+        self._tools_ready = True
 
     def invoke(self, state: AgentState) -> Any:
         return self.graph.invoke(state)
 
-    def ainvoke(self, state: AgentState) -> Any:
-        return self.graph.ainvoke(state)
+    async def ainvoke(self, state: AgentState) -> Any:
+        await self._ensure_tools()
+        return await self.graph.ainvoke(state)
 
     def stream(self, state: AgentState) -> Any:
         return self.graph.stream(state, stream_mode="custom")
 
-    def astream(self, state: AgentState) -> Any:
-        return self.graph.astream(state, stream_mode="custom")
+    async def astream(self, state: AgentState) -> Any:
+        await self._ensure_tools()
+        async for chunk in self.graph.astream(state, stream_mode="custom"):
+            yield chunk
 
-    def call_model(self, state: AgentState):
+    async def call_model(self, state: AgentState):
         from handlers.model_utils import get_model_instance_by_operator
 
         writer = get_stream_writer()
+        await self._ensure_tools()
         llm = get_model_instance_by_operator(self.operator, self.model)
         llm = llm.bind_tools(list(self.tools.values()))
         full_response = ""  # for using reasoning result for next round input
-        for chunk in llm.stream(state["messages"]):
+        async for chunk in llm.astream(state["messages"]):
             if isinstance(chunk, AIMessage):
                 response = chunk
                 full_response += str(chunk.content)
@@ -157,17 +170,9 @@ class PengAgent:
         )
         return {"messages": [full_response, response]}
 
-    def call_tools(self, state: AgentState):
+    async def call_tools(self, state: AgentState):
         writer = get_stream_writer()
         self.total_tool_calls -= 1
-        if self.total_tool_calls == 0:
-            message = "Tool call limit reached. No more tool calls can be made. Try to generate the final response based on the history."
-            return {
-                "messages": ToolMessage(
-                    content=message, name="tool_call_error_detector", tool_call_id=""
-                )
-            }
-
         last_message = list(state["messages"])[-1]
         if not isinstance(last_message, AIMessage):
             message = "Not an AI message to call tools."
@@ -187,6 +192,15 @@ class PengAgent:
 
         newmessages = []
         for tc in tool_calls:
+            if self.total_tool_calls == 0:
+                message = "Tool call limit reached. No more tool calls can be made. Try to generate the final response based on the history."
+                return {
+                    "messages": ToolMessage(
+                        content=message,
+                        name="tool_call_error_detector",
+                        tool_call_id=tc.get("id", ""),
+                    )
+                }
             name = tc.get("name") if isinstance(tc, dict) else getattr(tc, "name", None)
             args = (
                 tc.get("args", {}) if isinstance(tc, dict) else getattr(tc, "args", {})
@@ -202,12 +216,15 @@ class PengAgent:
                     ToolMessage(
                         content=message,
                         name="tool_call_error_detector",
-                        tool_call_id="",
+                        tool_call_id=tc.get("id"),
                     )
                 )
             else:
                 tool = self.tools[name]
-                observation = tool.invoke(args)
+                try:
+                    observation = await tool.ainvoke(args)
+                except Exception as e:
+                    observation = f"Error calling tool '{name}': {e}"
                 newmessages.append(
                     ToolMessage(
                         content=str(observation),

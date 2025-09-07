@@ -261,13 +261,19 @@ class CustomOpenAIResponse(BaseChatModel):
             convert_to_openai_tool(tool, strict=strict) for tool in tools
         ]
         tool_names = []
-        for tool in formatted_tools:
+        for index, tool in enumerate(formatted_tools):
             if "function" in tool:
                 tool_names.append(tool["function"]["name"])
             elif "name" in tool:
                 tool_names.append(tool["name"])
-            else:
-                pass
+
+            if "properties" not in tool:
+                formatted_tools[index]["function"]["parameters"]["properties"] = {}
+                formatted_tools[index]["function"]["parameters"]["required"] = []
+                formatted_tools[index]["properties"] = {
+                    "additionalProperties": False,
+                }
+                formatted_tools[index]["required"] = []
         kwargs["tools"] = formatted_tools
         return super().bind(**kwargs)
 

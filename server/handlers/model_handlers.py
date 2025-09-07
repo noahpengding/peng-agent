@@ -3,13 +3,14 @@ from models.model_config import ModelConfig
 from utils.log import output_log
 from utils.minio_connection import MinioStorage
 from handlers.operator_handlers import get_all_operators, update_operator
+from config.config import config
 import re
 import pandas as pd
 
 
 def _get_local_models() -> list[ModelConfig]:
     m = MinioStorage()
-    m.file_download("peng-bot/peng-agent/models.xlsx", "models.xlsx")
+    m.file_download(f"{config.s3_base_path}/models.xlsx", "models.xlsx")
     models = pd.read_excel("models.xlsx")
     models.dropna(subset=["model_name"], inplace=True)
     result = []
@@ -24,7 +25,7 @@ def _save_local_models(models: list[ModelConfig]):
     m = MinioStorage()
     m.file_upload(
         "models.xlsx",
-        "peng-bot/peng-agent/models.xlsx",
+        f"{config.s3_base_path}/models.xlsx",
         "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
     )
 

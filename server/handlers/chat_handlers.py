@@ -42,35 +42,50 @@ async def chat_handler(
         chat_config.base_model,
         chat_config.tools_name,
     )
+    yield (
+        json.dumps({"chunk": "Agent Created\n", "type": "output_text", "done": False})
+        + "\n"
+    )
 
     full_response = ""
-    async for chunk in agent.astream(AgentState(prompt.invoke(params))):
-        output_log(f"Received chunk: {chunk}", "DEBUG")
-        if chunk:
-            if "call_model" in chunk and "messages" in chunk["call_model"]:
-                chunk_content = str(chunk["call_model"]["messages"].content)
-                chunk_type = chunk["call_model"]["messages"].additional_kwargs.get(
-                    "type", "output_text"
-                )
-            elif "call_tools" in chunk and "messages" in chunk["call_tools"]:
-                chunk_content = chunk["call_tools"]["messages"]
-                if isinstance(chunk_content, list):
-                    chunk_content = chunk_content[0].content
-                else:
-                    chunk_content = chunk_content.content
-                chunk_type = "tool_calls"
-            else:
-                chunk_content = ""
-                continue
-            chunk_content = response_formatter_main(chat_config.operator, chunk_content)
-            if isinstance(chunk_content, str):
-                yield (
-                    json.dumps(
-                        {"chunk": chunk_content, "type": chunk_type, "done": False}
+    try:
+        async for chunk in agent.astream(AgentState(prompt.invoke(params))):
+            output_log(f"Received chunk: {chunk}", "DEBUG")
+            if chunk:
+                if "call_model" in chunk and "messages" in chunk["call_model"]:
+                    chunk_content = str(chunk["call_model"]["messages"].content)
+                    chunk_type = chunk["call_model"]["messages"].additional_kwargs.get(
+                        "type", "output_text"
                     )
-                    + "\n"
+                elif "call_tools" in chunk and "messages" in chunk["call_tools"]:
+                    chunk_content = chunk["call_tools"]["messages"]
+                    if isinstance(chunk_content, list):
+                        chunk_content = chunk_content[0].content
+                    else:
+                        chunk_content = chunk_content.content
+                    chunk_type = "tool_calls"
+                else:
+                    chunk_content = ""
+                    continue
+                chunk_content = response_formatter_main(
+                    chat_config.operator, chunk_content
                 )
-                full_response += chunk_content
+                if isinstance(chunk_content, str):
+                    yield (
+                        json.dumps(
+                            {"chunk": chunk_content, "type": chunk_type, "done": False}
+                        )
+                        + "\n"
+                    )
+                    full_response += chunk_content
+    except Exception as e:
+        output_log(f"Error during streaming: {e}", "error")
+        yield (
+            json.dumps(
+                {"chunk": f"Error: {str(e)}", "type": "output_text", "done": False}
+            )
+            + "\n"
+        )
     yield json.dumps({"chunk": "", "done": True}) + "\n"
 
 

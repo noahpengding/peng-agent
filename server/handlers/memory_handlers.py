@@ -7,4 +7,5 @@ def get_memory(username: str = ""):
     m = MysqlConnect()
     if username == "":
         return m.read_records("chat", {"type": "assistant"})
-    return m.read_records("chat", {"user_name": username, "type": "assistant"})
+    records = m.read_records("chat", {"user_name": username, "type": "assistant"})
+    return sorted(records, key=lambda x: x["created_at"], reverse=True)
