@@ -14,7 +14,7 @@ def prompt_template(model_name):
             "system",
             """You are a helpful assistant. You will answer the user's question based on the context provided.
             
-            Here are some ruls you must follow:
+            Here are some rules you must follow:
             1. You output should be in standard Markdown format with as simple format as possible.
             2. When you have tools to use, you should use them to solve tasks step by step.
             3. If you've already tried a tool call, don't repeat it. Try to call other tools or change your input parameters.

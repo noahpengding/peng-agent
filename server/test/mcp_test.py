@@ -74,7 +74,7 @@ async def main():
                 tools,
             )
             async for chunk in agent.astream(AgentState(prompt.invoke(params))):
-                continue
+                print(chunk, end="", flush=True)
 
             
 if __name__ == "__main__":

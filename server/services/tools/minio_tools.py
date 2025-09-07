@@ -21,7 +21,7 @@ def minio_file_upload_tool(file_content: str, file_name: str, content_type: str)
 
 def minio_file_download_tool(file_name: str) -> str:
     minio_storage = MinioStorage()
-    file_content = minio_storage.file_download_to_string(file_name=file_name, download_path=f"/tmp/{file_name.split('/')[-1]}")
+    minio_storage.file_download_to_string(file_name=file_name, download_path=f"/tmp/{file_name.split('/')[-1]}")
     file_content = ""
     with open(f"/tmp/{file_name.split('/')[-1]}", "r", encoding="utf-8") as f:
         file_content = f.read()

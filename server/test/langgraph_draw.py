@@ -12,7 +12,7 @@ with open(dotenv_path, "r") as f:
 SCRIPT_DIR = os.path.dirname(os.path.realpath(__file__))
 sys.path.append(os.path.dirname(SCRIPT_DIR + "../"))
 
-from IPython.display import Image, display
+from IPython.display import Image
 from services.peng_agent import PengAgent
 
 agent = PengAgent(
