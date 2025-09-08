@@ -91,7 +91,11 @@ class MysqlConnect:
         self.execute_query(query, params)
 
     def delete_record(self, table, conditions: dict):
-        cond_clause = " AND ".join([f"{k}=%s" for k in conditions.keys()])
-        query = f"DELETE FROM {table} WHERE {cond_clause}"
-        params = tuple(conditions.values())
+        if conditions:
+            cond_clause = " AND ".join([f"{k}=%s" for k in conditions.keys()])
+            query = f"DELETE FROM {table} WHERE {cond_clause}"
+            params = tuple(conditions.values())
+        else:
+            query = f"DELETE FROM {table}"
+            params = None
         self.execute_query(query, params)

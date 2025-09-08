@@ -1,5 +1,5 @@
 from langchain_core.tools import StructuredTool
-from langchain_tavily import TavilySearch
+from config.config import config
 
 
 def _wikipedia_search(query) -> str:
@@ -12,8 +12,44 @@ def _wikipedia_search(query) -> str:
     return results
 
 
-tavily_search_tool = TavilySearch(
-    max_results=5,
+def _tavily_search(query: str, topic="general") -> str:
+    from tavily import TavilyClient
+
+    client = TavilyClient(
+        api_key=config.tavily_api_key,
+    )
+    response = client.search(
+        query=query,
+        topic=topic,
+        search_depth="advanced",
+        max_results=5,
+    )
+    return [
+        f"{result['title']} --- {result['url']}: {result['content']}"
+        for result in response["results"]
+    ]
+
+
+tavily_search_tool = StructuredTool.from_function(
+    func=_tavily_search,
+    name="tavily_search_tool",
+    description="A search engine that searches the web for relevant information. Input should be a query string for search, a topic choosen from [general, news, finance]",
+    args_schema={
+        "type": "object",
+        "properties": {
+            "query": {
+                "type": "string",
+                "description": "The search query to run on the web.",
+            },
+            "topic": {
+                "type": "string",
+                "description": "The topic of the search, should be one of [general, news, finance].",
+                "enum": ["general", "news", "finance"],
+            },
+        },
+        "required": ["query"],
+    },
+    return_direct=False,
 )
 
 wikipedia_search_tool = StructuredTool.from_function(

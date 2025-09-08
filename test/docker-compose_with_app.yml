@@ -6,10 +6,7 @@ services:
     networks:
       - agent
     volumes:
-      - /RAID1/docker/qdrant:/qdrant/storage
-    labels:
-      - traefik.enable=false
-    profiles: ["prod", "ollama"]
+      - /data/peng-agent/qdrant:/qdrant/storage
 
   peng-agent-mysql:
     image: mysql:lts
@@ -17,60 +14,41 @@ services:
     hostname: peng-agent
     restart: always
     env_file:
-      - ./peng-chat.env
+      - ./.env
+    ports:
+      - "3306:3306"
     volumes:
       - /etc/localtime:/etc/localtime:ro
-      - /RAID1/docker/peng-agent:/var/lib/mysql
+      - /data/peng-agent/mysql:/var/lib/mysql
     networks:
       - agent
-    labels:
-      - traefik.enable=false
-    profiles: ["prod", "ollama"]
 
   peng-agent-server:
-    image: ghcr.io/noahpengding/peng-agent/server:latest
+    image: peng-agent/server:local
     container_name: peng-agent-server
     hostname: peng-chat
     restart: always
+    ports:
+      - "1532:1532"
     env_file:
-      - ./peng-chat.env
+      - ./.env
     depends_on:
       - peng-agent-mysql
-    environment:
-      - NVIDIA_VISIBLE_DEVICES=all
-      - NVIDIA_DRIVER_CAPABILITIES=compute,utility
     networks:
       - agent
-    labels:
-      - traefik.enable=true
-      - traefik.http.routers.peng-agent-backend.rule=Host(`agent.tenawalcott.com`) && PathPrefix(`/api`)
-      - traefik.http.routers.peng-agent-backend.entrypoints=websecure
-      - traefik.http.routers.peng-agent-backend.tls=true
-      - treafik.http.routers.peng-agent-backend.service=peng-agent-server
-      - traefik.http.services.peng-agent-server.loadbalancer.server.port=1532
-        
-      - traefik.http.middlewares.api-stripprefix.stripprefix.prefixes=/api
-      - traefik.http.routers.peng-agent-backend.middlewares=api-stripprefix@docker
-    profiles: ["prod", "ollama"]
 
   peng-agent-front:
-    image: ghcr.io/noahpengding/peng-agent/front:latest
+    image: peng-agent/web:local
     container_name: peng-agent-front
     restart: always
     environment:
       - VITE_BACKEND_URL=http://peng-chat:1532/
+    ports:
+      - "8080:80"
     depends_on:
       - peng-agent-server
     networks:
       - agent
-    labels:
-      - traefik.enable=true
-      - traefik.http.routers.peng-agent-frontend.rule=Host(`agent.tenawalcott.com`)
-      - traefik.http.routers.peng-agent-frontend.entrypoints=websecure
-      - traefik.http.routers.mattermost-frontend.tls=true
-      - traefik.http.routers.peng-agent-frontend.service=peng-agent-front
-      - traefik.http.services.peng-agent-front.loadbalancer.server.port=80
-    profiles: ["prod", "ollama"]
 
 
 networks:

@@ -7,19 +7,13 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libpq-dev \
     && rm -rf /var/lib/apt/lists/*
 
-RUN pip install --no-cache-dir playwright
-
-RUN playwright install chromium
-
-RUN playwright install-deps
-
-RUN pip uninstall -y playwright
-
 RUN pip install --no-cache-dir uv
 
 COPY pyproject.toml uv.lock ./
 
 RUN uv sync --locked
+
+RUN uv run crawl4ai-setup
 
 COPY . .
 

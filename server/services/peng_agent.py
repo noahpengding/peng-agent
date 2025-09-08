@@ -130,7 +130,9 @@ class PengAgent:
 
     async def ainvoke(self, state: AgentState) -> Any:
         await self._ensure_tools()
-        return await self.graph.ainvoke(state)
+        return await self.graph.ainvoke(
+            state, {"recursion_limit": self.total_tool_calls}
+        )
 
     def stream(self, state: AgentState) -> Any:
         return self.graph.stream(state, stream_mode="custom")

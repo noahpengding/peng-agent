@@ -26,6 +26,7 @@ def update_tools():
     tools = pd.read_excel("tools.xlsx")
     tools = tools.fillna("")
     mysql = MysqlConnect()
+    mysql.delete_record("tools", {})
     for index, row in tools.iterrows():
         tool_data = {
             "name": row["name"],
@@ -33,7 +34,6 @@ def update_tools():
             "url": row["url"],
         }
         try:
-            mysql.delete_record("tools", {"name": tool_data["name"]})
             mysql.create_record("tools", tool_data)
         except Exception as e:
             output_log(f"Error updating tool {tool_data['name']}: {e}", "error")

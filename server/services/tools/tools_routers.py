@@ -27,10 +27,15 @@ async def tools_routers(tools_name: List[str]):
 
             tools += requests_tools
 
-        elif tool_name == "playwright_tools":
-            from services.tools.web_page_tools import async_playwright_tools
+        elif tool_name == "adaptive_web_crawler_tool":
+            from services.tools.web_page_tools import adaptive_web_crawler_tool
 
-            tools += async_playwright_tools
+            tools += [adaptive_web_crawler_tool]
+
+        elif tool_name == "deep_web_crawler_tool":
+            from services.tools.web_page_tools import deep_web_crawler_tool
+
+            tools += [deep_web_crawler_tool]
 
         elif tool_name == "email_send_tool":
             from services.tools.smtp_tools import email_send_tool
