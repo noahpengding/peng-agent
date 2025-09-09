@@ -140,9 +140,9 @@ class PengAgent:
     async def astream(self, state: AgentState) -> Any:
         await self._ensure_tools()
         async for chunk in self.graph.astream(
-            state, 
-            stream_mode="custom", 
-            config={"recursion_limi": self.total_tool_calls + 2}
+            state,
+            stream_mode="custom",
+            config={"recursion_limi": self.total_tool_calls + 2},
         ):
             yield chunk
 
