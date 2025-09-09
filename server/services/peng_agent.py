@@ -131,7 +131,7 @@ class PengAgent:
     async def ainvoke(self, state: AgentState) -> Any:
         await self._ensure_tools()
         return await self.graph.ainvoke(
-            state, {"recursion_limit": self.total_tool_calls}
+            state, {"recursion_limit": self.total_tool_calls + 2}
         )
 
     def stream(self, state: AgentState) -> Any:
@@ -139,7 +139,11 @@ class PengAgent:
 
     async def astream(self, state: AgentState) -> Any:
         await self._ensure_tools()
-        async for chunk in self.graph.astream(state, stream_mode="custom"):
+        async for chunk in self.graph.astream(
+            state, 
+            stream_mode="custom", 
+            config={"recursion_limi": self.total_tool_calls + 2}
+        ):
             yield chunk
 
     async def call_model(self, state: AgentState):
@@ -196,6 +200,7 @@ class PengAgent:
         for tc in tool_calls:
             if self.total_tool_calls == 0:
                 message = "Tool call limit reached. No more tool calls can be made. Try to generate the final response based on the history."
+                self.tools = {}
                 return {
                     "messages": ToolMessage(
                         content=message,

@@ -1,5 +1,6 @@
 from langchain_core.tools import StructuredTool
 from utils.minio_connection import MinioStorage
+from config.config import config
 import os
 
 
@@ -8,6 +9,9 @@ def minio_file_upload_tool(file_content: str, file_name: str, content_type: str)
     import io
 
     file_content_encoded = io.BytesIO(file_content.encode("utf-8"))
+    if "/" not in file_name and "\\" not in file_name:
+        file_name = config.s3_base_path + "/" + file_name
+
     success = minio_storage.file_upload_from_string(
         file_content=file_content_encoded,
         file_name=file_name,
@@ -16,8 +20,7 @@ def minio_file_upload_tool(file_content: str, file_name: str, content_type: str)
     )
     if success:
         return f"File '{file_name}' uploaded successfully to Minio."
-    else:
-        return f"Failed to upload file '{file_name}' to Minio."
+    return f"Failed to upload file '{file_name}' to Minio."
 
 
 def minio_file_download_tool(file_name: str) -> str:

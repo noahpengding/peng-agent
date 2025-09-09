@@ -75,7 +75,7 @@ class SmtpEmailSender:
         subject: str,
         body: str,
         attachments: Optional[List[Dict[str, Any]]] = None,
-    ) -> bool:
+    ) -> str:
         """Send an email using SMTP.
 
         Args:
@@ -92,7 +92,7 @@ class SmtpEmailSender:
                 "No SMTP connection established, attempting to connect.", "debug"
             )
             if not self.connect():
-                return False
+                return "Failed to connect to SMTP server."
 
         try:
             msg = MIMEMultipart()
@@ -122,7 +122,7 @@ class SmtpEmailSender:
                 try:
                     self.connection.sendmail(self.username, to_address, msg.as_string())
                     output_log(f"Email sent to {to_address}", "info")
-                    return True
+                    return f"Email sent to {to_address}"
                 except Exception as e:
                     if attempt < 4:  # Try 5 times total
                         wait_time = 2**attempt  # Exponential backoff
@@ -138,10 +138,10 @@ class SmtpEmailSender:
                         raise e
         except Exception as e:
             output_log(f"Failed to send email to {to_address}: {str(e)}", "error")
-            return False
+            return f"Failed to send email to {to_address}: {str(e)}"
         finally:
             self.disconnect()
-        return False
+        return f"Failed to send email to {to_address} after multiple attempts."
 
 
 def send_email_tool(
@@ -149,7 +149,7 @@ def send_email_tool(
     subject: str,
     body: str,
     attachments: Optional[List[Dict[str, Any]]] = None,
-) -> bool:
+) -> str:
     """Send an email using the SmtpEmailSender class.
 
     Args:
