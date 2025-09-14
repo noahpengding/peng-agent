@@ -14,7 +14,7 @@ interface ChatRequest {
 export const ChatService = {
   async sendMessage(
     request: ChatRequest,
-    onChunk: (chunk: string, type: string) => void,
+    onChunk: (chunk: string, type: string, done: boolean) => void,
     onComplete: () => void,
     onError: (error: Error) => void
   ): Promise<void> {
@@ -72,7 +72,7 @@ export const ChatService = {
               const data = JSON.parse(line);
               if (!data.done) {
                 // pass chunk and its type
-                onChunk(data.chunk, data.type);
+                onChunk(data.chunk, data.type, data.done);
               } else {
                 if (!isCompleted) {
                   isCompleted = true;

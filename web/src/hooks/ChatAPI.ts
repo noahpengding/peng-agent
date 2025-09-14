@@ -19,7 +19,7 @@ export const useChatApi = () => {
   const [error, setError] = useState<string | null>(null);
   const [isStreaming, setIsStreaming] = useState(false);
 
-  const sendMessage = async (request: ChatRequest, onChunk: (chunk: string, type: string) => void, onComplete?: () => void): Promise<void> => {
+  const sendMessage = async (request: ChatRequest, onChunk: (chunk: string, type: string, done: boolean) => void, onComplete?: () => void): Promise<void> => {
     setIsLoading(true);
     setIsStreaming(true);
     setError(null);
@@ -28,8 +28,8 @@ export const useChatApi = () => {
       await ChatService.sendMessage(
         request,
         // On each chunk with type
-        (chunk: string, type: string) => {
-          onChunk(chunk, type);
+        (chunk: string, type: string, done: boolean) => {
+          onChunk(chunk, type, done);
         },
         // On complete
         () => {

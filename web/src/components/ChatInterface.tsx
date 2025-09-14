@@ -26,6 +26,9 @@ interface ModelInfo {
 const ChatbotUI = () => {
   // State for chat input and messages
   const [input, setInput] = useState('');
+  const [messages, setMessages] = useState<Message[]>([]);
+  // State to control sidebar visibility
+  const [isSidebarHidden, setIsSidebarHidden] = useState(false);
   interface Message {
     role: string;
     content: string;
@@ -38,15 +41,36 @@ const ChatbotUI = () => {
     messageId?: string;
   }
 
-  const [messages, setMessages] = useState<Message[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [image, setImage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+
+  // Add state to force re-render of Markdown content
+  const [forceRerender, setForceRerender] = useState(0);
+
+  // Textarea behavior: auto-grow with max height and character cap
+  const MAX_TEXTAREA_HEIGHT = 240; // px, ~8-10 lines depending on styles
+  const MAX_INPUT_CHARS = 4000; // character limit for the input box
 
   // Create ref for file input
   const fileInputRef = useRef<HTMLInputElement>(null);
   // Ref for textarea to focus after certain actions
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  // Helper: adjust textarea height based on content up to max
+  const adjustTextareaSize = () => {
+    const el = textareaRef.current;
+    if (!el) return;
+    el.style.height = 'auto';
+    const next = Math.min(el.scrollHeight, MAX_TEXTAREA_HEIGHT);
+    el.style.height = `${next}px`;
+    el.style.overflowY = el.scrollHeight > MAX_TEXTAREA_HEIGHT ? 'auto' as const : 'hidden' as const;
+  };
+
+  // Adjust when content changes or on mount
+  useEffect(() => {
+    adjustTextareaSize();
+  }, [input]);
 
   // Initialize the chat API hook
   const { sendMessage, error: apiError } = useChatApi();
@@ -264,7 +288,7 @@ const ChatbotUI = () => {
     setError(null);
 
     // Generate a unique message ID for this conversation turn
-    const messageId = Date.now().toString();
+    const messageId = Math.random().toString(36).substring(2, 15);
 
     try {
       // Configure the API request - only include fields expected by backend
@@ -293,9 +317,8 @@ const ChatbotUI = () => {
       await sendMessage(
         request,
         // Handle each chunk with its type
-        (chunk: string, type: string) => {
-          // Skip empty chunks
-          if (!chunk.trim()) return;
+        (chunk: string, type: string, done: boolean) => {
+          if (done) return;
 
           if (type === 'tool_calls') {
             // Add individual tool message chunk as a separate message
@@ -377,11 +400,19 @@ const ChatbotUI = () => {
               if (m.messageId === messageId) {
                 if (m.type === 'tool_calls' || m.type === 'reasoning_summary') {
                   return { ...m, folded: true };
+                } else if (m.type === 'output_text') {
+                  // Clean up double newlines in output text
+                  return { ...m, content: m.content.replace(/\n\n+/g, '\n') };
                 }
               }
               return m;
             })
           );
+
+          // Force Markdown re-render by toggling the forceRerender state
+          setTimeout(() => {
+            setForceRerender(prev => prev + 1);
+          }, 10);
 
           // Add each type of content as separate entries to short-term memory
           setShortTermMemory((prev) => {
@@ -465,7 +496,7 @@ const ChatbotUI = () => {
   };
 
   return (
-    <div className="chat-container">
+    <div className={`chat-container ${isSidebarHidden ? 'sidebar-hidden' : ''}`}>
       {/* Header */}
       <header className="header">
         <div className="header-content">
@@ -498,45 +529,77 @@ const ChatbotUI = () => {
       </header>
 
       <div className="main-content">
+        {/* Show sidebar handle when hidden */}
+        {isSidebarHidden && (
+          <button
+            type="button"
+            className="show-sidebar-toggle"
+            onClick={() => setIsSidebarHidden(false)}
+            title="Show sidebar"
+            aria-label="Show sidebar"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <polyline points="15 18 9 12 15 6" />
+              <rect x="3" y="4" width="18" height="16" rx="2" ry="2" />
+            </svg>
+          </button>
+        )}
         {/* Sidebar for Controls */}
-        <div className="sidebar">
-          <h2 className="sidebar-title">Configuration</h2>
-
-          {/* Model Selection - replaced with dynamic version */}
-          {renderBaseModelSelection()}
-
-          {/* Tool Selection */}
-          <div className="form-group">
-            <div className="tool-section-header">
-              <label className="form-label">Tools</label>
-              <button className="tool-add-button" onClick={openToolPopup} title="Add Tools">
-                +
+        {!isSidebarHidden && (
+          <div className="sidebar">
+            <div className="sidebar-header-row">
+              <h2 className="sidebar-title">Configuration</h2>
+              {/* Hide sidebar button */}
+              <button
+                type="button"
+                className="sidebar-toggle"
+                onClick={() => setIsSidebarHidden(true)}
+                aria-label="Hide sidebar"
+                title="Hide sidebar"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <rect x="3" y="4" width="18" height="16" rx="2" ry="2" />
+                  <path d="M9 4v16" />
+                </svg>
               </button>
             </div>
-            {selectedToolNames.length > 0 ? (
-              <div className="selected-tools-list">
-                {selectedToolNames.map((toolName, index) => (
-                  <div key={index} className="selected-tool-item">
-                    <span className="selected-tool-name">{toolName}</span>
-                    <button type="button" className="tool-remove-button" onClick={() => handleToolSelection(toolName, false)} title="Remove tool">
-                      ×
-                    </button>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div className="no-tools-selected">No tools selected</div>
-            )}
-          </div>
 
-          {/* Memory Selection Link */}
-          <div className="form-group">
-            <a href="/memory" className="memory-link">
-              Memory Selection
-            </a>
-            {shortTermMemory.length > 0 && <div className="selected-memories-count">{shortTermMemory.length} short-term memories used</div>}
+            {/* Model Selection - replaced with dynamic version */}
+            {renderBaseModelSelection()}
+
+            {/* Tool Selection */}
+            <div className="form-group">
+              <div className="tool-section-header">
+                <label className="form-label">Tools</label>
+                <button className="tool-add-button" onClick={openToolPopup} title="Add Tools">
+                  +
+                </button>
+              </div>
+              {selectedToolNames.length > 0 ? (
+                <div className="selected-tools-list">
+                  {selectedToolNames.map((toolName, index) => (
+                    <div key={index} className="selected-tool-item">
+                      <span className="selected-tool-name">{toolName}</span>
+                      <button type="button" className="tool-remove-button" onClick={() => handleToolSelection(toolName, false)} title="Remove tool">
+                        ×
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="no-tools-selected">No tools selected</div>
+              )}
+            </div>
+
+            {/* Memory Selection Link */}
+            <div className="form-group">
+              <a href="/memory" className="memory-link">
+                Memory Selection
+              </a>
+              {shortTermMemory.length > 0 && <div className="selected-memories-count">{shortTermMemory.length} short-term memories used</div>}
+            </div>
           </div>
-        </div>
+        )}
 
         {/* Main Chat Area */}
         <div className="chat-area">
@@ -569,6 +632,7 @@ const ChatbotUI = () => {
                       <div className="message-text">
                         <div className="markdown-content">
                           <ReactMarkdown
+                      key={`${msg.messageId}-${forceRerender}`}
                             remarkPlugins={[remarkGfm, remarkMath]}
                             rehypePlugins={[rehypeKatex]}
                             components={{
@@ -576,11 +640,15 @@ const ChatbotUI = () => {
                               li: ({ ...props }) => <li className="tight-list-item" {...props} />,
                               code: (props: { inline?: boolean; className?: string; children?: React.ReactNode }) => {
                                 const { inline, className, children, ...rest } = props;
-                                const match = /language-(\w+)/.exec(className || '');
-                                return !inline && match ? (
+                                const cls = className || '';
+                                const langToken = cls
+                                  .split(' ')
+                                  .find((c) => c.startsWith('language-'));
+                                const lang = !inline && langToken ? langToken.replace('language-', '') : undefined;
+                                return !inline && lang ? (
                                   <SyntaxHighlighter
                                     style={vscDarkPlus as Record<string, React.CSSProperties>}
-                                    language={match[1]}
+                                    language={lang}
                                     PreTag="div"
                                     {...rest}
                                   >
@@ -594,7 +662,7 @@ const ChatbotUI = () => {
                               },
                             }}
                           >
-                            {msg.content || (isLoading && index === messages.length - 1 ? 'AI is thinking...' : '')}
+                            {msg.content}
                           </ReactMarkdown>
                         </div>
                       </div>
@@ -626,10 +694,20 @@ const ChatbotUI = () => {
                   placeholder="Type your message here... (Ctrl+Enter to send)"
                   rows={3}
                   value={input}
-                  onChange={(e) => setInput(e.target.value)}
+                  maxLength={MAX_INPUT_CHARS}
+                  onChange={(e) => {
+                    setInput(e.target.value);
+                    // Adjust size immediately for snappy UX
+                    adjustTextareaSize();
+                  }}
                   onKeyDown={handleKeyDown}
                   onPaste={handlePaste}
                 />
+
+                {/* Character counter */}
+                <div className="char-counter">
+                  {input.length} / {MAX_INPUT_CHARS}
+                </div>
 
                 <div className="input-actions">
                   <input ref={fileInputRef} type="file" accept="image/*" className="file-input" onChange={handleImageUpload} id="image-upload" />
