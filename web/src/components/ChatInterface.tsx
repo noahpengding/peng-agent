@@ -307,7 +307,7 @@ const ChatbotUI = () => {
     setError(null);
 
     // Generate a unique message ID for this conversation turn
-    const messageId = Math.random().toString(36).substring(2, 15);
+    const messageId = crypto.randomUUID();
 
     try {
       // Configure the API request - only include fields expected by backend
@@ -337,7 +337,9 @@ const ChatbotUI = () => {
         request,
         // Handle each chunk with its type
         (chunk: string, type: string, done: boolean) => {
-          if (done) return;
+          if (done && !chunk) {
+            return;
+          }
 
           if (type === 'tool_calls') {
             // Add individual tool message chunk as a separate message
