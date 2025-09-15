@@ -81,8 +81,6 @@ const MemoryPage: React.FC = () => {
 
   return (
     <div className="memory-selection-container">
-      <h1 className="memory-selection-title">Memory Selection</h1>
-
       {/* Search Bar */}
       <div className="search-container">
         <input
