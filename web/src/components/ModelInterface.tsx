@@ -123,10 +123,7 @@ const ModelInterface: React.FC = () => {
 
   return (
     <div className="model-container">
-      <div className="header">
-        <div className="header-title">Model Management</div>
-        {error && <div className="error-message">{error}</div>}
-      </div>
+      {error && <div className="error-message">{error}</div>}
 
       <div className="main-content">
         {/* Sidebar with filters */}

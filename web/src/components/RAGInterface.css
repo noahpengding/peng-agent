@@ -8,18 +8,6 @@
   color: white;
 }
 
-/* Header styles - reused from ChatInterface */
-.header {
-  background-color: #6d28d9;
-  color: white;
-  padding: 1rem;
-}
-
-.header-title {
-  font-size: 1.5rem;
-  font-weight: bold;
-}
-
 .error-message {
   margin-top: 0.5rem;
   padding: 0.5rem;
@@ -36,22 +24,12 @@
   overflow: hidden;
 }
 
-/* Sidebar styles - adapted from ChatInterface */
-.sidebar {
-  width: 16rem;
-  background-color: #000000;
-  padding: 1rem;
-  border-right: 1px solid #374151;
-  overflow-y: auto;
-  color: white;
-}
-
 /* Home button style */
 .home-button {
   display: block;
   width: 100%;
   padding: 0.75rem;
-  background-color: #4b5563;
+  background-color: #212121;
   color: white;
   border-radius: 0.25rem;
   text-align: center;
@@ -62,7 +40,7 @@
 }
 
 .home-button:hover {
-  background-color: #6b7280;
+  background-color: #222936;
 }
 
 .sidebar-title {
@@ -94,9 +72,9 @@
 .form-select {
   width: 100%;
   padding: 0.5rem;
-  border: 1px solid #4b5563;
+  border: 1px solid #212121;
   border-radius: 0.25rem;
-  background-color: #374151;
+  background-color: #212121;
   color: white;
 }
 
@@ -118,12 +96,12 @@
 
 .radio-input {
   margin-right: 0.5rem;
-  accent-color: #7c3aed;
+  accent-color: #047857;
   cursor: pointer;
 }
 
 .index-button {
-  background-color: #7c3aed;
+  background-color: #212121;
   color: white;
   padding: 0.75rem;
   border-radius: 0.25rem;
@@ -133,7 +111,7 @@
 }
 
 .index-button:hover {
-  background-color: #6d28d9;
+  background-color: #222936;
 }
 
 .index-button:disabled {
@@ -145,7 +123,7 @@
   margin-top: 1rem;
   padding: 0.75rem;
   border-radius: 0.25rem;
-  background-color: #374151;
+  background-color: #212121;
 }
 
 .filters {
@@ -165,6 +143,7 @@
   flex-direction: column;
   padding: 1rem;
   overflow: hidden;
+  background: #212121;
 }
 
 .documents-header {
@@ -199,7 +178,7 @@
   flex: 1;
   overflow-y: auto;
   border-radius: 0.5rem;
-  border: 1px solid #374151;
+  border: 1px solid #212121;
 }
 
 .documents-table {
@@ -211,12 +190,12 @@
 .documents-table td {
   padding: 0.75rem 1rem;
   text-align: left;
-  border-bottom: 1px solid #374151;
+  border-bottom: 1px solid #212121;
   white-space: nowrap;
 }
 
 .documents-table th {
-  background-color: #374151;
+  background-color: #303030;
   font-weight: 500;
   color: #e5e7eb;
   position: sticky;
@@ -224,7 +203,7 @@
 }
 
 .documents-table tbody tr:hover {
-  background-color: #374151;
+  background-color: #303030;
 }
 
 .no-documents {

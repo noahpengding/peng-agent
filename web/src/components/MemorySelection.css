@@ -1,8 +1,10 @@
 .memory-selection-container {
-  padding: 1.5rem;
-  max-width: 2000px;
+  display: flex;
+  flex-direction: column;
+  padding: 2rem;
   margin: 0 auto;
   color: white;
+  background-color: #212121;
 }
 
 .memory-selection-title {
@@ -44,12 +46,12 @@
   border-radius: 4px;
   cursor: pointer;
   font-weight: 500;
-  background-color: #6d28d9;
+  background-color: #303030;
   color: white;
 }
 
 .primary-button:hover {
-  background-color: #5b21b6;
+  background-color: #181818;
 }
 
 /* Table styling */
@@ -66,7 +68,8 @@
 
 .memories-table th,
 .memories-table td {
-  border: 1px solid #444;
+  border: 1px solid #303030;
+  background-color: #303030;
   padding: 12px 16px; /* Increased padding for taller rows */
   text-align: left;
   overflow: hidden;
@@ -75,14 +78,14 @@
   color: white;
 }
 
-.memories-table th {
-  background-color: #333;
-  position: sticky;
-  top: 0;
+.memories-table td {
+  background-color: #212121;
 }
 
 /* Column widths */
-.select-column,
+.select-column {
+  width: 50px;
+}
 .model-column,
 .kb-column {
   width: 100px;
@@ -97,12 +100,12 @@
 }
 
 .memories-table tr {
-  background-color: #2f3237;
+  background-color: #212121;
   height: 60px; /* Set explicit height for rows */
 }
 
 .memories-table tr:hover {
-  background-color: #3a3f48;
+  background-color: #303030;
 }
 
 /* Error and loading states */

@@ -84,11 +84,7 @@ const RAGInterface: React.FC = () => {
 
   return (
     <div className="rag-container">
-      {/* Header */}
-      <header className="header">
-        <h1 className="header-title">RAG Collection Management</h1>
-        {error && <div className="error-message">{error}</div>}
-      </header>
+      {error && <div className="error-message">{error}</div>}
 
       <div className="main-content">
         {/* Sidebar for controls */}
