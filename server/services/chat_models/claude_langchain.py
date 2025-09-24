@@ -317,12 +317,33 @@ class CustomClaude(BaseChatModel):
                     }
                 )
             elif isinstance(message, HumanMessage):
-                prompt_text.append(
-                    {
-                        "role": "user",
-                        "content": message.content,
-                    }
-                )
+                if isinstance(message.content, str) and message.content.startswith(
+                    "data:image"
+                ):
+                    prompt_text.append(
+                        {
+                            "role": "user",
+                            "content": [
+                                {
+                                    "type": "image",
+                                    "source": {
+                                        "type": "base64",
+                                        "media_type": "image/png",
+                                        "data": message.content.split(",")[1],
+                                    },
+                                }
+                            ]
+                        }
+                    )
+                else:
+                    prompt_text.append(
+                        {
+                            "role": "user",
+                            "content": [
+                                {"type": "text", "text": message.content}
+                            ]
+                        }
+                    )
             elif isinstance(message, ToolMessage):
                 output_log(f"Tool message detected: {message.tool_call_id}", "debug")
                 prompt_text.append(

@@ -18,26 +18,15 @@ def update_operator() -> None:
 
     operators = pd.read_excel("operator.xlsx")
     operators = operators.fillna("")
-    for index, row in operators.iterrows():
-        operator = OperatorConfig(
-            operator=row["operator"],
-            runtime=row["runtime"],
-            endpoint=row["endpoint"],
-            api_key=row["api_key"],
-            org_id=row["org_id"],
-            project_id=row["project_id"],
-            embedding_pattern=row["embedding_pattern"],
-            image_pattern=row["image_pattern"],
-            audio_pattern=row["audio_pattern"],
-            video_pattern=row["video_pattern"],
-            chat_pattern=row["chat_pattern"],
-        )
-        mysql = MysqlConnect()
-        try:
-            mysql.delete_record("operator", {"operator": operator.operator})
-            mysql.create_record("operator", operator.to_dict())
-        finally:
-            mysql.close()
+    operators = [OperatorConfig(**row.to_dict()) for _, row in operators.iterrows()]
+    print(operators)
+    mysql = MysqlConnect()
+
+    try:
+        mysql.delete_record("operator", None)
+        [mysql.create_record("operator", operator.to_dict()) for operator in operators]
+    finally:
+        mysql.close()
 
 
 def get_all_operators() -> list[OperatorConfig]:

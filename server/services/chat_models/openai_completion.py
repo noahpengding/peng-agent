@@ -344,12 +344,30 @@ class CustomOpenAICompletion(BaseChatModel):
                     }
                 )
             elif isinstance(message, HumanMessage):
-                prompt_text.append(
-                    {
-                        "role": "user",
-                        "content": message.content,
-                    }
-                )
+                if isinstance(message.content, str) and message.content.startswith(
+                    "data:image"
+                ):
+                    prompt_text.append(
+                        {
+                            "role": "user",
+                            "content": [
+                                {
+                                    "type": "image_url",
+                                    "image_url": {
+                                        "url": message.content,
+                                        "detail": "auto",
+                                    }
+                                }
+                            ]
+                        },
+                    )
+                else:
+                    prompt_text.append(
+                        {
+                            "role": "user",
+                            "content": message.content,
+                        }
+                    )
         return prompt_text
 
     @property

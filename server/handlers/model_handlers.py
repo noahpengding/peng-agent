@@ -46,15 +46,16 @@ def _check_new_model(
 ) -> ModelConfig:
     if not patterns:
         return None
-    if any(re.search(str(pattern), model_name) for pattern in patterns.split(";")):
-        return ModelConfig(
-            operator=operator,
-            type=model_type,
-            model_name=model_name,
-            isAvailable=False,
-            isMultimodal=False,
-            reasoning_effect="not a reasoning model",
-        )
+    for pattern in patterns.split(";"):
+        if pattern == "*" or re.search(str(pattern), model_name) is not None:
+            return ModelConfig(
+                operator=operator,
+                type=model_type,
+                model_name=model_name,
+                isAvailable=False,
+                isMultimodal=False,
+                reasoning_effect="not a reasoning model",
+            )
     return None
 
 
@@ -90,7 +91,7 @@ def refresh_models():
                 None,
             )
             # no-dd-sa:python-best-practices/nested-blocks
-            if server_match:
+            if server_match is not None:
                 continue
             else:
                 # Check new model based on priority patterns
