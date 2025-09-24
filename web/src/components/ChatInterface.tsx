@@ -307,7 +307,7 @@ const ChatbotUI = () => {
     setError(null);
 
     // Generate a unique message ID for this conversation turn
-    const messageId = crypto.randomUUID();
+    const messageId = Math.random().toString(36).substring(2) + Date.now().toString(36);
 
     try {
       // Configure the API request - only include fields expected by backend
