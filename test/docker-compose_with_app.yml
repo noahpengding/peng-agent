@@ -26,7 +26,7 @@ services:
       - agent
 
   peng-agent-server:
-    image: peng-agent/server:local
+    image: ghcr.io/noahpengding/peng-agent/server:v2.2.5-nightly
     container_name: peng-agent-server
     hostname: peng-chat
     restart: always
@@ -40,7 +40,7 @@ services:
       - agent
 
   peng-agent-front:
-    image: peng-agent/web:local
+    image: ghcr.io/noahpengding/peng-agent/front:v2.2.5-nightly
     container_name: peng-agent-front
     restart: always
     environment:
