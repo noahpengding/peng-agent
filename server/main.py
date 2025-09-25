@@ -9,4 +9,6 @@ if __name__ == "__main__":
     setup.set_up()
     output_log(f"Starting {config.app_name} API", "INFO")
     output_log(f"Version: {importlib.metadata.version('Peng-Agent')}", "INFO")
-    uvicorn.run(app, host=config.host, port=config.port, log_level=config.log_level.lower())
+    uvicorn.run(
+        app, host=config.host, port=config.port, log_level=config.log_level.lower()
+    )

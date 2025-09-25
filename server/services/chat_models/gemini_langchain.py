@@ -312,7 +312,8 @@ class CustomGemini(BaseChatModel):
                             role="user",
                             parts=[
                                 types.Part.from_bytes(
-                                    data=message.content.split(",")[1], mime_type="image/png",
+                                    data=message.content.split(",")[1],
+                                    mime_type="image/png",
                                 )
                             ],
                         )
@@ -320,7 +321,8 @@ class CustomGemini(BaseChatModel):
                 else:
                     prompt_text.append(
                         types.Content(
-                            role="user", parts=[types.Part.from_text(text=message.content)]
+                            role="user",
+                            parts=[types.Part.from_text(text=message.content)],
                         )
                     )
             elif isinstance(message, ToolMessage):

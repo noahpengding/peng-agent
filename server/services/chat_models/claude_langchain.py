@@ -332,16 +332,14 @@ class CustomClaude(BaseChatModel):
                                         "data": message.content.split(",")[1],
                                     },
                                 }
-                            ]
+                            ],
                         }
                     )
                 else:
                     prompt_text.append(
                         {
                             "role": "user",
-                            "content": [
-                                {"type": "text", "text": message.content}
-                            ]
+                            "content": [{"type": "text", "text": message.content}],
                         }
                     )
             elif isinstance(message, ToolMessage):

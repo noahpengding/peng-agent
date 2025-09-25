@@ -19,4 +19,6 @@ if __name__ == "__main__":
     from config.config import config
 
     set_up()
-    uvicorn.run(app, host=config.host, port=config.port, log_level=config.log_level.lower())
+    uvicorn.run(
+        app, host=config.host, port=config.port, log_level=config.log_level.lower()
+    )

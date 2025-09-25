@@ -356,9 +356,9 @@ class CustomOpenAICompletion(BaseChatModel):
                                     "image_url": {
                                         "url": message.content,
                                         "detail": "auto",
-                                    }
+                                    },
                                 }
-                            ]
+                            ],
                         },
                     )
                 else:
