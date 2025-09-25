@@ -19,7 +19,6 @@ def update_operator() -> None:
     operators = pd.read_excel("operator.xlsx")
     operators = operators.fillna("")
     operators = [OperatorConfig(**row.to_dict()) for _, row in operators.iterrows()]
-    print(operators)
     mysql = MysqlConnect()
 
     try:
