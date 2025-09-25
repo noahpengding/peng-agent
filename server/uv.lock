@@ -2150,7 +2150,7 @@ wheels = [
 
 [[package]]
 name = "peng-agent"
-version = "2.2.5"
+version = "2.2.6"
 source = { editable = "." }
 dependencies = [
     { name = "anthropic" },
