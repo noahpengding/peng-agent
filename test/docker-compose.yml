@@ -6,7 +6,7 @@ services:
     ports:
       - "6333:6333"
     volumes:
-      - ./data/qdrant:/qdrant/storage
+      - /data/peng-agent/qdrant:/qdrant/storage
 
   peng-agent-mysql:
     image: mysql:lts
@@ -18,5 +18,5 @@ services:
     env_file:
       - ./.env
     volumes:
-      - ./data/mysql:/var/lib/mysql
+      - /data/peng-agent/mysql:/var/lib/mysql
 

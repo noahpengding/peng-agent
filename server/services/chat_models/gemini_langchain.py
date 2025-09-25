@@ -304,11 +304,27 @@ class CustomGemini(BaseChatModel):
                         )
                     )
             elif isinstance(message, HumanMessage):
-                prompt_text.append(
-                    types.Content(
-                        role="user", parts=[types.Part.from_text(text=message.content)]
+                if isinstance(message.content, str) and message.content.startswith(
+                    "data:image"
+                ):
+                    prompt_text.append(
+                        types.Content(
+                            role="user",
+                            parts=[
+                                types.Part.from_bytes(
+                                    data=message.content.split(",")[1],
+                                    mime_type="image/png",
+                                )
+                            ],
+                        )
                     )
-                )
+                else:
+                    prompt_text.append(
+                        types.Content(
+                            role="user",
+                            parts=[types.Part.from_text(text=message.content)],
+                        )
+                    )
             elif isinstance(message, ToolMessage):
                 prompt_text.append(
                     types.Content(
