@@ -24,7 +24,7 @@ from langchain_core.tools import BaseTool
 from langchain_core.runnables import Runnable
 from langchain_core.language_models import LanguageModelInput
 
-import time
+import ast
 
 
 class CustomOpenAIResponse(BaseChatModel):
@@ -47,102 +47,13 @@ class CustomOpenAIResponse(BaseChatModel):
             base_url=self.base_url,
         )
 
-    def _generate(
-        self,
-        prompt: List[BaseMessage],
-        stop: Optional[List[str]] = None,
-        run_manager: Optional[CallbackManagerForLLMRun] = None,
-        **kwargs: Any,
-    ) -> ChatResult:
-        now = time.time()
+    def _openai_prepare(self, prompt: List[BaseMessage], streaming: bool = False, **kwargs) -> Dict[str, Any]:
         prompt_translated = self._prompt_translate(prompt)
         output_log(f"Translated prompt: {prompt_translated}", "debug")
         request_params = {
             "model": self.model_name,
             "input": prompt_translated,
-            "stream": False,
-        }
-        if self.reasoning_effect != "not a reasoning model":
-            request_params["reasoning"] = {
-                "effort": self.reasoning_effect,
-            }
-        tools = kwargs.get("tools")
-        tool_choice = kwargs.get("tool_choice")
-        if tools:
-            request_params["tools"] = []
-            for tool in tools:
-                parameters = tool.get("function", {}).get("parameters", {})
-                parameters["additionalProperties"] = False
-                request_params["tools"].append(
-                    {
-                        "type": "function",
-                        "name": tool.get("function", {}).get("name"),
-                        "description": tool.get("function", {}).get("description"),
-                        "parameters": parameters,
-                        "strict": False,
-                    }
-                )
-        if self.model_name.find("deep-research") != -1:
-            if "tools" not in request_params:
-                request_params["tools"] = []
-            request_params["tools"].append(
-                {"type": "web_search_preview"},
-            )
-            request_params["tools"].append(
-                {"type": "code_interpreter", "container": {"type": "auto"}}
-            )
-        if tool_choice:
-            request_params["tool_choice"] = tool_choice
-        responses = self.client.responses.create(**request_params)
-        additional_kwargs = {}
-        message_content = ""
-        for response in responses.output:
-            if response.type == "message":
-                message_content = response.content[0].text
-                additional_kwargs = {"type": "output_text"}
-            elif response.type == "function_call":
-                additional_kwargs = {
-                    "tool_calls": [
-                        {
-                            "id": response.call_id,
-                            "function": {
-                                "name": response.name,
-                                "arguments": response.arguments,
-                            },
-                            "type": response.type,
-                        }
-                    ],
-                    "type": "tool_calls",
-                }
-        generate_message = AIMessage(
-            content=message_content,
-            additional_kwargs=additional_kwargs,
-            response_metadata={
-                "time_in_seconds": time.time() - now,
-            },
-            metadata={
-                "input_tokens": len(prompt),
-                "output_tokens": len(message_content),
-                "total_tokens": len(prompt) + len(message_content),
-            },
-        )
-        generation = ChatGeneration(message=generate_message)
-        return ChatResult(generations=[generation])
-
-    def _stream(
-        self,
-        prompt: List[BaseMessage],
-        stop: Optional[List[str]] = None,
-        run_manager: Optional[CallbackManagerForLLMRun] = None,
-        **kwargs: Any,
-    ) -> Iterator[ChatGenerationChunk]:
-        output_log(f"Streaming chat completion request: {prompt}", "debug")
-        prompt_translated = self._prompt_translate(prompt)
-        output_log(f"Translated prompt for streaming: {prompt_translated}", "debug")
-        request_params = {
-            "model": self.model_name,
-            "input": prompt_translated,
-            "stream": True,
+            "stream": streaming,
         }
         if self.reasoning_effect != "not a reasoning model":
             request_params["reasoning"] = {
@@ -176,73 +87,92 @@ class CustomOpenAIResponse(BaseChatModel):
             )
         if tool_choice:
             request_params["tool_choice"] = tool_choice
+        
+        return request_params
+
+    def _generate(
+        self,
+        prompt: List[BaseMessage],
+        stop: Optional[List[str]] = None,
+        run_manager: Optional[CallbackManagerForLLMRun] = None,
+        **kwargs: Any,
+    ) -> ChatResult:
+        request_params = self._openai_prepare(prompt, streaming=False, **kwargs)
+        responses = self.client.responses.create(**request_params)
+        additional_kwargs = {}
+        message_content = ""
+        for response in responses.output:
+            if response.type == "message":
+                message_content = response.content[0].text
+                additional_kwargs = {"type": "output_text"}
+            elif response.type == "function_call":
+                additional_kwargs = {
+                    "tool_calls": [
+                        {
+                            "id": response.call_id,
+                            "function": {
+                                "name": response.name,
+                                "arguments": response.arguments,
+                            },
+                            "type": response.type,
+                        }
+                    ],
+                    "type": "tool_calls",
+                }
+
+        generate_message = AIMessage(
+            content=message_content,
+            additional_kwargs=additional_kwargs,
+        )
+        generation = ChatGeneration(message=generate_message)
+        return ChatResult(generations=[generation])
+
+    def _stream(
+        self,
+        prompt: List[BaseMessage],
+        stop: Optional[List[str]] = None,
+        run_manager: Optional[CallbackManagerForLLMRun] = None,
+        **kwargs: Any,
+    ) -> Iterator[ChatGenerationChunk]:
+        request_params = self._openai_prepare(prompt, streaming=True, **kwargs)
         stream = self.client.responses.create(**request_params)
-        token_count = len(prompt)
         for event in stream:
             if event.type == "response.output_text.delta":
                 token = event.delta
                 if token:
-                    token_count += 1
                     message_chunk = AIMessageChunk(
-                        content=token,
-                        additional_kwargs={
-                            "type": "output_text",
-                        },
-                        usage_metadata=UsageMetadata(
-                            {
-                                "input_tokens": len(prompt),
-                                "output_tokens": len(token),
-                                "total_tokens": token_count,
-                            }
-                        ),
+                        content_blocks=[{
+                            "type": "text",
+                            "text": token,
+                            "annotations": []
+                        }]
                     )
-                    chunk = ChatGenerationChunk(message=message_chunk)
-                    yield chunk
+                    yield ChatGenerationChunk(message=message_chunk)
             elif event.type == "response.reasoning_summary_text.delta":
                 token = event.delta
                 if token:
-                    token_count += 1
                     message_chunk = AIMessageChunk(
-                        content=token,
-                        additional_kwargs={"type": "reasoning_summary"},
-                        usage_metadata=UsageMetadata(
-                            {
-                                "input_tokens": len(prompt),
-                                "output_tokens": len(token),
-                                "total_tokens": token_count,
-                            }
-                        ),
+                        content_blocks=[{
+                            "type": "reasoning",
+                            "reasoning": token,
+                            "extras": {},
+                        }]
                     )
-                    chunk = ChatGenerationChunk(message=message_chunk)
-                    yield chunk
+                    yield ChatGenerationChunk(message=message_chunk)
             elif event.type == "response.output_item.done":
                 token = event.item
                 if token and token.type == "function_call":
                     message_chunk = AIMessageChunk(
-                        content="",
-                        additional_kwargs={
-                            "tool_calls": [
-                                {
-                                    "id": token.call_id,
-                                    "function": {
-                                        "name": token.name,
-                                        "arguments": token.arguments,
-                                    },
-                                    "type": token.type,
-                                }
-                            ],
-                            "type": "tool_calls",
-                        },
-                        usage_metadata=UsageMetadata(
-                            {
-                                "input_tokens": len(prompt),
-                                "output_tokens": len(token.arguments),
-                                "total_tokens": token_count + len(token.arguments),
-                            }
-                        ),
+                        content_blocks=[{
+                            "type": "tool_call",
+                            "name": token.name,
+                            "args": ast.literal_eval(token.arguments),
+                            "id": token.call_id,
+                        }]
                     )
-                    chunk = ChatGenerationChunk(message=message_chunk)
-                    yield chunk
+                    yield ChatGenerationChunk(message=message_chunk)
+            else:
+                continue
 
     def bind_tools(
         self,

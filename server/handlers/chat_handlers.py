@@ -53,12 +53,21 @@ async def chat_handler(
             output_log(f"Received chunk: {chunk}", "DEBUG")
             if chunk:
                 if "call_model" in chunk and "messages" in chunk["call_model"]:
-                    chunk_content = str(chunk["call_model"]["messages"].content)
-                    chunk_type = chunk["call_model"]["messages"].additional_kwargs.get(
-                        "type", "output_text"
-                    )
+                    message = chunk["call_model"]["messages"]
+                    if message["type"] == "text":
+                        chunk_content = message["text"]
+                        chunk_type = "output_text"
+                    elif message["type"] == "reasoning":
+                        chunk_content = message["resoning"]
+                        chunk_type = "reasoning_summary"
+                    # Tool call from chat model
+                    elif message["type"] == "tool_call":
+                        chunk_content = f"Tool Call: {message['name']} with args {message['args']}"
+                        chunk_type = "tool_calls"
+                # Tool message after execution the tool
                 elif "call_tools" in chunk and "messages" in chunk["call_tools"]:
-                    chunk_content = chunk["call_tools"]["messages"]
+                    message = chunk["messages"]
+                    chunk_content = message["messages"]
                     if isinstance(chunk_content, list):
                         chunk_content = chunk_content[0].content
                     else:
@@ -67,9 +76,6 @@ async def chat_handler(
                 else:
                     chunk_content = ""
                     continue
-                chunk_content = response_formatter_main(
-                    chat_config.operator, chunk_content
-                )
                 if isinstance(chunk_content, str):
                     yield (
                         json.dumps(

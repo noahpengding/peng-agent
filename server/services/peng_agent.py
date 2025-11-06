@@ -126,6 +126,7 @@ class PengAgent:
         self._tools_ready = True
 
     def invoke(self, state: AgentState) -> Any:
+        self._ensure_tools()
         return self.graph.invoke(state)
 
     async def ainvoke(self, state: AgentState) -> Any:
@@ -135,6 +136,7 @@ class PengAgent:
         )
 
     def stream(self, state: AgentState) -> Any:
+        self._ensure_tools()
         return self.graph.stream(state, stream_mode="custom")
 
     async def astream(self, state: AgentState) -> Any:
@@ -153,129 +155,106 @@ class PengAgent:
         await self._ensure_tools()
         llm = get_model_instance_by_operator(self.operator, self.model)
         llm = llm.bind_tools(list(self.tools.values()))
-        full_response = ""  # for using reasoning result for next round input
+        final_response = ""
+        final_reasoning = ""
+        final_content = ""
         async for chunk in llm.astream(state["messages"]):
-            if isinstance(chunk, AIMessage):
-                response = chunk
-                full_response += str(chunk.content)
-            else:
-                response = AIMessage(
-                    content=str(chunk), additional_kwargs={"type": "output_text"}
-                )
-                full_response += str(chunk)
-            writer({"call_model": {"messages": response}})
-        full_response = AIMessage(
-            content=full_response, additional_kwargs={"type": "output_text"}
+            if isinstance(chunk, AIMessage) and chunk.content_blocks:
+                final_content = chunk.content_blocks[0]
+                writer({"call_model": {"messages": chunk.content_blocks[0]}})
+                if chunk.content_blocks[0]["type"] == "text":
+                    final_response += chunk.content_blocks[0]["text"]
+                elif chunk.content_blocks[0]["type"] == "reasoning":
+                    final_reasoning += chunk.content_blocks[0]["reasoning"]
+        final_reasoning_message = AIMessage(
+            content_blocks=[{
+                "type": "reasoning",
+                "reasoning": final_reasoning,
+            }]
         )
-        save_chat(
-            self.user_name,
-            "assistant",
-            self.model,
-            "|\n".join([str(msg.content) for msg in list(state["messages"])[1:-1]]),
-            full_response.content,
+        final_response_message = AIMessage(
+            content_blocks=[{
+                "type": "text",
+                "text": final_response,
+            }]
         )
-        return {"messages": [full_response, response]}
+        if final_reasoning != "" and final_response != "":
+            return {"messages": [final_reasoning_message, final_response_message]}
+        elif final_reasoning != "":
+            return {"messages": [final_reasoning_message]}
+        elif final_response != "":
+            return {"messages": [final_response_message]}
+        else:
+            return {"messages": final_content}
 
     async def call_tools(self, state: AgentState):
         writer = get_stream_writer()
         self.total_tool_calls -= 1
         last_message = list(state["messages"])[-1]
+        # Not an AI message
         if not isinstance(last_message, AIMessage):
             message = "Not an AI message to call tools."
-            return {
-                "messages": ToolMessage(
-                    content=message, name="tool_call_error_detector", tool_call_id=""
-                )
-            }
-        tool_calls = getattr(last_message, "tool_calls", None) or []
-        if not tool_calls:
-            message = "No tool calls found in the last message."
-            return {
-                "messages": ToolMessage(
-                    content=message, name="tool_call_error_detector", tool_call_id=""
-                )
-            }
-
-        newmessages = []
-        for tc in tool_calls:
-            if self.total_tool_calls == 0:
-                message = "Tool call limit reached. No more tool calls can be made. Try to generate the final response based on the history."
-                self.tools = {}
-                return {
-                    "messages": ToolMessage(
-                        content=message,
-                        name="tool_call_error_detector",
-                        tool_call_id=tc.get("id", ""),
-                    )
-                }
-            name = tc.get("name") if isinstance(tc, dict) else getattr(tc, "name", None)
-            args = (
-                tc.get("args", {}) if isinstance(tc, dict) else getattr(tc, "args", {})
+            return {"messages": ToolMessage(
+                content=message, tool_call_id=""
+            )}
+        tool_calls = last_message.content_blocks[0]
+        # Not a tool call
+        if tool_calls["type"] != "tool_call":
+            message = "Invalid tool call format."
+            return {"messages": ToolMessage(
+                content=message,
+                tool_call_id="",
+            )}
+        # Exceeded tool call limit
+        if self.total_tool_calls == 0:
+            message = "Tool call limit reached. No more tool calls can be made. Try to generate the final response based on the history."
+            self.tools = {}
+            return {"messages": ToolMessage(
+                content=message,
+                tool_call_id=tool_calls["id"] if isinstance(tool_calls, dict) else "",
+            )}
+        name = tool_calls["name"]
+        args = tool_calls["args"]
+        # Tool not found
+        if name not in self.tools:
+            return {"messages": ToolMessage(
+                content=f"Tool '{name}' not found.",
+                tool_call_id=tool_calls["id"] if isinstance(tool_calls, dict) else "",
+            )}
+        # Duplicate tool call
+        if any(
+            (name == history["name"] and args == history["args"])
+            for history in self.tool_call_history
+        ):
+            message = f"The tool call '{name}' with args {args} has already been executed. Try to find it in the history. If you need further information, try to call it with different args."
+            return {"messages": ToolMessage(
+                content=message,
+                tool_call_id=tool_calls["id"] if isinstance(tool_calls, dict) else "",
+            )}
+        tool = self.tools[name]
+        try:
+            observation = await tool.ainvoke(args)
+        except Exception as e:
+            observation = f"Error calling tool '{name}': {e}"
+        message = ToolMessage(
+            content=observation,
+            tool_call_id=tool_calls["id"] if isinstance(tool_calls, dict) else "",
+        )
+        self.tool_call_history.append(
+            ToolCall(
+                name=name,
+                args=args,
+                id=tool_calls["id"] if isinstance(tool_calls, dict) else "",
             )
-            if name not in self.tools:
-                return {"messages": f"Tool '{name}' not found."}
-            if any(
-                (name == history["name"] and args == history["args"])
-                for history in self.tool_call_history
-            ):
-                message = f"The tool call '{name}' with args {args} has already been executed. Try to find it in the history. If you need further information, try to call it with different args."
-                newmessages.append(
-                    ToolMessage(
-                        content=message,
-                        name="tool_call_error_detector",
-                        tool_call_id=tc.get("id"),
-                    )
-                )
-            else:
-                tool = self.tools[name]
-                try:
-                    observation = await tool.ainvoke(args)
-                except Exception as e:
-                    observation = f"Error calling tool '{name}': {e}"
-                newmessages.append(
-                    ToolMessage(
-                        content=str(observation),
-                        name=name,
-                        tool_call_id=tc.get("id")
-                        if isinstance(tc, dict)
-                        else getattr(tc, "id", ""),
-                    )
-                )
-                self.tool_call_history.append(
-                    ToolCall(
-                        name=name,
-                        args=args,
-                        id=tc.get("id")
-                        if isinstance(tc, dict)
-                        else getattr(tc, "id", ""),
-                    )
-                )
-            writer(
-                {
-                    "call_tools": {
-                        "messages": newmessages[-1],
-                    }
-                }
-            )
-        return {"messages": newmessages}
+        )
+        writer({"call_tools": {"messages": message}})
+        return {"messages": message}
 
     def should_continue(self, state: AgentState) -> str:
         last_message = list(state["messages"])[-1]
-        input_message = list(state["messages"])[1:-1]
-        if isinstance(last_message, AIMessage) and getattr(
-            last_message, "tool_calls", None
-        ):
-            save_tool_call(
-                call_id=last_message.tool_calls[0].get("id", ""),
-                tools_name=last_message.tool_calls[0].get("name", ""),
-                tools_argument=last_message.tool_calls[0].get("args", {}),
-                problem="|\n".join([str(msg.content) for msg in input_message]),
-            )
+        print(state["messages"])
+        if isinstance(last_message, AIMessage) and last_message.content_blocks["type"] == "tool_call":
             return "call_tools"
-        if (
-            isinstance(last_message, AIMessage)
-            and last_message.additional_kwargs.get("type") == "reasoning_summary"
-        ):
-            self.tools = {}
+        if isinstance(last_message, AIMessage) and last_message.content_blocks["type"] != "text":
             return "call_model"
         return END
