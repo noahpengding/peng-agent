@@ -157,35 +157,31 @@ class PengAgent:
         llm = llm.bind_tools(list(self.tools.values()))
         final_response = ""
         final_reasoning = ""
-        final_content = ""
         async for chunk in llm.astream(state["messages"]):
             if isinstance(chunk, AIMessage) and chunk.content_blocks:
-                final_content = chunk.content_blocks[0]
                 writer({"call_model": {"messages": chunk.content_blocks[0]}})
                 if chunk.content_blocks[0]["type"] == "text":
                     final_response += chunk.content_blocks[0]["text"]
                 elif chunk.content_blocks[0]["type"] == "reasoning":
                     final_reasoning += chunk.content_blocks[0]["reasoning"]
-        final_reasoning_message = AIMessage(
-            content_blocks=[{
-                "type": "reasoning",
-                "reasoning": final_reasoning,
-            }]
-        )
-        final_response_message = AIMessage(
+                elif chunk.content_blocks[0]["type"] == "tool_call":
+                    return {"messages": chunk}
+        final_response = AIMessage(
             content_blocks=[{
                 "type": "text",
                 "text": final_response,
             }]
         )
-        if final_reasoning != "" and final_response != "":
-            return {"messages": [final_reasoning_message, final_response_message]}
-        elif final_reasoning != "":
-            return {"messages": [final_reasoning_message]}
-        elif final_response != "":
-            return {"messages": [final_response_message]}
-        else:
-            return {"messages": final_content}
+        if final_reasoning != "":
+            final_reasooning = AIMessage(
+                content_blocks=[{
+                    "type": "reasoning",
+                    "reasoning": final_reasoning,
+                }]
+            )
+            return {"messages": [final_response, final_reasooning]}
+        return {"messages": final_response}
+
 
     async def call_tools(self, state: AgentState):
         writer = get_stream_writer()
@@ -252,9 +248,10 @@ class PengAgent:
 
     def should_continue(self, state: AgentState) -> str:
         last_message = list(state["messages"])[-1]
-        print(state["messages"])
-        if isinstance(last_message, AIMessage) and last_message.content_blocks["type"] == "tool_call":
+        if isinstance(last_message, AIMessage) and last_message.content_blocks[0]["type"] == "tool_call":
             return "call_tools"
-        if isinstance(last_message, AIMessage) and last_message.content_blocks["type"] != "text":
+        if isinstance(last_message, AIMessage) and last_message.content_blocks[0]["type"] != "text":
+            return "call_model"
+        if not isinstance(last_message, AIMessage):
             return "call_model"
         return END

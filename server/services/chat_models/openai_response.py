@@ -238,10 +238,24 @@ class CustomOpenAIResponse(BaseChatModel):
         prompt_messages = []
         for message in prompt:
             if isinstance(message, AIMessage):
-                msg_dict = {
-                    "role": "assistant",
-                    "content": message.content,
-                }
+                for m in message.content:
+                    if m["type"] == "tool_call":
+                        msg_dict = {
+                            "type": "function_call",
+                            "name": m["name"],
+                            "call_id": m["id"],
+                            "arguments": str(m["args"]),
+                        }
+                    elif m["type"] == "text":
+                        msg_dict = {
+                            "role": "assistant",
+                            "content": m["text"],
+                        }
+                    elif m["type"] == "reasoning":
+                        msg_dict = {
+                            "role": "assistant",
+                            "content": m["reasoning"],
+                        }
                 prompt_messages.append(msg_dict)
             elif isinstance(message, SystemMessage):
                 prompt_messages.append(
@@ -275,10 +289,11 @@ class CustomOpenAIResponse(BaseChatModel):
             elif isinstance(message, ToolMessage):
                 prompt_messages.append(
                     {
-                        "role": "assistant",
-                        "content": message.content,
-                    }
-                )
+                        "type": "function_call_output",
+                        "call_id": message.tool_call_id,
+                        "output": str(message.content),
+                    },
+                    )
         return prompt_messages
 
     @property

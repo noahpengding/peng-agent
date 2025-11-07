@@ -58,7 +58,7 @@ async def chat_handler(
                         chunk_content = message["text"]
                         chunk_type = "output_text"
                     elif message["type"] == "reasoning":
-                        chunk_content = message["resoning"]
+                        chunk_content = message["reasoning"]
                         chunk_type = "reasoning_summary"
                     # Tool call from chat model
                     elif message["type"] == "tool_call":
@@ -66,8 +66,7 @@ async def chat_handler(
                         chunk_type = "tool_calls"
                 # Tool message after execution the tool
                 elif "call_tools" in chunk and "messages" in chunk["call_tools"]:
-                    message = chunk["messages"]
-                    chunk_content = message["messages"]
+                    chunk_content = chunk["call_tools"]["messages"]
                     if isinstance(chunk_content, list):
                         chunk_content = chunk_content[0].content
                     else:
