@@ -1,5 +1,4 @@
-*test/test*
-*test/data*
+*/server/test/*
 
 */config/config.json
 

@@ -1,23 +1,32 @@
 from datetime import datetime, timedelta, timezone
 from typing import Optional, Dict
-from passlib.context import CryptContext
-from utils.mysql_connect import MysqlConnect
-from utils.log import output_log
-from config.config import config
+
+import bcrypt
 from fastapi import HTTPException, Request
-from models.user_models import UserCreate
 import jwt
 
-# Configure password hashing
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
-
+from config.config import config
+from models.user_models import UserCreate
+from utils.log import output_log
+from utils.mysql_connect import MysqlConnect
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
-    return pwd_context.verify(plain_password, hashed_password)
+    try:
+        plain_bytes = plain_password.encode("utf-8")
+        hashed_bytes = (
+            hashed_password.encode("utf-8")
+            if isinstance(hashed_password, str)
+            else hashed_password
+        )
+        return bcrypt.checkpw(plain_bytes, hashed_bytes)
+    except (TypeError, ValueError) as exc:
+        output_log(f"Password verification error: {str(exc)}", "error")
+        return False
 
 
 def get_password_hash(password: str) -> str:
-    return pwd_context.hash(password)
+    hashed = bcrypt.hashpw(password.encode("utf-8"), bcrypt.gensalt())
+    return hashed.decode("utf-8")
 
 
 def authenticate_user(username: str, password: str) -> Optional[Dict]:

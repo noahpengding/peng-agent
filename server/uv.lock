@@ -2473,15 +2473,6 @@ wheels = [
 ]
 
 [[package]]
-name = "passlib"
-version = "1.7.4"
-source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/b6/06/9da9ee59a67fae7761aab3ccc84fa4f3f33f125b370f1ccdb915bf967c11/passlib-1.7.4.tar.gz", hash = "sha256:defd50f72b65c5402ab2c573830a6978e5f202ad0d984793c8dde2c4152ebe04", size = 689844 }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/3b/a4/ab6b7589382ca3df236e03faa71deac88cae040af60c071a78d254a62172/passlib-1.7.4-py2.py3-none-any.whl", hash = "sha256:aa6bca462b8d8bda89c70b382f0c298a20b5560af6cbfa2dce410c0a2fb669f1", size = 525554 },
-]
-
-[[package]]
 name = "patchright"
 version = "1.55.2"
 source = { registry = "https://pypi.org/simple" }
@@ -2521,6 +2512,7 @@ dependencies = [
     { name = "arize-phoenix-otel" },
     { name = "azure-ai-documentintelligence" },
     { name = "azure-identity" },
+    { name = "bcrypt" },
     { name = "bs4" },
     { name = "crawl4ai" },
     { name = "email-to" },
@@ -2544,7 +2536,6 @@ dependencies = [
     { name = "openpyxl" },
     { name = "pandas" },
     { name = "paramiko" },
-    { name = "passlib" },
     { name = "pdf2image" },
     { name = "pillow" },
     { name = "pydantic" },
@@ -2568,6 +2559,7 @@ requires-dist = [
     { name = "arize-phoenix-otel", specifier = ">=0.12.1" },
     { name = "azure-ai-documentintelligence", specifier = ">=1.0.1" },
     { name = "azure-identity", specifier = ">=1.21.0" },
+    { name = "bcrypt", specifier = ">=4.2.0" },
     { name = "bs4", specifier = ">=0.0.2" },
     { name = "crawl4ai", specifier = ">=0.7.4" },
     { name = "email-to", specifier = ">=0.1.0" },
@@ -2575,7 +2567,7 @@ requires-dist = [
     { name = "google-genai", specifier = ">=1.30.0" },
     { name = "importlib", specifier = ">=1.0.4" },
     { name = "langchain", extras = ["openai"], specifier = ">=1.0.3" },
-    { name = "langchain-community", specifier = ">=1.0.0a1" },
+    { name = "langchain-community", specifier = ">=0.4.1" },
     { name = "langchain-core", specifier = ">=1.0.3" },
     { name = "langchain-mcp-adapters", specifier = ">=0.1.9" },
     { name = "langchain-openai", specifier = ">=1.0.2" },
@@ -2591,7 +2583,6 @@ requires-dist = [
     { name = "openpyxl", specifier = ">=3.1.5" },
     { name = "pandas", specifier = ">=2.2.3" },
     { name = "paramiko", specifier = ">=4.0.0" },
-    { name = "passlib", specifier = ">=1.7.4" },
     { name = "pdf2image", specifier = ">=1.17.0" },
     { name = "pillow", specifier = ">=11.1.0" },
     { name = "pydantic", specifier = ">=2.10.6" },
