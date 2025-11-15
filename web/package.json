@@ -1,10 +1,11 @@
 {
   "name": "peng-agent-web",
   "private": true,
-  "version": "2.2.6",
+  "version": "2.3.0",
   "type": "module",
   "scripts": {
-    "dev": "vite",
+    "dev": "bun --env-file=../test/.env run dev:serve",
+    "dev:serve": "vite",
     "build": "tsc -b && vite build",
     "lint": "eslint .",
     "format": "prettier --write .",
