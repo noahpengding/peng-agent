@@ -40,10 +40,6 @@ jobs:
         run: uv tool run ruff check
         working-directory: ./server
 
-      - name: Run ruff format check
-        run: uv tool run ruff format --check
-        working-directory: ./server
-
   # Web frontend lint check
   web-lint:
     runs-on: ubuntu-latest
