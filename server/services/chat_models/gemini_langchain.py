@@ -12,7 +12,6 @@ from langchain_core.messages import (
     BaseMessage,
     ToolMessage,
 )
-from langchain_core.messages.ai import UsageMetadata
 from langchain_core.outputs import ChatGeneration, ChatGenerationChunk, ChatResult
 from langchain_core.utils.function_calling import convert_to_openai_tool
 from pydantic import Field
@@ -27,8 +26,9 @@ from langchain_core.tools import BaseTool
 from langchain_core.runnables import Runnable
 from langchain_core.language_models import LanguageModelInput
 
-import time
+import ast
 import json
+import uuid
 
 
 class CustomGemini(BaseChatModel):
@@ -47,15 +47,8 @@ class CustomGemini(BaseChatModel):
             http_options=types.HttpOptions(api_version="v1alpha"),
         )
 
-    def _generate(
-        self,
-        prompt: List[BaseMessage],
-        stop: Optional[List[str]] = None,
-        run_manager: Optional[CallbackManagerForLLMRun] = None,
-        **kwargs: Any,
-    ) -> ChatResult:
+    def _gemini_prepare(self, prompt: List[BaseMessage], **kwargs: Any):
         output_log(f"Chat completion request: {prompt}", "debug")
-        now = time.time()
         prompt_translated = self._prompt_translate(prompt)
         output_log(f"Translated prompt: {prompt_translated}", "debug")
         request_params = {
@@ -76,53 +69,41 @@ class CustomGemini(BaseChatModel):
             request_params["tools"] = [
                 types.Tool(function_declarations=request_params["tools"])
             ]
+        
+        return prompt_translated, request_params
+
+    def _generate(
+        self,
+        prompt: List[BaseMessage],
+        stop: Optional[List[str]] = None,
+        run_manager: Optional[CallbackManagerForLLMRun] = None,
+        **kwargs: Any,
+    ) -> ChatResult:
+        prompt_translated, request_params = self._gemini_prepare(prompt, **kwargs)
         responses = self.client.models.generate_content(
             model=self.model_name,
             contents=prompt_translated,
             config=types.GenerateContentConfig(**request_params),
         )
-        additional_kwargs = {}
-        message_content = ""
+        generate_message = None
         if responses.candidates[0].content.parts[0].function_call:
             function_call = responses.candidates[0].content.parts[0].function_call
-            import uuid
-
             function_call.id = f"function_call_{uuid.uuid4()}"
-            additional_kwargs = {
-                "tool_calls": [
-                    {
-                        "id": function_call.id,
-                        "function": {
-                            "name": function_call.name,
-                            "arguments": json.dumps(function_call.args),
-                        },
-                        "type": "function",
-                    }
-                ],
-                "type": "tool_calls",
-            }
-            message_content = [
-                {
-                    "id": function_call.id,
+            generate_message = AIMessage(
+                content_blocks=[{
+                    "type": "tool_call",
                     "name": function_call.name,
-                    "args": function_call.args,
-                }
-            ]
+                    "args": ast.literal_eval(json.dumps(function_call.args)),
+                    "id": function_call.id,
+                }]
+            )
         else:
-            message_content = responses.candidates[0].content.parts[0].text
-            additional_kwargs = {"type": "output_text"}
-        generate_message = AIMessage(
-            content=message_content,
-            additional_kwargs=additional_kwargs,
-            response_metadata={
-                "time_in_seconds": time.time() - now,
-            },
-            metadata={
-                "input_tokens": len(prompt),
-                "output_tokens": len(message_content),
-                "total_tokens": len(prompt) + len(message_content),
-            },
-        )
+            generate_message = AIMessage(
+                content_blocks=[{
+                    "type": "text",
+                    "text": responses.candidates[0].content.parts[0].text,
+                }]
+            )
         generation = ChatGeneration(message=generate_message)
         return ChatResult(generations=[generation])
 
@@ -133,37 +114,12 @@ class CustomGemini(BaseChatModel):
         run_manager: Optional[CallbackManagerForLLMRun] = None,
         **kwargs: Any,
     ) -> Iterator[ChatGenerationChunk]:
-        output_log(f"Streaming chat completion request{prompt}", "debug")
-        prompt_translated = self._prompt_translate(prompt)
-        output_log(f"Translated prompt for streaming{prompt_translated}", "debug")
-        request_params = {
-            "max_output_tokens": self.max_tokens,
-            "temperature": self.temperature,
-        }
-        if self.reasoning_effect != "not a reasoning model":
-            request_params["thinking_config"] = types.ThinkingConfig(
-                thinking_budget=-1, include_thoughts=True
-            )
-        tools = kwargs.get("tools")
-        if tools:
-            request_params["tools"] = []
-            for tool in tools:
-                request_params["tools"].append(
-                    {
-                        "name": tool.get("function", {}).get("name"),
-                        "description": tool.get("function", {}).get("description"),
-                        "parameters": tool.get("function", {}).get("parameters", {}),
-                    }
-                )
-            request_params["tools"] = [
-                types.Tool(function_declarations=request_params["tools"])
-            ]
+        prompt_translated, request_params = self._gemini_prepare(prompt, **kwargs)
         stream = self.client.models.generate_content_stream(
             model=self.model_name,
             contents=prompt_translated,
             config=types.GenerateContentConfig(**request_params),
         )
-        token_count = len(prompt)
         for event in stream:
             output_log(f"Received event: {event}", "debug")
             if event.candidates is None:
@@ -173,57 +129,34 @@ class CustomGemini(BaseChatModel):
                 part = token.content.parts[0]
                 if getattr(part, "function_call", None):
                     fc = part.function_call
-                    import uuid
-
                     fc.id = f"function_call_{uuid.uuid4()}"
                     message_chunk = AIMessageChunk(
-                        content="",
-                        additional_kwargs={
-                            "tool_calls": [
-                                {
-                                    "id": fc.id,
-                                    "function": {
-                                        "name": fc.name,
-                                        "arguments": json.dumps(fc.args),
-                                    },
-                                    "type": "function",
-                                }
-                            ],
-                            "type": "tool_calls",
-                        },
+                        content_blocks=[{
+                            "type": "tool_call",
+                            "name": fc.name,
+                            "args": ast.literal_eval(json.dumps(fc.args)),
+                            "id": fc.id,
+                        }]
                     )
-                    chunk = ChatGenerationChunk(message=message_chunk)
-                    yield chunk
+                    yield ChatGenerationChunk(message=message_chunk)
                 elif getattr(part, "thought", None):
                     message_chunk = AIMessageChunk(
-                        content=part.text,
-                        additional_kwargs={"type": "reasoning_summary"},
-                        usage_metadata=UsageMetadata(
-                            {
-                                "input_tokens": len(prompt),
-                                "output_tokens": len(part.text),
-                                "total_tokens": token_count + len(part.text),
-                            }
-                        ),
+                        content_blocks=[{
+                            "type": "reasoning",
+                            "reasoning": part.thought,
+                            "extras": {},
+                        }]
                     )
-                    chunk = ChatGenerationChunk(message=message_chunk)
-                    yield chunk
+                    yield ChatGenerationChunk(message=message_chunk)
                 elif getattr(part, "text", None):
                     try:
-                        text = part.text
                         message_chunk = AIMessageChunk(
-                            content=text,
-                            additional_kwargs={"type": "output_text"},
-                            usage_metadata=UsageMetadata(
-                                {
-                                    "input_tokens": len(prompt),
-                                    "output_tokens": len(text),
-                                    "total_tokens": token_count + len(text),
-                                }
-                            ),
+                            content_blocks=[{
+                                "type": "text",
+                                "text": part.text,
+                            }]
                         )
-                        chunk = ChatGenerationChunk(message=message_chunk)
-                        yield chunk
+                        yield ChatGenerationChunk(message=message_chunk)
                     except Exception as e:
                         output_log(f"Error processing token: {e}", "debug")
                         continue
@@ -283,38 +216,51 @@ class CustomGemini(BaseChatModel):
     def _prompt_translate(self, prompt: List[BaseMessage]):
         prompt_text = []
         for message in prompt:
-            if isinstance(message, SystemMessage) or isinstance(message, AIMessage):
-                if isinstance(message.content, str):
-                    prompt_text.append(
-                        types.Content(
-                            role="model",
-                            parts=[types.Part.from_text(text=message.content)],
-                        )
+            if isinstance(message, SystemMessage):
+                prompt_text.append(
+                    types.Content(
+                        role="model",
+                        parts=[types.Part.from_text(text=message.content)],
                     )
-                else:
-                    prompt_text.append(
-                        types.Content(
-                            role="model",
-                            parts=[
-                                types.Part.from_function_call(
-                                    name=message.content[0]["name"],
-                                    args=message.content[0]["args"],
-                                )
-                            ],
+                )
+            elif isinstance(message, AIMessage):
+                for m in message.content:
+                    if m["type"] == "text":
+                        prompt_text.append(
+                            types.Content(
+                                role="model",
+                                parts=[types.Part.from_text(text=m["text"])],
+                            )
                         )
-                    )
+                    elif m["type"] == "tool_call":
+                        prompt_text.append(
+                            types.Content(
+                                role="model",
+                                parts=[
+                                    types.Part.from_function_call(
+                                        name=m["name"],
+                                        args=str(m["args"]),
+                                    )
+                                ],
+                            )
+                        )
+                    elif m["type"] == "reasoning":
+                        prompt_text.append(
+                            types.Content(
+                                role="model",
+                                parts=[types.Part.from_thought(text=m["reasoning"])],
+                            )
+                        )
             elif isinstance(message, HumanMessage):
-                if isinstance(message.content, str) and message.content.startswith(
-                    "data:image"
-                ):
+                if message.content_blocks and message.content_blocks[0]["type"] == "image":
                     prompt_text.append(
                         types.Content(
                             role="user",
                             parts=[
                                 types.Part.from_bytes(
-                                    data=message.content.split(",")[1],
+                                    data=m["base64"].decode("utf-8").split(",")[1],
                                     mime_type="image/png",
-                                )
+                                ) for m in message.content_blocks
                             ],
                         )
                     )
@@ -331,29 +277,12 @@ class CustomGemini(BaseChatModel):
                         role="user",
                         parts=[
                             types.Part.from_function_response(
-                                name=message.name, response={"result": message.content}
+                                name=message.name, response={"result": str(message.content)}
                             )
                         ],
                     )
                 )
         return prompt_text
-
-    def embed_documents(self, query: List[str]) -> List[List[float]]:
-        texts = list(map(lambda x: x.replace("\n", " "), query))
-        embeddings = self.client.models.embed_content(
-            model=self.model_name,
-            contents=texts,
-            config=types.EmbedContentConfig(task_type="SEMANTIC_SIMILARITY"),
-        )
-        if isinstance(embeddings, list):
-            raise TypeError(
-                "Expected embeddings to be a Tensor or a numpy array, "
-                "got a list instead."
-            )
-        return embeddings.tolist()
-
-    def embed_query(self, text: str) -> List[float]:
-        return self.embed_documents([text])[0]
 
     @property
     def _llm_type(self) -> str:

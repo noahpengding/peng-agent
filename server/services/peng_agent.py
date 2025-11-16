@@ -144,7 +144,7 @@ class PengAgent:
         async for chunk in self.graph.astream(
             state,
             stream_mode="custom",
-            config={"recursion_limi": self.total_tool_calls + 2},
+            config={"recursion_limit": self.total_tool_calls + 2},
         ):
             yield chunk
 
@@ -234,6 +234,7 @@ class PengAgent:
             observation = f"Error calling tool '{name}': {e}"
         message = ToolMessage(
             content=observation,
+            name=name,
             tool_call_id=tool_calls["id"] if isinstance(tool_calls, dict) else "",
         )
         self.tool_call_history.append(

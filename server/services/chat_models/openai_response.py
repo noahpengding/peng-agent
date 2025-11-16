@@ -98,31 +98,25 @@ class CustomOpenAIResponse(BaseChatModel):
     ) -> ChatResult:
         request_params = self._openai_prepare(prompt, streaming=False, **kwargs)
         responses = self.client.responses.create(**request_params)
-        additional_kwargs = {}
-        message_content = ""
+        generate_message = None
         for response in responses.output:
             if response.type == "message":
                 message_content = response.content[0].text
-                additional_kwargs = {"type": "output_text"}
+                generate_message = AIMessage(
+                    content_blocks=[{
+                        "type": "text",
+                        "text": message_content,
+                    }]
+                )
             elif response.type == "function_call":
-                additional_kwargs = {
-                    "tool_calls": [
-                        {
-                            "id": response.call_id,
-                            "function": {
-                                "name": response.name,
-                                "arguments": response.arguments,
-                            },
-                            "type": response.type,
-                        }
-                    ],
-                    "type": "tool_calls",
-                }
-
-        generate_message = AIMessage(
-            content=message_content,
-            additional_kwargs=additional_kwargs,
-        )
+                generate_message = AIMessage(
+                    content_blocks=[{
+                        "type": "tool_call",
+                        "name": response.name,
+                        "args": ast.literal_eval(response.arguments),
+                        "id": response.call_id,
+                    }]
+                )
         generation = ChatGeneration(message=generate_message)
         return ChatResult(generations=[generation])
 
@@ -237,7 +231,7 @@ class CustomOpenAIResponse(BaseChatModel):
         prompt_messages = []
         for message in prompt:
             if isinstance(message, AIMessage):
-                for m in message.content:
+                for m in message.content_blocks:
                     if m["type"] == "tool_call":
                         msg_dict = {
                             "type": "function_call",
@@ -264,17 +258,15 @@ class CustomOpenAIResponse(BaseChatModel):
                     }
                 )
             elif isinstance(message, HumanMessage):
-                if isinstance(message.content, str) and message.content.startswith(
-                    "data:image"
-                ):
+                if message.content_blocks and message.content_blocks[0]["type"] == "image":
                     prompt_messages.append(
                         {
                             "role": "user",
                             "content": [
                                 {
                                     "type": "input_image",
-                                    "image_url": message.content,
-                                }
+                                    "image_url": m["base64"].decode("utf-8"),
+                                } for m in message.content_blocks
                             ],
                         }
                     )

@@ -25,7 +25,7 @@ from langchain_core.tools import BaseTool
 from langchain_core.runnables import Runnable
 from langchain_core.language_models import LanguageModelInput
 
-import time
+import ast
 import json
 
 THINKING_BUDGET_TOKENS = int(8192 * 0.8)
@@ -45,15 +45,8 @@ class CustomClaude(BaseChatModel):
             api_key=self.api_key,
         )
 
-    def _generate(
-        self,
-        prompt: List[BaseMessage],
-        stop: Optional[List[str]] = None,
-        run_manager: Optional[CallbackManagerForLLMRun] = None,
-        **kwargs: Any,
-    ) -> ChatResult:
+    def _claude_prepare(self, prompt: List[BaseMessage], **kwargs: Any):
         output_log(f"Chat completion request: {prompt}", "debug")
-        now = time.time()
         prompt_translated = self._prompt_translate(prompt)
         output_log(f"Translated prompt: {prompt_translated}", "debug")
         request_params = {
@@ -82,45 +75,36 @@ class CustomClaude(BaseChatModel):
                 )
         if tool_choice:
             request_params["tool_choice"] = tool_choice
+        
+        return request_params
+
+    def _generate(
+        self,
+        prompt: List[BaseMessage],
+        stop: Optional[List[str]] = None,
+        run_manager: Optional[CallbackManagerForLLMRun] = None,
+        **kwargs: Any,
+    ) -> ChatResult:
+        request_params = self._claude_prepare(prompt, **kwargs)
         responses = self.client.messages.create(**request_params)
-        additional_kwargs = {}
-        message_content = ""
+        generate_message = None
         for response in responses.content:
             if response.type == "text":
-                message_content += response.text
-            if response.type == "tool_use":
-                message_content = [
-                    {
+                generate_message = AIMessage(
+                    content_blocks=[{
+                        "type": "text",
+                        "text": response.text,
+                    }],
+                )
+            elif response.type == "tool_use":
+                generate_message = AIMessage(
+                    content_blocks=[{
                         "type": "tool_use",
                         "id": response.id,
                         "name": response.name,
-                        "input": response.input,
-                    }
-                ]
-                additional_kwargs = {
-                    "tool_calls": [
-                        {
-                            "id": response.id,
-                            "type": "function_call",
-                            "function": {
-                                "name": response.name,
-                                "arguments": json.dumps(response.input),
-                            },
-                        }
-                    ]
-                }
-        generate_message = AIMessage(
-            content=message_content,
-            additional_kwargs=additional_kwargs,
-            response_metadata={
-                "time_in_seconds": time.time() - now,
-            },
-            metadata={
-                "input_tokens": len(prompt),
-                "output_tokens": len(message_content),
-                "total_tokens": len(prompt) + len(message_content),
-            },
-        )
+                        "args": ast.literal_eval(response.input),
+                    }],
+                )
         generation = ChatGeneration(message=generate_message)
         return ChatResult(generations=[generation])
 
@@ -131,36 +115,7 @@ class CustomClaude(BaseChatModel):
         run_manager: Optional[CallbackManagerForLLMRun] = None,
         **kwargs: Any,
     ) -> Iterator[ChatGenerationChunk]:
-        output_log(f"Streaming chat completion request{prompt}", "debug")
-        prompt_translated = self._prompt_translate(prompt)
-        output_log(f"Translated prompt for streaming{prompt_translated}", "debug")
-        request_params = {
-            "model": self.model_name,
-            "messages": prompt_translated,
-            "max_tokens": self.max_tokens,
-        }
-        if self.reasoning_effect != "not a reasoning model":
-            request_params["thinking"] = {
-                "type": "enabled",
-                "budget_tokens": THINKING_BUDGET_TOKENS,
-            }
-        tools = kwargs.get("tools")
-        tool_choice = kwargs.get("tool_choice")
-        if tools:
-            request_params["tools"] = []
-            for tool in tools:
-                parameters = tool.get("function", {}).get("parameters", {})
-                parameters["additionalProperties"] = False
-                request_params["tools"].append(
-                    {
-                        "name": tool.get("function", {}).get("name"),
-                        "description": tool.get("function", {}).get("description"),
-                        "input_schema": parameters,
-                    }
-                )
-        if tool_choice:
-            request_params["tool_choice"] = tool_choice
-        token_count = len(prompt)
+        request_params = self._claude_prepare(prompt, **kwargs)
         with self.client.messages.stream(**request_params) as stream:
             tool_calls_id = ""
             tool_calls_name = ""
@@ -173,44 +128,15 @@ class CustomClaude(BaseChatModel):
                     tool_calls_id = event.content_block.id
                     tool_calls_name = event.content_block.name
                 elif event.type == "content_block_stop" and tool_calls_id != "":
-                    output_log(
-                        f"Tool call detected: {tool_calls_name} with input {tool_calls_input}",
-                        "debug",
-                    )
                     message_chunk = AIMessageChunk(
-                        content=[
-                            {
-                                "type": "tool_use",
-                                "id": tool_calls_id,
-                                "name": tool_calls_name,
-                                "input": json.loads(tool_calls_input)
-                                if tool_calls_input != ""
-                                else {},
-                            }
-                        ],
-                        additional_kwargs={
-                            "tool_calls": [
-                                {
-                                    "id": tool_calls_id,
-                                    "type": "function_call",
-                                    "function": {
-                                        "name": tool_calls_name,
-                                        "arguments": tool_calls_input,
-                                    },
-                                },
-                            ],
-                            "type": "tool_calls",
-                        },
-                        usage_metadata=UsageMetadata(
-                            {
-                                "input_tokens": len(prompt),
-                                "output_tokens": 0,
-                                "total_tokens": token_count,
-                            }
-                        ),
+                        content_blocks=[{
+                            "type": "tool_use",
+                            "id": tool_calls_id,
+                            "name": tool_calls_name,
+                            "args": ast.literal_eval(json.loads(tool_calls_input))
+                        }]
                     )
-                    chunk = ChatGenerationChunk(message=message_chunk)
-                    yield chunk
+                    yield ChatGenerationChunk(message=message_chunk)
                     tool_calls_id = ""
                     tool_calls_name = ""
                     tool_calls_input = ""
@@ -220,33 +146,21 @@ class CustomClaude(BaseChatModel):
                         continue
                     elif event.delta.type == "thinking_delta":
                         message_chunk = AIMessageChunk(
-                            content=event.delta.thinking,
-                            additional_kwargs={"type": "reasoning_summary"},
-                            usage_metadata=UsageMetadata(
-                                {
-                                    "input_tokens": len(prompt),
-                                    "output_tokens": len(event.delta.thinking),
-                                    "total_tokens": token_count
-                                    + len(event.delta.thinking),
-                                }
-                            ),
+                            content_blocks=[{
+                                "type": "reasoning",
+                                "reasoning": event.delta.thinking,
+                                "extras": {}
+                            }]
                         )
-                        chunk = ChatGenerationChunk(message=message_chunk)
-                        yield chunk
+                        yield ChatGenerationChunk(message=message_chunk)
                     elif event.delta.type == "text_delta":
                         message_chunk = AIMessageChunk(
-                            content=event.delta.text,
-                            additional_kwargs={"type": "output_text"},
-                            usage_metadata=UsageMetadata(
-                                {
-                                    "input_tokens": len(prompt),
-                                    "output_tokens": len(event.delta.text),
-                                    "total_tokens": token_count + len(event.delta.text),
-                                }
-                            ),
+                            content_blocks=[{
+                                "type": "text",
+                                "text": event.delta.text,
+                            }]
                         )
-                        chunk = ChatGenerationChunk(message=message_chunk)
-                        yield chunk
+                        yield ChatGenerationChunk(message=message_chunk)
 
     def bind_tools(
         self,
@@ -305,10 +219,7 @@ class CustomClaude(BaseChatModel):
 
     def _prompt_translate(self, prompt: List[BaseMessage]) -> str:
         prompt_text = []
-
         for message in prompt:
-            if message.content == "":
-                continue
             if isinstance(message, AIMessage) or isinstance(message, SystemMessage):
                 prompt_text.append(
                     {
@@ -317,9 +228,7 @@ class CustomClaude(BaseChatModel):
                     }
                 )
             elif isinstance(message, HumanMessage):
-                if isinstance(message.content, str) and message.content.startswith(
-                    "data:image"
-                ):
+                if message.content_blocks and message.content_blocks[0]["type"] == "image":
                     prompt_text.append(
                         {
                             "role": "user",
@@ -329,9 +238,9 @@ class CustomClaude(BaseChatModel):
                                     "source": {
                                         "type": "base64",
                                         "media_type": "image/png",
-                                        "data": message.content.split(",")[1],
+                                        "data": m["base64"].decode("utf-8").split(",")[1],
                                     },
-                                }
+                                } for m in message.content_blocks
                             ],
                         }
                     )
@@ -343,7 +252,6 @@ class CustomClaude(BaseChatModel):
                         }
                     )
             elif isinstance(message, ToolMessage):
-                output_log(f"Tool message detected: {message.tool_call_id}", "debug")
                 prompt_text.append(
                     {
                         "role": "user",
@@ -351,7 +259,7 @@ class CustomClaude(BaseChatModel):
                             {
                                 "type": "tool_result",
                                 "tool_use_id": message.tool_call_id,
-                                "content": message.content,
+                                "content": str(message.content),
                             }
                         ],
                     }

@@ -31,7 +31,7 @@ class MinioStorage:
         self, file_path, file_name, content_type, bucket_name=config.s3_bucket
     ):
         try:
-            file_name = file_name.replace("\\", "/")
+            file_name = file_name.replace("\\", "/").replace("//", "/")
             self.client.fput_object(
                 bucket_name, file_name, file_path, content_type=content_type
             )
@@ -50,7 +50,7 @@ class MinioStorage:
         bucket_name=config.s3_bucket,
     ):
         try:
-            file_name = file_name.replace("\\", "/")
+            file_name = file_name.replace("\\", "/").replace("//", "/")
             self.client.put_object(
                 bucket_name,
                 file_name,

@@ -12,7 +12,6 @@ from langchain_core.messages import (
     ToolMessage,
     BaseMessage,
 )
-from langchain_core.messages.ai import UsageMetadata
 from langchain_core.outputs import ChatGeneration, ChatGenerationChunk, ChatResult
 from langchain_core.utils.function_calling import convert_to_openai_tool
 from pydantic import Field
@@ -26,7 +25,7 @@ from langchain_core.tools import BaseTool
 from langchain_core.runnables import Runnable
 from langchain_core.language_models import LanguageModelInput
 
-import time
+import ast
 
 
 class CustomOpenAICompletion(BaseChatModel):
@@ -49,14 +48,7 @@ class CustomOpenAICompletion(BaseChatModel):
             base_url=self.base_url,
         )
 
-    def _generate(
-        self,
-        prompt: List[BaseMessage],
-        stop: Optional[List[str]] = None,
-        run_manager: Optional[CallbackManagerForLLMRun] = None,
-        **kwargs: Any,
-    ) -> ChatResult:
-        now = time.time()
+    def _openai_prepare(self, prompt: List[BaseMessage], streaming: bool, **kwargs: Any) -> Dict[str, Any]:
         prompt_translated = self._prompt_translate(prompt)
         output_log(f"Translated prompt: {prompt_translated}", "debug")
         request_params = {
@@ -92,51 +84,49 @@ class CustomOpenAICompletion(BaseChatModel):
                 )
         if tool_choice:
             request_params["tool_choice"] = tool_choice
+
+        return request_params
+
+    def _generate(
+        self,
+        prompt: List[BaseMessage],
+        stop: Optional[List[str]] = None,
+        run_manager: Optional[CallbackManagerForLLMRun] = None,
+        **kwargs: Any,
+    ) -> ChatResult:
+        request_params = self._openai_prepare(prompt, streaming=False, **kwargs)
         responses = self.client.chat.completions.create(**request_params)
-        additional_kwargs = {}
-        message_content = ""
+        generate_message = None
         for choice in responses.choices:
             if choice.finish_reason == "stop":
-                message_content = choice.message.content
-                additional_kwargs = {
-                    "type": "output_text",
-                }
+                generate_message = AIMessage(
+                    content_blocks=[{
+                        "type": "text",
+                        "text": choice.message.content,
+                    }]
+                )
             elif (
                 choice.finish_reason == "tool_calls"
                 or choice.finish_reason == "function_call"
             ):
-                tool_call = (
-                    choice.message.tool_calls[0]
-                    if choice.finish_reason == "tool_calls"
-                    else choice.message.function_call[0]
-                )
-                tool_call.type = "function_call"
-                additional_kwargs = {
-                    "tool_calls": [
-                        {
-                            "id": tool_call.id,
-                            "function": {
-                                "name": tool_call.function.name,
-                                "arguments": tool_call.function.arguments,
-                            },
-                            "type": tool_call.type,
-                        }
-                    ],
-                    "type": "tool_calls",
-                }
-        generate_message = AIMessage(
-            content=message_content,
-            additional_kwargs=additional_kwargs,
-            response_metadata={
-                "time_in_seconds": time.time() - now,
-            },
-            metadata={
-                "input_tokens": len(prompt),
-                "output_tokens": len(message_content),
-                "total_tokens": len(prompt) + len(message_content),
-            },
-        )
-        output_log(f"Generated message: {generate_message}", "debug")
+                if choice.finish_reason == "function_call":
+                    generate_message = AIMessage(
+                        content_blocks=[{
+                            "type": "tool_call",
+                            "name": choice.message.function_call[0].function.name,
+                            "args": ast.literal_eval(choice.message.function_call[0].function.arguments),
+                            "id": choice.message.function_call[0].id,
+                        }]
+                    )
+                else:
+                    generate_message = AIMessage(
+                        content_blocks=[{
+                            "type": "tool_call",
+                            "name": choice.message.tool_calls[0].name,
+                            "args": ast.literal_eval(choice.message.tool_calls[0].function.arguments),
+                            "id": choice.message.tool_calls[0].id,
+                        }]
+                    )
         generation = ChatGeneration(message=generate_message)
         return ChatResult(generations=[generation])
 
@@ -147,73 +137,27 @@ class CustomOpenAICompletion(BaseChatModel):
         run_manager: Optional[CallbackManagerForLLMRun] = None,
         **kwargs: Any,
     ) -> Iterator[ChatGenerationChunk]:
-        prompt_translated = self._prompt_translate(prompt)
-        output_log(f"Translated prompt for streaming{prompt_translated}", "debug")
-        request_params = {
-            "model": self.model_name,
-            "messages": prompt_translated,
-            "max_tokens": self.max_tokens,
-            "stream": True,
-        }
-        if self.reasoning_effect != "not a reasoning model":
-            request_params["reasoning_effort"] = self.reasoning_effect
-        tools = kwargs.get("tools")
-        tool_choice = kwargs.get("tool_choice")
-        if tools:
-            request_params["tools"] = []
-            for tool in tools:
-                parameters = tool.get("function", {}).get("parameters", {})
-                parameters["additionalProperties"] = False
-                request_params["tools"].append(
-                    {
-                        "type": "function",
-                        "function": {
-                            "name": tool.get("function", {}).get("name", ""),
-                            "description": tool.get("function", {}).get(
-                                "description", ""
-                            ),
-                            "parameters": parameters,
-                        },
-                        "strict": False,
-                    }
-                )
-        if tool_choice:
-            request_params["tool_choice"] = tool_choice
+        request_params = self._openai_prepare(prompt, streaming=True, **kwargs)
         stream = self.client.chat.completions.create(**request_params)
-        token_count = len(prompt)
         tool_calls_name = ""
         tool_calls_args = ""
         tool_calls_id = ""
-        tool_calls_type = ""
         for event in stream:
             output_log(f"Received event: {event}", "debug")
             choice = event.choices[0]
             if choice.finish_reason == "tool_calls":
                 message_chunk = AIMessageChunk(
-                    content="",
-                    additional_kwargs={
-                        "tool_calls": [
-                            {
-                                "id": tool_calls_id,
-                                "function": {
-                                    "name": tool_calls_name,
-                                    "arguments": tool_calls_args,
-                                },
-                                "type": tool_calls_type,
-                            }
-                        ],
-                        "type": "tool_calls",
-                    },
-                    usage_metadata=UsageMetadata(
-                        {
-                            "input_tokens": len(prompt),
-                            "output_tokens": len(tool_calls_args) + 1,
-                            "total_tokens": token_count + len(tool_calls_args) + 1,
-                        }
-                    ),
+                    content_blocks=[{
+                        "type": "tool_call",
+                        "name": tool_calls_name,
+                        "args": ast.literal_eval(tool_calls_args),
+                        "id": tool_calls_id,
+                    }]
                 )
-                chunk = ChatGenerationChunk(message=message_chunk)
-                yield chunk
+                yield ChatGenerationChunk(message=message_chunk)
+                tool_calls_id = ""
+                tool_calls_name = ""
+                tool_calls_args = ""
             if choice.finish_reason is None:
                 token = choice.delta
                 if getattr(token, "tool_calls", None):
@@ -224,52 +168,34 @@ class CustomOpenAICompletion(BaseChatModel):
                         tool_calls_name = tool_call.function.name
                     if tool_call.function.arguments:
                         tool_calls_args += tool_call.function.arguments
-                    if tool_call.type:
-                        tool_calls_type = tool_call.type
                     continue
                 elif getattr(token, "reasoning_content", None):
                     message_chunk = AIMessageChunk(
-                        content=token.reasoning_content,
-                        additional_kwargs={"type": "reasoning_summary"},
-                        usage_metadata=UsageMetadata(
-                            {
-                                "input_tokens": len(prompt),
-                                "output_tokens": len(token.reasoning_content),
-                                "total_tokens": token_count
-                                + len(token.reasoning_content),
-                            }
-                        ),
+                        content_blocks=[{
+                            "type": "reasoning",
+                            "reasoning": token.reasoning_content,
+                            "extras": {},
+                        }]
                     )
-                    chunk = ChatGenerationChunk(message=message_chunk)
-                    yield chunk
+                    yield ChatGenerationChunk(message=message_chunk)
                 elif getattr(token, "reasoning", None):
                     message_chunk = AIMessageChunk(
-                        content=token.reasoning,
-                        additional_kwargs={"type": "reasoning_summary"},
-                        usage_metadata=UsageMetadata(
-                            {
-                                "input_tokens": len(prompt),
-                                "output_tokens": len(token.reasoning),
-                                "total_tokens": token_count + len(token.reasoning),
-                            }
-                        ),
+                        content_blocks=[{
+                            "type": "reasoning",
+                            "reasoning": token.reasoning,
+                            "extras": {},
+                        }]
                     )
-                    chunk = ChatGenerationChunk(message=message_chunk)
-                    yield chunk
+                    yield ChatGenerationChunk(message=message_chunk)
                 elif getattr(token, "content", None):
                     message_chunk = AIMessageChunk(
-                        content=token.content,
-                        additional_kwargs={"type": "output_text"},
-                        usage_metadata=UsageMetadata(
-                            {
-                                "input_tokens": len(prompt),
-                                "output_tokens": len(token.content),
-                                "total_tokens": token_count + len(token.content),
-                            }
-                        ),
+                        content_blocks=[{
+                            "type": "text",
+                            "text": token.content,
+                            "extras": {},
+                        }]
                     )
-                    chunk = ChatGenerationChunk(message=message_chunk)
-                    yield chunk
+                    yield ChatGenerationChunk(message=message_chunk)
 
     def bind_tools(
         self,
@@ -327,8 +253,6 @@ class CustomOpenAICompletion(BaseChatModel):
     def _prompt_translate(self, prompt: List[BaseMessage]) -> str:
         prompt_text = []
         for message in prompt:
-            if message.content == "":
-                continue
             if isinstance(message, AIMessage) or isinstance(message, ToolMessage):
                 prompt_text.append(
                     {
@@ -344,9 +268,7 @@ class CustomOpenAICompletion(BaseChatModel):
                     }
                 )
             elif isinstance(message, HumanMessage):
-                if isinstance(message.content, str) and message.content.startswith(
-                    "data:image"
-                ):
+                if message.content_blocks and message.content_blocks[0]["type"] == "image":
                     prompt_text.append(
                         {
                             "role": "user",
@@ -354,10 +276,10 @@ class CustomOpenAICompletion(BaseChatModel):
                                 {
                                     "type": "image_url",
                                     "image_url": {
-                                        "url": message.content,
+                                        "url": m["base64"].decode("utf-8"),
                                         "detail": "auto",
                                     },
-                                }
+                                } for m in message.content_blocks
                             ],
                         },
                     )
