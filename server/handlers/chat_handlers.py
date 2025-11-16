@@ -9,22 +9,16 @@ import json
 from typing import AsyncIterator
 
 
-def _generate_prompt_params(message: str, image: str, chat_config: ChatConfig):
-    prompt = prompt_generator.prompt_template(
-        model_name=chat_config.base_model,
-    )
-    params = prompt_generator.base_prompt_generate(
-        message=message,
-        short_term_memory=chat_config.short_term_memory,
-        long_term_memory=chat_config.long_term_memory,
-    )
-    params = prompt_generator.add_image_to_prompt(
-        model_name=chat_config.base_model,
-        params=params,
-        image=image,
-    )
-    return prompt, params
-
+def _generate_prompt_params(user_name:str, message: str, image: str, chat_config: ChatConfig):
+    prompt = [
+        prompt_generator.system_prompt(user_name),
+        prompt_generator.add_long_term_memory_to_prompt(chat_config.long_term_memory),
+        prompt_generator.add_short_term_memory_to_prompt(chat_config.short_term_memory),
+        prompt_generator.add_image_to_prompt(chat_config.base_model, image),
+        prompt_generator.add_human_message_to_prompt(message),
+    ]
+    prompt = [p for p in prompt if p is not None]
+    return prompt
 
 async def chat_handler(
     user_name: str, message: str, image: str, chat_config: ChatConfig
@@ -34,7 +28,9 @@ async def chat_handler(
         "debug",
     )
 
-    prompt, params = _generate_prompt_params(message, image, chat_config)
+    prompt = _generate_prompt_params(user_name, message, image, chat_config)
+
+    output_log(f"Generated Prompt: {prompt}", "DEBUG")
 
     agent = PengAgent(
         user_name,
@@ -49,7 +45,7 @@ async def chat_handler(
 
     full_response = ""
     try:
-        async for chunk in agent.astream(AgentState(prompt.invoke(params))):
+        async for chunk in agent.astream(AgentState(messages=prompt)):
             output_log(f"Received chunk: {chunk}", "DEBUG")
             if chunk:
                 if "call_model" in chunk and "messages" in chunk["call_model"]:
@@ -111,7 +107,7 @@ async def chat_completions_handler(
         "debug",
     )
 
-    prompt, params = _generate_prompt_params(message, image, chat_config)
+    prompt = _generate_prompt_params(user_name, message, image, chat_config)
 
     agent = PengAgent(
         operater=chat_config.operator,
@@ -119,12 +115,8 @@ async def chat_completions_handler(
         tools=chat_config.tools_name,
         user_name=user_name,
     )
-    response = await agent.ainvoke(prompt.invoke(params))
-    full_response = response_formatter_main(
-        chat_config.operator,
-        response["messages"][-2].content if "messages" in response else str(response),
-    )
-    return full_response
+    response = await agent.ainvoke(prompt)
+    return response
 
 
 async def create_completion_response(
