@@ -1,7 +1,7 @@
 interface ChatRequest {
   user_name: string;
   message: string;
-  image?: string;
+  image?: string[];
   config: {
     operator: string;
     base_model: string;
@@ -74,10 +74,8 @@ export const ChatService = {
                 // pass chunk and its type
                 onChunk(data.chunk, data.type, data.done);
               } else {
-                if (!isCompleted) {
-                  isCompleted = true;
-                  onComplete();
-                }
+                isCompleted = true;
+                onComplete();
               }
             } catch {
               // Silently handle JSON parsing errors to avoid console warnings

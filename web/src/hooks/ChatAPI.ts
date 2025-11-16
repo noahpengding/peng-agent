@@ -4,7 +4,7 @@ import { ChatService } from '../services/chatService';
 interface ChatRequest {
   user_name: string;
   message: string;
-  image?: string;
+  image?: string[];
   config: {
     operator: string;
     base_model: string;
