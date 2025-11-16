@@ -1,7 +1,5 @@
 from handlers.model_handlers import check_multimodal
-from services.azure_document import AzureDocument
 from langchain_core.messages import (
-    AIMessage,
     SystemMessage,
     HumanMessage,
 )
@@ -37,12 +35,15 @@ def add_short_term_memory_to_prompt(short_term_memory):
 def add_human_message_to_prompt(message):
     return HumanMessage(message)
 
+
 def add_image_to_prompt(model_name, images, mime_type="image/png"):
     messages = []
     m = MinioStorage()
     for image in images:
         file_name = image.split("/")[-1]
-        temp_path = f"/tmp/uploads/temp_{random.randint(1000000000,9999999999)}_{file_name}"
+        temp_path = (
+            f"/tmp/uploads/temp_{random.randint(1000000000, 9999999999)}_{file_name}"
+        )
         success = m.file_download(image, temp_path)
         if success:
             with open(temp_path, "rb") as f:
@@ -54,7 +55,8 @@ def add_image_to_prompt(model_name, images, mime_type="image/png"):
                     "type": "image",
                     "base64": img_data,
                     "mime_type": mime_type,
-                } for img_data in messages
+                }
+                for img_data in messages
             ]
         )
     return None

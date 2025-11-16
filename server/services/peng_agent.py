@@ -167,21 +167,24 @@ class PengAgent:
                 elif chunk.content_blocks[0]["type"] == "tool_call":
                     return {"messages": chunk}
         final_response = AIMessage(
-            content_blocks=[{
-                "type": "text",
-                "text": final_response,
-            }]
+            content_blocks=[
+                {
+                    "type": "text",
+                    "text": final_response,
+                }
+            ]
         )
         if final_reasoning != "":
             final_reasooning = AIMessage(
-                content_blocks=[{
-                    "type": "reasoning",
-                    "reasoning": final_reasoning,
-                }]
+                content_blocks=[
+                    {
+                        "type": "reasoning",
+                        "reasoning": final_reasoning,
+                    }
+                ]
             )
             return {"messages": [final_response, final_reasooning]}
         return {"messages": final_response}
-
 
     async def call_tools(self, state: AgentState):
         writer = get_stream_writer()
@@ -190,43 +193,55 @@ class PengAgent:
         # Not an AI message
         if not isinstance(last_message, AIMessage):
             message = "Not an AI message to call tools."
-            return {"messages": ToolMessage(
-                content=message, tool_call_id=""
-            )}
+            return {"messages": ToolMessage(content=message, tool_call_id="")}
         tool_calls = last_message.content_blocks[0]
         # Not a tool call
         if tool_calls["type"] != "tool_call":
             message = "Invalid tool call format."
-            return {"messages": ToolMessage(
-                content=message,
-                tool_call_id="",
-            )}
+            return {
+                "messages": ToolMessage(
+                    content=message,
+                    tool_call_id="",
+                )
+            }
         # Exceeded tool call limit
         if self.total_tool_calls == 0:
             message = "Tool call limit reached. No more tool calls can be made. Try to generate the final response based on the history."
             self.tools = {}
-            return {"messages": ToolMessage(
-                content=message,
-                tool_call_id=tool_calls["id"] if isinstance(tool_calls, dict) else "",
-            )}
+            return {
+                "messages": ToolMessage(
+                    content=message,
+                    tool_call_id=tool_calls["id"]
+                    if isinstance(tool_calls, dict)
+                    else "",
+                )
+            }
         name = tool_calls["name"]
         args = tool_calls["args"]
         # Tool not found
         if name not in self.tools:
-            return {"messages": ToolMessage(
-                content=f"Tool '{name}' not found.",
-                tool_call_id=tool_calls["id"] if isinstance(tool_calls, dict) else "",
-            )}
+            return {
+                "messages": ToolMessage(
+                    content=f"Tool '{name}' not found.",
+                    tool_call_id=tool_calls["id"]
+                    if isinstance(tool_calls, dict)
+                    else "",
+                )
+            }
         # Duplicate tool call
         if any(
             (name == history["name"] and args == history["args"])
             for history in self.tool_call_history
         ):
             message = f"The tool call '{name}' with args {args} has already been executed. Try to find it in the history. If you need further information, try to call it with different args."
-            return {"messages": ToolMessage(
-                content=message,
-                tool_call_id=tool_calls["id"] if isinstance(tool_calls, dict) else "",
-            )}
+            return {
+                "messages": ToolMessage(
+                    content=message,
+                    tool_call_id=tool_calls["id"]
+                    if isinstance(tool_calls, dict)
+                    else "",
+                )
+            }
         tool = self.tools[name]
         try:
             observation = await tool.ainvoke(args)
@@ -249,9 +264,15 @@ class PengAgent:
 
     def should_continue(self, state: AgentState) -> str:
         last_message = list(state["messages"])[-1]
-        if isinstance(last_message, AIMessage) and last_message.content_blocks[0]["type"] == "tool_call":
+        if (
+            isinstance(last_message, AIMessage)
+            and last_message.content_blocks[0]["type"] == "tool_call"
+        ):
             return "call_tools"
-        if isinstance(last_message, AIMessage) and last_message.content_blocks[0]["type"] != "text":
+        if (
+            isinstance(last_message, AIMessage)
+            and last_message.content_blocks[0]["type"] != "text"
+        ):
             return "call_model"
         if not isinstance(last_message, AIMessage):
             return "call_model"

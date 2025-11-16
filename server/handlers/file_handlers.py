@@ -55,6 +55,7 @@ def file_upload_frontend(file_content: str, content_type: str):
     else:
         return ["Unsupported content type", False]
 
+
 def file_operator(local_file_path: str):
     with open(local_file_path, "r") as file:
         return file.read()

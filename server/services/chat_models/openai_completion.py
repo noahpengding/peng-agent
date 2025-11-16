@@ -48,7 +48,9 @@ class CustomOpenAICompletion(BaseChatModel):
             base_url=self.base_url,
         )
 
-    def _openai_prepare(self, prompt: List[BaseMessage], streaming: bool, **kwargs: Any) -> Dict[str, Any]:
+    def _openai_prepare(
+        self, prompt: List[BaseMessage], streaming: bool, **kwargs: Any
+    ) -> Dict[str, Any]:
         prompt_translated = self._prompt_translate(prompt)
         output_log(f"Translated prompt: {prompt_translated}", "debug")
         request_params = {
@@ -100,10 +102,12 @@ class CustomOpenAICompletion(BaseChatModel):
         for choice in responses.choices:
             if choice.finish_reason == "stop":
                 generate_message = AIMessage(
-                    content_blocks=[{
-                        "type": "text",
-                        "text": choice.message.content,
-                    }]
+                    content_blocks=[
+                        {
+                            "type": "text",
+                            "text": choice.message.content,
+                        }
+                    ]
                 )
             elif (
                 choice.finish_reason == "tool_calls"
@@ -111,21 +115,29 @@ class CustomOpenAICompletion(BaseChatModel):
             ):
                 if choice.finish_reason == "function_call":
                     generate_message = AIMessage(
-                        content_blocks=[{
-                            "type": "tool_call",
-                            "name": choice.message.function_call[0].function.name,
-                            "args": ast.literal_eval(choice.message.function_call[0].function.arguments),
-                            "id": choice.message.function_call[0].id,
-                        }]
+                        content_blocks=[
+                            {
+                                "type": "tool_call",
+                                "name": choice.message.function_call[0].function.name,
+                                "args": ast.literal_eval(
+                                    choice.message.function_call[0].function.arguments
+                                ),
+                                "id": choice.message.function_call[0].id,
+                            }
+                        ]
                     )
                 else:
                     generate_message = AIMessage(
-                        content_blocks=[{
-                            "type": "tool_call",
-                            "name": choice.message.tool_calls[0].name,
-                            "args": ast.literal_eval(choice.message.tool_calls[0].function.arguments),
-                            "id": choice.message.tool_calls[0].id,
-                        }]
+                        content_blocks=[
+                            {
+                                "type": "tool_call",
+                                "name": choice.message.tool_calls[0].name,
+                                "args": ast.literal_eval(
+                                    choice.message.tool_calls[0].function.arguments
+                                ),
+                                "id": choice.message.tool_calls[0].id,
+                            }
+                        ]
                     )
         generation = ChatGeneration(message=generate_message)
         return ChatResult(generations=[generation])
@@ -147,12 +159,14 @@ class CustomOpenAICompletion(BaseChatModel):
             choice = event.choices[0]
             if choice.finish_reason == "tool_calls":
                 message_chunk = AIMessageChunk(
-                    content_blocks=[{
-                        "type": "tool_call",
-                        "name": tool_calls_name,
-                        "args": ast.literal_eval(tool_calls_args),
-                        "id": tool_calls_id,
-                    }]
+                    content_blocks=[
+                        {
+                            "type": "tool_call",
+                            "name": tool_calls_name,
+                            "args": ast.literal_eval(tool_calls_args),
+                            "id": tool_calls_id,
+                        }
+                    ]
                 )
                 yield ChatGenerationChunk(message=message_chunk)
                 tool_calls_id = ""
@@ -171,29 +185,35 @@ class CustomOpenAICompletion(BaseChatModel):
                     continue
                 elif getattr(token, "reasoning_content", None):
                     message_chunk = AIMessageChunk(
-                        content_blocks=[{
-                            "type": "reasoning",
-                            "reasoning": token.reasoning_content,
-                            "extras": {},
-                        }]
+                        content_blocks=[
+                            {
+                                "type": "reasoning",
+                                "reasoning": token.reasoning_content,
+                                "extras": {},
+                            }
+                        ]
                     )
                     yield ChatGenerationChunk(message=message_chunk)
                 elif getattr(token, "reasoning", None):
                     message_chunk = AIMessageChunk(
-                        content_blocks=[{
-                            "type": "reasoning",
-                            "reasoning": token.reasoning,
-                            "extras": {},
-                        }]
+                        content_blocks=[
+                            {
+                                "type": "reasoning",
+                                "reasoning": token.reasoning,
+                                "extras": {},
+                            }
+                        ]
                     )
                     yield ChatGenerationChunk(message=message_chunk)
                 elif getattr(token, "content", None):
                     message_chunk = AIMessageChunk(
-                        content_blocks=[{
-                            "type": "text",
-                            "text": token.content,
-                            "extras": {},
-                        }]
+                        content_blocks=[
+                            {
+                                "type": "text",
+                                "text": token.content,
+                                "extras": {},
+                            }
+                        ]
                     )
                     yield ChatGenerationChunk(message=message_chunk)
 
@@ -268,7 +288,10 @@ class CustomOpenAICompletion(BaseChatModel):
                     }
                 )
             elif isinstance(message, HumanMessage):
-                if message.content_blocks and message.content_blocks[0]["type"] == "image":
+                if (
+                    message.content_blocks
+                    and message.content_blocks[0]["type"] == "image"
+                ):
                     prompt_text.append(
                         {
                             "role": "user",
@@ -279,7 +302,8 @@ class CustomOpenAICompletion(BaseChatModel):
                                         "url": m["base64"].decode("utf-8"),
                                         "detail": "auto",
                                     },
-                                } for m in message.content_blocks
+                                }
+                                for m in message.content_blocks
                             ],
                         },
                     )

@@ -46,7 +46,9 @@ class CustomOpenAIResponse(BaseChatModel):
             base_url=self.base_url,
         )
 
-    def _openai_prepare(self, prompt: List[BaseMessage], streaming: bool = False, **kwargs) -> Dict[str, Any]:
+    def _openai_prepare(
+        self, prompt: List[BaseMessage], streaming: bool = False, **kwargs
+    ) -> Dict[str, Any]:
         prompt_translated = self._prompt_translate(prompt)
         output_log(f"Translated prompt: {prompt_translated}", "debug")
         request_params = {
@@ -86,7 +88,7 @@ class CustomOpenAIResponse(BaseChatModel):
             )
         if tool_choice:
             request_params["tool_choice"] = tool_choice
-        
+
         return request_params
 
     def _generate(
@@ -103,19 +105,23 @@ class CustomOpenAIResponse(BaseChatModel):
             if response.type == "message":
                 message_content = response.content[0].text
                 generate_message = AIMessage(
-                    content_blocks=[{
-                        "type": "text",
-                        "text": message_content,
-                    }]
+                    content_blocks=[
+                        {
+                            "type": "text",
+                            "text": message_content,
+                        }
+                    ]
                 )
             elif response.type == "function_call":
                 generate_message = AIMessage(
-                    content_blocks=[{
-                        "type": "tool_call",
-                        "name": response.name,
-                        "args": ast.literal_eval(response.arguments),
-                        "id": response.call_id,
-                    }]
+                    content_blocks=[
+                        {
+                            "type": "tool_call",
+                            "name": response.name,
+                            "args": ast.literal_eval(response.arguments),
+                            "id": response.call_id,
+                        }
+                    ]
                 )
         generation = ChatGeneration(message=generate_message)
         return ChatResult(generations=[generation])
@@ -134,34 +140,36 @@ class CustomOpenAIResponse(BaseChatModel):
                 token = event.delta
                 if token:
                     message_chunk = AIMessageChunk(
-                        content_blocks=[{
-                            "type": "text",
-                            "text": token,
-                            "annotations": []
-                        }]
+                        content_blocks=[
+                            {"type": "text", "text": token, "annotations": []}
+                        ]
                     )
                     yield ChatGenerationChunk(message=message_chunk)
             elif event.type == "response.reasoning_summary_text.delta":
                 token = event.delta
                 if token:
                     message_chunk = AIMessageChunk(
-                        content_blocks=[{
-                            "type": "reasoning",
-                            "reasoning": token,
-                            "extras": {},
-                        }]
+                        content_blocks=[
+                            {
+                                "type": "reasoning",
+                                "reasoning": token,
+                                "extras": {},
+                            }
+                        ]
                     )
                     yield ChatGenerationChunk(message=message_chunk)
             elif event.type == "response.output_item.done":
                 token = event.item
                 if token and token.type == "function_call":
                     message_chunk = AIMessageChunk(
-                        content_blocks=[{
-                            "type": "tool_call",
-                            "name": token.name,
-                            "args": ast.literal_eval(token.arguments),
-                            "id": token.call_id,
-                        }]
+                        content_blocks=[
+                            {
+                                "type": "tool_call",
+                                "name": token.name,
+                                "args": ast.literal_eval(token.arguments),
+                                "id": token.call_id,
+                            }
+                        ]
                     )
                     yield ChatGenerationChunk(message=message_chunk)
             else:
@@ -258,7 +266,10 @@ class CustomOpenAIResponse(BaseChatModel):
                     }
                 )
             elif isinstance(message, HumanMessage):
-                if message.content_blocks and message.content_blocks[0]["type"] == "image":
+                if (
+                    message.content_blocks
+                    and message.content_blocks[0]["type"] == "image"
+                ):
                     prompt_messages.append(
                         {
                             "role": "user",
@@ -266,7 +277,8 @@ class CustomOpenAIResponse(BaseChatModel):
                                 {
                                     "type": "input_image",
                                     "image_url": m["base64"].decode("utf-8"),
-                                } for m in message.content_blocks
+                                }
+                                for m in message.content_blocks
                             ],
                         }
                     )
@@ -284,7 +296,7 @@ class CustomOpenAIResponse(BaseChatModel):
                         "call_id": message.tool_call_id,
                         "output": str(message.content),
                     },
-                    )
+                )
         return prompt_messages
 
     @property

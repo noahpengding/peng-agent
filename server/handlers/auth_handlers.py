@@ -10,6 +10,7 @@ from models.user_models import UserCreate
 from utils.log import output_log
 from utils.mysql_connect import MysqlConnect
 
+
 def verify_password(plain_password: str, hashed_password: str) -> bool:
     try:
         plain_bytes = plain_password.encode("utf-8")

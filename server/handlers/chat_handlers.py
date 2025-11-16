@@ -9,7 +9,9 @@ import json
 from typing import AsyncIterator
 
 
-def _generate_prompt_params(user_name:str, message: str, image: str, chat_config: ChatConfig):
+def _generate_prompt_params(
+    user_name: str, message: str, image: str, chat_config: ChatConfig
+):
     prompt = [
         prompt_generator.system_prompt(user_name),
         prompt_generator.add_long_term_memory_to_prompt(chat_config.long_term_memory),
@@ -19,6 +21,7 @@ def _generate_prompt_params(user_name:str, message: str, image: str, chat_config
     ]
     prompt = [p for p in prompt if p is not None]
     return prompt
+
 
 async def chat_handler(
     user_name: str, message: str, image: str, chat_config: ChatConfig
@@ -58,7 +61,9 @@ async def chat_handler(
                         chunk_type = "reasoning_summary"
                     # Tool call from chat model
                     elif message["type"] == "tool_call":
-                        chunk_content = f"Tool Call: {message['name']} with args {message['args']}"
+                        chunk_content = (
+                            f"Tool Call: {message['name']} with args {message['args']}"
+                        )
                         chunk_type = "tool_calls"
                 # Tool message after execution the tool
                 elif "call_tools" in chunk and "messages" in chunk["call_tools"]:

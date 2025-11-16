@@ -1,7 +1,6 @@
-from fastapi import APIRouter, HTTPException, Depends
+from fastapi import APIRouter, HTTPException
 from fastapi.responses import Response
 from models.user_models import UserLogin, TokenResponse, UserCreate
-from handlers.auth_handlers import authenticate_request
 from config.config import config
 import secrets
 

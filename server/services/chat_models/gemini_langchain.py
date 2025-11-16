@@ -69,7 +69,7 @@ class CustomGemini(BaseChatModel):
             request_params["tools"] = [
                 types.Tool(function_declarations=request_params["tools"])
             ]
-        
+
         return prompt_translated, request_params
 
     def _generate(
@@ -90,19 +90,23 @@ class CustomGemini(BaseChatModel):
             function_call = responses.candidates[0].content.parts[0].function_call
             function_call.id = f"function_call_{uuid.uuid4()}"
             generate_message = AIMessage(
-                content_blocks=[{
-                    "type": "tool_call",
-                    "name": function_call.name,
-                    "args": ast.literal_eval(json.dumps(function_call.args)),
-                    "id": function_call.id,
-                }]
+                content_blocks=[
+                    {
+                        "type": "tool_call",
+                        "name": function_call.name,
+                        "args": ast.literal_eval(json.dumps(function_call.args)),
+                        "id": function_call.id,
+                    }
+                ]
             )
         else:
             generate_message = AIMessage(
-                content_blocks=[{
-                    "type": "text",
-                    "text": responses.candidates[0].content.parts[0].text,
-                }]
+                content_blocks=[
+                    {
+                        "type": "text",
+                        "text": responses.candidates[0].content.parts[0].text,
+                    }
+                ]
             )
         generation = ChatGeneration(message=generate_message)
         return ChatResult(generations=[generation])
@@ -131,30 +135,36 @@ class CustomGemini(BaseChatModel):
                     fc = part.function_call
                     fc.id = f"function_call_{uuid.uuid4()}"
                     message_chunk = AIMessageChunk(
-                        content_blocks=[{
-                            "type": "tool_call",
-                            "name": fc.name,
-                            "args": ast.literal_eval(json.dumps(fc.args)),
-                            "id": fc.id,
-                        }]
+                        content_blocks=[
+                            {
+                                "type": "tool_call",
+                                "name": fc.name,
+                                "args": ast.literal_eval(json.dumps(fc.args)),
+                                "id": fc.id,
+                            }
+                        ]
                     )
                     yield ChatGenerationChunk(message=message_chunk)
                 elif getattr(part, "thought", None):
                     message_chunk = AIMessageChunk(
-                        content_blocks=[{
-                            "type": "reasoning",
-                            "reasoning": part.thought,
-                            "extras": {},
-                        }]
+                        content_blocks=[
+                            {
+                                "type": "reasoning",
+                                "reasoning": part.thought,
+                                "extras": {},
+                            }
+                        ]
                     )
                     yield ChatGenerationChunk(message=message_chunk)
                 elif getattr(part, "text", None):
                     try:
                         message_chunk = AIMessageChunk(
-                            content_blocks=[{
-                                "type": "text",
-                                "text": part.text,
-                            }]
+                            content_blocks=[
+                                {
+                                    "type": "text",
+                                    "text": part.text,
+                                }
+                            ]
                         )
                         yield ChatGenerationChunk(message=message_chunk)
                     except Exception as e:
@@ -252,7 +262,10 @@ class CustomGemini(BaseChatModel):
                             )
                         )
             elif isinstance(message, HumanMessage):
-                if message.content_blocks and message.content_blocks[0]["type"] == "image":
+                if (
+                    message.content_blocks
+                    and message.content_blocks[0]["type"] == "image"
+                ):
                     prompt_text.append(
                         types.Content(
                             role="user",
@@ -260,7 +273,8 @@ class CustomGemini(BaseChatModel):
                                 types.Part.from_bytes(
                                     data=m["base64"].decode("utf-8").split(",")[1],
                                     mime_type="image/png",
-                                ) for m in message.content_blocks
+                                )
+                                for m in message.content_blocks
                             ],
                         )
                     )
@@ -277,7 +291,8 @@ class CustomGemini(BaseChatModel):
                         role="user",
                         parts=[
                             types.Part.from_function_response(
-                                name=message.name, response={"result": str(message.content)}
+                                name=message.name,
+                                response={"result": str(message.content)},
                             )
                         ],
                     )

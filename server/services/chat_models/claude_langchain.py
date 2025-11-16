@@ -12,7 +12,6 @@ from langchain_core.messages import (
     ToolMessage,
     BaseMessage,
 )
-from langchain_core.messages.ai import UsageMetadata
 from langchain_core.outputs import ChatGeneration, ChatGenerationChunk, ChatResult
 from pydantic import Field
 from config.config import config
@@ -75,7 +74,7 @@ class CustomClaude(BaseChatModel):
                 )
         if tool_choice:
             request_params["tool_choice"] = tool_choice
-        
+
         return request_params
 
     def _generate(
@@ -91,19 +90,23 @@ class CustomClaude(BaseChatModel):
         for response in responses.content:
             if response.type == "text":
                 generate_message = AIMessage(
-                    content_blocks=[{
-                        "type": "text",
-                        "text": response.text,
-                    }],
+                    content_blocks=[
+                        {
+                            "type": "text",
+                            "text": response.text,
+                        }
+                    ],
                 )
             elif response.type == "tool_use":
                 generate_message = AIMessage(
-                    content_blocks=[{
-                        "type": "tool_use",
-                        "id": response.id,
-                        "name": response.name,
-                        "args": ast.literal_eval(response.input),
-                    }],
+                    content_blocks=[
+                        {
+                            "type": "tool_use",
+                            "id": response.id,
+                            "name": response.name,
+                            "args": ast.literal_eval(response.input),
+                        }
+                    ],
                 )
         generation = ChatGeneration(message=generate_message)
         return ChatResult(generations=[generation])
@@ -129,12 +132,14 @@ class CustomClaude(BaseChatModel):
                     tool_calls_name = event.content_block.name
                 elif event.type == "content_block_stop" and tool_calls_id != "":
                     message_chunk = AIMessageChunk(
-                        content_blocks=[{
-                            "type": "tool_use",
-                            "id": tool_calls_id,
-                            "name": tool_calls_name,
-                            "args": ast.literal_eval(json.loads(tool_calls_input))
-                        }]
+                        content_blocks=[
+                            {
+                                "type": "tool_use",
+                                "id": tool_calls_id,
+                                "name": tool_calls_name,
+                                "args": ast.literal_eval(json.loads(tool_calls_input)),
+                            }
+                        ]
                     )
                     yield ChatGenerationChunk(message=message_chunk)
                     tool_calls_id = ""
@@ -146,19 +151,23 @@ class CustomClaude(BaseChatModel):
                         continue
                     elif event.delta.type == "thinking_delta":
                         message_chunk = AIMessageChunk(
-                            content_blocks=[{
-                                "type": "reasoning",
-                                "reasoning": event.delta.thinking,
-                                "extras": {}
-                            }]
+                            content_blocks=[
+                                {
+                                    "type": "reasoning",
+                                    "reasoning": event.delta.thinking,
+                                    "extras": {},
+                                }
+                            ]
                         )
                         yield ChatGenerationChunk(message=message_chunk)
                     elif event.delta.type == "text_delta":
                         message_chunk = AIMessageChunk(
-                            content_blocks=[{
-                                "type": "text",
-                                "text": event.delta.text,
-                            }]
+                            content_blocks=[
+                                {
+                                    "type": "text",
+                                    "text": event.delta.text,
+                                }
+                            ]
                         )
                         yield ChatGenerationChunk(message=message_chunk)
 
@@ -228,7 +237,10 @@ class CustomClaude(BaseChatModel):
                     }
                 )
             elif isinstance(message, HumanMessage):
-                if message.content_blocks and message.content_blocks[0]["type"] == "image":
+                if (
+                    message.content_blocks
+                    and message.content_blocks[0]["type"] == "image"
+                ):
                     prompt_text.append(
                         {
                             "role": "user",
@@ -238,9 +250,12 @@ class CustomClaude(BaseChatModel):
                                     "source": {
                                         "type": "base64",
                                         "media_type": "image/png",
-                                        "data": m["base64"].decode("utf-8").split(",")[1],
+                                        "data": m["base64"]
+                                        .decode("utf-8")
+                                        .split(",")[1],
                                     },
-                                } for m in message.content_blocks
+                                }
+                                for m in message.content_blocks
                             ],
                         }
                     )
