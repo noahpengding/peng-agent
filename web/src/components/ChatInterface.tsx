@@ -197,16 +197,16 @@ const ChatbotUI = () => {
     if (!input.trim() && uploadedImages.length === 0) return;
 
     // Collect image paths from uploaded images
-    const imagePaths = uploadedImages.map(img => img.path);
+    const imagePaths = uploadedImages.map((img) => img.path);
 
     // Add user message to chat (with preview images for display)
     const userMessage: Message = {
       role: 'user',
       content: input,
       type: 'user',
-      images: uploadedImages.map(img => img.preview), // Use preview for display
+      images: uploadedImages.map((img) => img.preview), // Use preview for display
     };
-    
+
     const newMessages = [...messages, userMessage];
     setMessages(newMessages);
     setIsLoading(true);

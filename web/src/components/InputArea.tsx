@@ -1,4 +1,4 @@
-import React, { useRef, useEffect, useState } from 'react';
+import React, { useRef, useEffect, useState, useCallback } from 'react';
 import { UploadService } from '../services/uploadService';
 import { UploadedImage } from './ChatInterface.types';
 
@@ -30,39 +30,36 @@ export const InputArea: React.FC<InputAreaProps> = ({
   const [isUploading, setIsUploading] = useState(false);
 
   // Helper: adjust textarea height based on content up to max
-  const adjustTextareaSize = () => {
+  const adjustTextareaSize = useCallback(() => {
     const el = textareaRef.current;
     if (!el) return;
     el.style.height = 'auto';
     const next = Math.min(el.scrollHeight, maxTextareaHeight);
     el.style.height = `${next}px`;
     el.style.overflowY = el.scrollHeight > maxTextareaHeight ? ('auto' as const) : ('hidden' as const);
-  };
+  }, [maxTextareaHeight]);
 
   // Adjust when content changes
   useEffect(() => {
     adjustTextareaSize();
-  }, [input]);
+  }, [input, adjustTextareaSize]);
 
   // Handle image file processing and upload
   const processAndUploadImage = async (file: File) => {
     setIsUploading(true);
     const reader = new FileReader();
-    
+
     reader.onload = async (event) => {
       if (event.target?.result) {
         const base64Data = event.target.result as string;
         const contentType = UploadService.extractContentType(base64Data);
-        
+
         try {
           const [uploadPath, success] = await UploadService.uploadImage(base64Data, contentType);
 
           if (success) {
             // Add to uploaded images list
-            setUploadedImages([
-              ...uploadedImages,
-              { path: uploadPath, preview: base64Data }
-            ]);
+            setUploadedImages([...uploadedImages, { path: uploadPath, preview: base64Data }]);
           } else {
             onError('Image upload failed. Please try again.');
           }
@@ -132,12 +129,7 @@ export const InputArea: React.FC<InputAreaProps> = ({
             {uploadedImages.map((img, index) => (
               <div key={index} className="image-preview-container">
                 <img src={img.preview} alt="Preview" className="image-preview" />
-                <button
-                  type="button"
-                  onClick={() => handleClearImage(index)}
-                  className="clear-image-button"
-                  title="Remove image"
-                >
+                <button type="button" onClick={() => handleClearImage(index)} className="clear-image-button" title="Remove image">
                   ×
                 </button>
               </div>
@@ -182,11 +174,7 @@ export const InputArea: React.FC<InputAreaProps> = ({
             >
               {isUploading ? '⏳' : '📎'}
             </button>
-            <button 
-              type="submit" 
-              className="send-button" 
-              disabled={isLoading || isUploading || (!input.trim() && uploadedImages.length === 0)}
-            >
+            <button type="submit" className="send-button" disabled={isLoading || isUploading || (!input.trim() && uploadedImages.length === 0)}>
               ➤
             </button>
           </div>

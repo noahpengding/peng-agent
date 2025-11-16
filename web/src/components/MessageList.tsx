@@ -48,15 +48,9 @@ export const MessageList: React.FC<MessageListProps> = ({ messages, isLoading })
           <div key={index} className={`message ${messageClass}`}>
             {/* For foldable messages (tool_calls, reasoning_summary), show a toggle */}
             {(message.type === 'tool_calls' || message.type === 'reasoning_summary') && (
-              <div
-                className="tool-summary"
-                onClick={() => toggleFolded(index)}
-                style={{ cursor: 'pointer', userSelect: 'none' }}
-              >
+              <div className="tool-summary" onClick={() => toggleFolded(index)} style={{ cursor: 'pointer', userSelect: 'none' }}>
                 <span style={{ marginRight: '8px' }}>{isFolded ? '▶' : '▼'}</span>
-                <strong>
-                  {message.type === 'tool_calls' ? 'Tool Execution' : 'Reasoning Process'}
-                </strong>
+                <strong>{message.type === 'tool_calls' ? 'Tool Execution' : 'Reasoning Process'}</strong>
               </div>
             )}
 
@@ -77,28 +71,22 @@ export const MessageList: React.FC<MessageListProps> = ({ messages, isLoading })
                     remarkPlugins={[remarkGfm, remarkMath]}
                     rehypePlugins={[rehypeKatex]}
                     components={{
-                      code({ inline, className, children, ...props }: any) {
-                        const match = /language-(\w+)/.exec(className || '');
-                        return !inline && match ? (
-                          <SyntaxHighlighter
-                            style={vscDarkPlus}
-                            language={match[1]}
-                            PreTag="div"
-                            {...props}
-                          >
+                      p: ({ ...props }) => <p className="tight-paragraph" {...props} />,
+                      li: ({ ...props }) => <li className="tight-list-item" {...props} />,
+                      code: (props: { inline?: boolean; className?: string; children?: React.ReactNode }) => {
+                        const { inline, className, children, ...rest } = props;
+                        const cls = className || '';
+                        const langToken = cls.split(' ').find((c) => c.startsWith('language-'));
+                        const lang = !inline && langToken ? langToken.replace('language-', '') : undefined;
+                        return !inline && lang ? (
+                          <SyntaxHighlighter style={vscDarkPlus as Record<string, React.CSSProperties>} language={lang} PreTag="div" {...rest}>
                             {String(children).replace(/\n$/, '')}
                           </SyntaxHighlighter>
                         ) : (
-                          <code className={className} {...props}>
+                          <code className={className} {...rest}>
                             {children}
                           </code>
                         );
-                      },
-                      p({ children }: any) {
-                        return <p className="tight-paragraph">{children}</p>;
-                      },
-                      li({ children }: any) {
-                        return <li className="tight-list-item">{children}</li>;
                       },
                     }}
                   >
