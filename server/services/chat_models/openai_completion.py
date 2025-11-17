@@ -56,7 +56,7 @@ class CustomOpenAICompletion(BaseChatModel):
         request_params = {
             "model": self.model_name,
             "messages": prompt_translated,
-            "stream": False,
+            "stream": streaming,
         }
         if self.reasoning_effect != "not a reasoning model":
             request_params["reasoning_effort"] = self.reasoning_effect
@@ -157,6 +157,15 @@ class CustomOpenAICompletion(BaseChatModel):
         for event in stream:
             output_log(f"Received event: {event}", "debug")
             choice = event.choices[0]
+            token = choice.delta
+            if getattr(token, "tool_calls", None):
+                tool_call = token.tool_calls[0]
+                if tool_call.id:
+                    tool_calls_id = tool_call.id
+                if tool_call.function.name:
+                    tool_calls_name = tool_call.function.name
+                if tool_call.function.arguments:
+                    tool_calls_args += tool_call.function.arguments
             if choice.finish_reason == "tool_calls":
                 message_chunk = AIMessageChunk(
                     content_blocks=[
@@ -172,18 +181,8 @@ class CustomOpenAICompletion(BaseChatModel):
                 tool_calls_id = ""
                 tool_calls_name = ""
                 tool_calls_args = ""
-            if choice.finish_reason is None:
-                token = choice.delta
-                if getattr(token, "tool_calls", None):
-                    tool_call = token.tool_calls[0]
-                    if tool_call.id:
-                        tool_calls_id = tool_call.id
-                    if tool_call.function.name:
-                        tool_calls_name = tool_call.function.name
-                    if tool_call.function.arguments:
-                        tool_calls_args += tool_call.function.arguments
-                    continue
-                elif getattr(token, "reasoning_content", None):
+            elif choice.finish_reason is None:
+                if getattr(token, "reasoning_content", None):
                     message_chunk = AIMessageChunk(
                         content_blocks=[
                             {
@@ -273,13 +272,36 @@ class CustomOpenAICompletion(BaseChatModel):
     def _prompt_translate(self, prompt: List[BaseMessage]) -> str:
         prompt_text = []
         for message in prompt:
-            if isinstance(message, AIMessage) or isinstance(message, ToolMessage):
-                prompt_text.append(
-                    {
-                        "role": "assistant",
-                        "content": message.content,
-                    }
-                )
+            if isinstance(message, AIMessage):
+                for m in message.content_blocks:
+                    if m["type"] == "tool_call":
+                        prompt_text.append(
+                            {
+                                "role": "assistant",
+                                "tool_calls": [{
+                                    "id": m["id"],
+                                    "type": "function",
+                                    "function": {
+                                        "name": m["name"],
+                                        "arguments": str(m["args"]),
+                                    },
+                                }]
+                            }
+                        )
+                    elif m["type"] == "reasoning":
+                        prompt_text.append(
+                            {
+                                "role": "assistant",
+                                "content": m["reasoning"],
+                            }
+                        )
+                    elif m["type"] == "text":
+                        prompt_text.append(
+                            {
+                                "role": "assistant",
+                                "content": m["text"],
+                            }
+                        )
             elif isinstance(message, SystemMessage):
                 prompt_text.append(
                     {
@@ -314,6 +336,14 @@ class CustomOpenAICompletion(BaseChatModel):
                             "content": message.content,
                         }
                     )
+            elif isinstance(message, ToolMessage):
+                prompt_text.append(
+                    {
+                        "role": "tool",
+                        "content": str(message.content),
+                        "tool_call_id": message.tool_call_id,
+                    }
+                )
         return prompt_text
 
     @property

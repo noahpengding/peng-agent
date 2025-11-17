@@ -249,7 +249,7 @@ class CustomGemini(BaseChatModel):
                                 parts=[
                                     types.Part.from_function_call(
                                         name=m["name"],
-                                        args=str(m["args"]),
+                                        args=ast.literal_eval(json.dumps(m["args"])),
                                     )
                                 ],
                             )

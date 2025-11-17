@@ -134,17 +134,15 @@ class CustomClaude(BaseChatModel):
                     message_chunk = AIMessageChunk(
                         content_blocks=[
                             {
-                                "type": "tool_use",
+                                "type": "tool_call",
                                 "id": tool_calls_id,
                                 "name": tool_calls_name,
-                                "args": ast.literal_eval(json.loads(tool_calls_input)),
+                                "args": json.loads(tool_calls_input),
                             }
                         ]
                     )
                     yield ChatGenerationChunk(message=message_chunk)
-                    tool_calls_id = ""
-                    tool_calls_name = ""
-                    tool_calls_input = ""
+                    break
                 elif event.type == "content_block_delta":
                     if event.delta.type == "input_json_delta":
                         tool_calls_input += event.delta.partial_json
@@ -229,11 +227,46 @@ class CustomClaude(BaseChatModel):
     def _prompt_translate(self, prompt: List[BaseMessage]) -> str:
         prompt_text = []
         for message in prompt:
-            if isinstance(message, AIMessage) or isinstance(message, SystemMessage):
+            if isinstance(message, AIMessage):
+                for m in message.content_blocks:
+                    if m["type"] == "text":
+                        prompt_text.append(
+                            {
+                                "role": "assistant",
+                                "content": [{"type": "text", "text": m["text"]}],
+                            }
+                        )
+                    elif m["type"] == "tool_call":
+                        prompt_text.append(
+                            {
+                                "role": "assistant",
+                                "content": [
+                                    {
+                                        "type": "tool_use",
+                                        "id": m["id"],
+                                        "name": m["name"],
+                                        "input": m["args"],
+                                    }
+                                ],
+                            }
+                        )
+                    elif m["type"] == "reasoning":
+                        prompt_text.append(
+                            {
+                                "role": "assistant",
+                                "content": [
+                                    {
+                                        "type": "thinking",
+                                        "thinking": m["reasoning"],
+                                    }
+                                ],
+                            }
+                        )
+            elif isinstance(message, SystemMessage):
                 prompt_text.append(
                     {
                         "role": "assistant",
-                        "content": message.content,
+                        "content": [{"type": "text", "text": message.content}],
                     }
                 )
             elif isinstance(message, HumanMessage):
@@ -249,10 +282,8 @@ class CustomClaude(BaseChatModel):
                                     "type": "image",
                                     "source": {
                                         "type": "base64",
-                                        "media_type": "image/png",
-                                        "data": m["base64"]
-                                        .decode("utf-8")
-                                        .split(",")[1],
+                                        "media_type": m["mime_type"],
+                                        "data": m["base64"].decode("utf-8").split(",")[1],
                                     },
                                 }
                                 for m in message.content_blocks

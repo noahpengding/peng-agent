@@ -1,5 +1,5 @@
 from models.chat_config import ChatConfig
-from services.peng_agent import save_chat, PengAgent, AgentState
+from services.peng_agent import PengAgent, AgentState
 from utils.log import output_log
 from services.response_formatter import response_formatter_main
 import services.prompt_generator as prompt_generator
@@ -160,14 +160,6 @@ def create_batch_response(
         response_formatter_main(chat_config.operator, response.content)
         for response in full_response
     ]
-    for message, response in zip(messages, reponses):
-        save_chat(
-            user_name,
-            "assistant",
-            chat_config.base_model,
-            message,
-            response,
-        )
     return JSONResponse(
         content=reponses,
         media_type="application/json",

@@ -48,7 +48,9 @@ def add_image_to_prompt(model_name, images, mime_type="image/png"):
         if success:
             with open(temp_path, "rb") as f:
                 messages.append(f.read())
-    if check_multimodal(model_name):
+    if check_multimodal(model_name) and messages:
+        if mime_type == "image/png":
+            mime_type = f"image/{file_name.split('.')[-1]}"
         return HumanMessage(
             content_blocks=[
                 {

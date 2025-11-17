@@ -12,10 +12,6 @@ from langchain_core.messages import (
 from langgraph.graph import StateGraph, END
 from langgraph.graph.message import add_messages
 from langgraph.config import get_stream_writer
-from config.config import config
-from utils.log import output_log
-from utils.mysql_connect import MysqlConnect
-from datetime import datetime, timedelta
 
 
 class AgentState(TypedDict):
@@ -26,63 +22,6 @@ class ToolCall(TypedDict):
     name: str
     args: dict
     id: str
-
-
-def save_chat(
-    user_name,
-    chat_type,
-    base_model,
-    human_input,
-    ai_response,
-):
-    if ai_response is None or ai_response.strip() == "":
-        return
-    mysql = MysqlConnect()
-    try:
-        mysql.create_record(
-            "chat",
-            {
-                "user_name": user_name,
-                "type": chat_type,
-                "base_model": base_model,
-                "human_input": human_input[: config.input_max_length]
-                if len(human_input) > config.input_max_length
-                else human_input,
-                "ai_response": ai_response[: config.output_max_length]
-                if len(ai_response) > config.output_max_length
-                else ai_response,
-                "created_at": datetime.now(),
-                "expire_at": datetime.now() + timedelta(days=7),
-            },
-        )
-    except Exception as e:
-        output_log(f"Error saving chat: {e}", "error")
-    finally:
-        mysql.close()
-
-
-def save_tool_call(
-    call_id: str,
-    tools_name: str,
-    tools_argument: dict,
-    problem: str,
-):
-    mysql = MysqlConnect()
-    try:
-        mysql.create_record(
-            "tool_call",
-            {
-                "call_id": str(call_id),
-                "tools_name": str(tools_name),
-                "tools_argument": str(tools_argument),
-                "problem": str(problem),
-                "created_at": datetime.now(),
-            },
-        )
-    except Exception as e:
-        output_log(f"Error saving tool call: {e}", "error")
-    finally:
-        mysql.close()
 
 
 class PengAgent:
@@ -132,7 +71,7 @@ class PengAgent:
     async def ainvoke(self, state: AgentState) -> Any:
         await self._ensure_tools()
         return await self.graph.ainvoke(
-            state, {"recursion_limit": self.total_tool_calls + 2}
+            state, {"recursion_limit": (self.total_tool_calls + 1) * 2}
         )
 
     def stream(self, state: AgentState) -> Any:
@@ -144,7 +83,7 @@ class PengAgent:
         async for chunk in self.graph.astream(
             state,
             stream_mode="custom",
-            config={"recursion_limit": self.total_tool_calls + 2},
+            config={"recursion_limit": (self.total_tool_calls + 1) * 2},
         ):
             yield chunk
 
@@ -188,6 +127,7 @@ class PengAgent:
 
     async def call_tools(self, state: AgentState):
         writer = get_stream_writer()
+        print(self.total_tool_calls)
         self.total_tool_calls -= 1
         last_message = list(state["messages"])[-1]
         # Not an AI message
@@ -269,11 +209,6 @@ class PengAgent:
             and last_message.content_blocks[0]["type"] == "tool_call"
         ):
             return "call_tools"
-        if (
-            isinstance(last_message, AIMessage)
-            and last_message.content_blocks[0]["type"] != "text"
-        ):
-            return "call_model"
         if not isinstance(last_message, AIMessage):
             return "call_model"
         return END
