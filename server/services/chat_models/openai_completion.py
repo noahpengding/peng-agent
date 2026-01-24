@@ -321,7 +321,7 @@ class CustomOpenAICompletion(BaseChatModel):
                                 {
                                     "type": "image_url",
                                     "image_url": {
-                                        "url": m["base64"].decode("utf-8"),
+                                        "url": f"data:{m['mime_type']};base64,{m['base64'].decode('utf-8')}",
                                         "detail": "auto",
                                     },
                                 }

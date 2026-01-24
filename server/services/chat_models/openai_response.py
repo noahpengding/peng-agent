@@ -276,7 +276,7 @@ class CustomOpenAIResponse(BaseChatModel):
                             "content": [
                                 {
                                     "type": "input_image",
-                                    "image_url": m["base64"].decode("utf-8"),
+                                    "image_url": f"data:{m['mime_type']};base64,{m['base64'].decode('utf-8')}"
                                 }
                                 for m in message.content_blocks
                             ],

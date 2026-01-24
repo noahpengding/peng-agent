@@ -30,7 +30,7 @@ async def flip_model_multimodal(
 ):
     from handlers.model_handlers import flip_multimodal
 
-    return flip_multimodal(request["model_name"])
+    return flip_multimodal(request["model_name"], request["column"])
 
 
 @router.post("/model_reasoning_effect")
@@ -67,4 +67,4 @@ async def options_model_refresh(auth: dict = Depends(authenticate_request)):
 async def avaliable_model(request: dict, auth: dict = Depends(authenticate_request)):
     from handlers.model_handlers import avaliable_models
 
-    return avaliable_models(request["type"])
+    return avaliable_models()

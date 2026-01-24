@@ -14,6 +14,7 @@ class Config(BaseModel):
     s3_access_key: str
     s3_secret_key: str
     s3_base_path: str
+    s3_region: str
     qdrant_host: str
     qdrant_port: int
     default_operator: str
@@ -40,6 +41,10 @@ class Config(BaseModel):
     smtp_use_ssl: bool
     smtp_username: str
     smtp_password: str
+    redis_host: str
+    redis_port: int
+    redis_db: int
+    redis_password: str | None = None
 
 
 try:
@@ -64,6 +69,9 @@ try:
         "s3_secret_key": os.environ.get("S3_SECRET_KEY")
         if os.environ.get("S3_SECRET_KEY")
         else "minioadmin",
+        "s3_region": os.environ.get("S3_REGION")
+        if os.environ.get("S3_REGION")
+        else "us-east-1",
         "s3_base_path": os.environ.get("S3_BASE_PATH")
         if os.environ.get("S3_BASE_PATH")
         else "files",
@@ -145,6 +153,16 @@ try:
         "smtp_password": os.environ.get("SMTP_PASSWORD")
         if os.environ.get("SMTP_PASSWORD")
         else "password",
+        "redis_host": os.environ.get("REDIS_HOST")
+        if os.environ.get("REDIS_HOST")
+        else "localhost",
+        "redis_port": int(os.environ.get("REDIS_PORT"))
+        if os.environ.get("REDIS_PORT")
+        else 6379,
+        "redis_db": int(os.environ.get("REDIS_DB"))
+        if os.environ.get("REDIS_DB")
+        else 0,
+        "redis_password": os.environ.get("REDIS_PASSWORD"),
     }
     for key, value in env_vars.items():
         if value is not None:

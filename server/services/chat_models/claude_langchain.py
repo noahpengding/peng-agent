@@ -283,7 +283,7 @@ class CustomClaude(BaseChatModel):
                                     "source": {
                                         "type": "base64",
                                         "media_type": m["mime_type"],
-                                        "data": m["base64"].decode("utf-8").split(",")[1],
+                                        "data": m["base64"].decode("utf-8"),
                                     },
                                 }
                                 for m in message.content_blocks

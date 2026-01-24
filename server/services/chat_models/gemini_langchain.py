@@ -271,7 +271,7 @@ class CustomGemini(BaseChatModel):
                             role="user",
                             parts=[
                                 types.Part.from_bytes(
-                                    data=m["base64"].decode("utf-8").split(",")[1],
+                                    data=m["base64"].decode("utf-8"),
                                     mime_type="image/png",
                                 )
                                 for m in message.content_blocks

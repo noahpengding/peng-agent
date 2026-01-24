@@ -1,7 +1,9 @@
-from minio import Minio
+import boto3
+from botocore.exceptions import ClientError
 from config.config import config
 from utils.log import output_log
 import os
+from io import BytesIO
 
 
 class MinioStorage:
@@ -9,19 +11,21 @@ class MinioStorage:
         self.entrypoint = config.s3_url
         self.access_key = config.s3_access_key
         self.secret_key = config.s3_secret_key
+        self.region = config.s3_region
         output_log(
-            f"Minio connection to {self.entrypoint} with {self.access_key} and {self.secret_key}",
+            f"S3 connection to {self.entrypoint} with {self.access_key} and {self.secret_key}",
             "debug",
         )
-        self.client = Minio(
-            self.entrypoint,
-            access_key=self.access_key,
-            secret_key=self.secret_key,
-            secure=True,
+        self.client = boto3.client(
+            's3',
+            endpoint_url=self.entrypoint,
+            aws_access_key_id=self.access_key,
+            aws_secret_access_key=self.secret_key,
+            region_name=self.region,
         )
 
     # @file_path: Local file path
-    # @file_name: File name to be saved in Minio
+    # @file_name: File name to be saved in S3
     # @content_type: Content type of the file:
     #   - application/json
     #   - application/pdf
@@ -32,12 +36,16 @@ class MinioStorage:
     ):
         try:
             file_name = file_name.replace("\\", "/").replace("//", "/")
-            self.client.fput_object(
-                bucket_name, file_name, file_path, content_type=content_type
+            self.client.upload_file(
+                file_path, bucket_name, file_name,
+                ExtraArgs={'ContentType': content_type}
             )
             os.remove(file_path)
+        except ClientError as e:
+            output_log(f"Error uploading file to S3: {e}", "error")
+            return False
         except Exception as e:
-            output_log(f"Error uploading file to Minio: {e}", "error")
+            output_log(f"Error uploading file to S3: {e}", "error")
             return False
         return True
 
@@ -45,21 +53,23 @@ class MinioStorage:
         self,
         file_content,
         file_name,
-        file_length,
         content_type,
         bucket_name=config.s3_bucket,
     ):
         try:
             file_name = file_name.replace("\\", "/").replace("//", "/")
+            output_log(f"Uploading file to S3: {file_name} with content type {content_type}", "debug")
             self.client.put_object(
-                bucket_name,
-                file_name,
-                file_content,
-                file_length,
-                content_type=content_type,
+                Bucket=bucket_name,
+                Key=file_name,
+                Body=file_content,
+                ContentType=content_type,
             )
+        except ClientError as e:
+            output_log(f"Error uploading file to S3: {e}", "error")
+            return False
         except Exception as e:
-            output_log(f"Error uploading file to Minio: {e}", "error")
+            output_log(f"Error uploading file to S3: {e}", "error")
             return False
         return True
 
@@ -70,9 +80,12 @@ class MinioStorage:
                 file_name = file_name.split("://")[1]
             file_name = file_name.replace("\\", "/")
             file_name = file_name.replace("//", "/")
-            self.client.fget_object(bucket_name, file_name, download_path)
+            self.client.download_file(bucket_name, file_name, download_path)
+        except ClientError as e:
+            output_log(f"Error downloading file from S3: {e}", "error")
+            return False
         except Exception as e:
-            output_log(f"Error downloading file from Minio: {e}", "error")
+            output_log(f"Error downloading file from S3: {e}", "error")
             return False
         return True
 
@@ -84,29 +97,46 @@ class MinioStorage:
             prefix = prefix.replace("\\", "/")
             prefix = prefix.replace("//", "/")
             output_log(
-                f"Listing files from Minio with prefix {prefix}; Bucket_name: {bucket_name}",
+                f"Listing files from S3 with prefix {prefix}; Bucket_name: {bucket_name}",
                 "debug",
             )
-            objects = self.client.list_objects(
-                bucket_name, prefix=prefix, recursive=True
-            )
-            return [obj.object_name for obj in objects]
+            paginator = self.client.get_paginator('list_objects_v2')
+            pages = paginator.paginate(Bucket=bucket_name, Prefix=prefix)
+            
+            file_list = []
+            for page in pages:
+                if 'Contents' in page:
+                    for obj in page['Contents']:
+                        file_list.append(obj['Key'])
+            return file_list
+        except ClientError as e:
+            output_log(f"Error listing files from S3: {e}", "error")
+            return None
         except Exception as e:
-            output_log(f"Error listing files from Minio: {e}", "error")
+            output_log(f"Error listing files from S3: {e}", "error")
             return None
 
     def file_exists(self, file_name, bucket_name=config.s3_bucket):
         try:
             file_name = file_name.replace("\\", "/")
-            return self.client.stat_object(bucket_name, file_name)
+            self.client.head_object(Bucket=bucket_name, Key=file_name)
+            return True
+        except ClientError as e:
+            if e.response['Error']['Code'] == '404':
+                return False
+            output_log(f"Error checking file from S3: {e}", "error")
+            return False
         except Exception as e:
-            output_log(f"Error checking file from Minio: {e}", "error")
+            output_log(f"Error checking file from S3: {e}", "error")
             return False
 
     def remove_file(self, file_name, bucket_name=config.s3_bucket):
         try:
-            self.client.remove_object(bucket_name, file_name)
+            self.client.delete_object(Bucket=bucket_name, Key=file_name)
+        except ClientError as e:
+            output_log(f"Error removing file from S3: {e}", "error")
+            return False
         except Exception as e:
-            output_log(f"Error removing file from Minio: {e}", "error")
+            output_log(f"Error removing file from S3: {e}", "error")
             return False
         return True

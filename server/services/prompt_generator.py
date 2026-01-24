@@ -4,7 +4,9 @@ from langchain_core.messages import (
     HumanMessage,
 )
 from utils.minio_connection import MinioStorage
-import random
+import base64
+import tempfile
+import os
 
 
 def system_prompt(user_name):
@@ -39,15 +41,14 @@ def add_human_message_to_prompt(message):
 def add_image_to_prompt(model_name, images, mime_type="image/png"):
     messages = []
     m = MinioStorage()
-    for image in images:
-        file_name = image.split("/")[-1]
-        temp_path = (
-            f"/tmp/uploads/temp_{random.randint(1000000000, 9999999999)}_{file_name}"
-        )
-        success = m.file_download(image, temp_path)
-        if success:
-            with open(temp_path, "rb") as f:
-                messages.append(f.read())
+    with tempfile.TemporaryDirectory() as temp_dir:
+        for image in images:
+            file_name = image.split("/")[-1]
+            temp_path = os.path.join(temp_dir, file_name)
+            success = m.file_download(file_name=image, download_path=temp_path)
+            if success:
+                with open(temp_path, "rb") as f:
+                    messages.append(f.read())
     if check_multimodal(model_name) and messages:
         if mime_type == "image/png":
             mime_type = f"image/{file_name.split('.')[-1]}"
@@ -55,7 +56,7 @@ def add_image_to_prompt(model_name, images, mime_type="image/png"):
             content_blocks=[
                 {
                     "type": "image",
-                    "base64": img_data,
+                    "base64": base64.b64encode(img_data),
                     "mime_type": mime_type,
                 }
                 for img_data in messages

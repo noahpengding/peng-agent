@@ -16,12 +16,11 @@ dependencies = [
     "google-genai>=1.30.0",
     "importlib>=1.0.4",
     "langchain[openai]>=1.0.3",
-    "langchain-community>=0.4.1",
     "langchain-core>=1.0.3",
     "langchain-openai>=1.0.2",
     "langchain-qdrant>=1.1.0",
     "langgraph>=0.5.3",
-    "minio>=7.2.15",
+    "boto3>=1.28.0",
     "mysql-connector-python>=9.2.0",
     "numpy>=2.2.3",
     "openai>=1.66.3",
@@ -50,6 +49,7 @@ dependencies = [
     "tavily-python>=0.7.11",
     "paramiko>=4.0.0",
     "langchain-mcp-adapters>=0.1.9",
+    "langchain-community>=0.4.1",
 ]
 requires-python = ">=3.12"
 

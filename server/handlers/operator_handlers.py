@@ -21,11 +21,17 @@ def update_operator() -> None:
     operators = [OperatorConfig(**row.to_dict()) for _, row in operators.iterrows()]
     mysql = MysqlConnect()
 
-    try:
-        mysql.delete_record("operator", None)
-        [mysql.create_record("operator", operator.to_dict()) for operator in operators]
-    finally:
-        mysql.close()
+    for operator in operators:
+        existing = mysql.read_records(
+            "operator", {"operator": operator.operator}
+        )
+        if existing:
+            mysql.update_record(
+                "operator", operator.to_dict(), {"operator": operator.operator}
+            )
+        else:
+            mysql.create_record("operator", operator.to_dict())
+    mysql.close()
 
 
 def get_all_operators() -> list[OperatorConfig]:

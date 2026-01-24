@@ -10,7 +10,6 @@ from models.user_models import UserCreate
 from utils.log import output_log
 from utils.mysql_connect import MysqlConnect
 
-
 def verify_password(plain_password: str, hashed_password: str) -> bool:
     try:
         plain_bytes = plain_password.encode("utf-8")
@@ -32,14 +31,15 @@ def get_password_hash(password: str) -> str:
 
 def authenticate_user(username: str, password: str) -> Optional[Dict]:
     try:
-        db = MysqlConnect()
-        user_records = db.read_record_v2("user", {"user_name=": username})
-
+        mysql = MysqlConnect()
+        user_records = mysql.read_records("user", {"user_name": username})
         if not user_records or len(user_records) == 0:
             output_log(f"User not found: {username}", "warning")
             return None
-
         user = user_records[0]
+        if not user:
+            output_log(f"User not found: {username}", "warning")
+            return None
         if verify_password(password, user["password"]):
             return user
         output_log(f"Invalid password for user: {username}", "warning")
@@ -48,28 +48,33 @@ def authenticate_user(username: str, password: str) -> Optional[Dict]:
         output_log(f"Authentication error: {str(e)}", "error")
         return None
     finally:
-        db.close()
+        mysql.close()
 
 
 def create_user(user_data: UserCreate) -> Optional[Dict]:
     try:
-        db = MysqlConnect()
-        user_records = db.read_record_v2("user", {"user_name=": user_data.username})
+        mysql = MysqlConnect()
+        user_records = mysql.read_records("user", {"user_name": user_data.username})
+        if user_records and len(user_records) > 0:
+            output_log(f"User already exists: {user_data.username}", "warning")
+            raise HTTPException(status_code=400, detail="User already exists")
         if user_records and len(user_records) > 0:
             output_log(f"User already exists: {user_data.username}", "warning")
             raise HTTPException(status_code=400, detail="User already exists")
         hashed_password = get_password_hash(user_data.password)
         api_token = create_access_token({"sub": user_data.username}, None)
-        db.create_record(
+        mysql.create_record(
             "user",
             {
                 "user_name": user_data.username,
                 "password": hashed_password,
                 "email": user_data.email,
                 "api_token": api_token,
-                "default_based_model": user_data.default_based_model,
+                "default_base_model": user_data.default_based_model,
+                "default_output_model": user_data.default_based_model,
                 "default_embedding_model": user_data.default_embedding_model,
             },
+            redis_id="user_name",
         )
         return {
             "user_name": user_data.username,
@@ -80,8 +85,6 @@ def create_user(user_data: UserCreate) -> Optional[Dict]:
     except Exception as e:
         output_log(f"User creation error: {str(e)}", "error")
         return None
-    finally:
-        db.close()
 
 
 def create_access_token(data: dict, expiration_days: int) -> str:
