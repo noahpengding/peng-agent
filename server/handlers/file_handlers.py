@@ -50,7 +50,10 @@ def file_upload_frontend(file_content: str, content_type: str):
         if "base64," in file_content:
             file_content = re.sub(r"^data:image/.+;base64,", "", file_content)
             padded_content = file_content + ("=" * (-len(file_content) % 4))
-            return file_uploader(base64.b64decode(padded_content), content_type, upload_path)
+        else:
+            # If no data-URL prefix, assume it's already base64
+            padded_content = file_content + ("=" * (-len(file_content) % 4))
+        return file_uploader(base64.b64decode(padded_content), content_type, upload_path)
     elif content_type == "application/pdf":
         return ["PDF upload not supported", False]
     else:

@@ -12,7 +12,7 @@ class MinioStorage:
         self.secret_key = config.s3_secret_key
         self.region = config.s3_region
         output_log(
-            f"S3 connection to {self.entrypoint} with {self.access_key} and {self.secret_key}",
+            f"S3 connection to {self.entrypoint}",
             "debug",
         )
         self.client = boto3.client(

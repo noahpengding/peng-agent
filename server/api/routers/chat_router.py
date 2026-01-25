@@ -15,6 +15,9 @@ async def options_chat():
 @router.post("/chat")
 async def chat(request: ChatRequest, auth: dict = Depends(authenticate_request)):
     output_log(request, "DEBUG")
+    # Ensure message is a string for single chat
+    if isinstance(request.message, list):
+        raise HTTPException(status_code=400, detail="Single chat endpoint expects a string message, not a list")
     if request.message.strip() == "":
         raise HTTPException(status_code=400, detail="Empty message")
     from handlers.chat_handlers import create_streaming_response
@@ -29,6 +32,9 @@ async def chat_completions(
     request: ChatRequest, auth: dict = Depends(authenticate_request)
 ):
     output_log(request, "DEBUG")
+    # Ensure message is a string for single chat
+    if isinstance(request.message, list):
+        raise HTTPException(status_code=400, detail="Chat completions endpoint expects a string message, not a list")
     if request.message.strip() == "":
         raise HTTPException(status_code=400, detail="Empty message")
     from handlers.chat_handlers import chat_completions_handler
@@ -47,10 +53,16 @@ async def options_chat_batch():
 @router.post("/chat_batch")
 async def chat_batch(request: ChatRequest, auth: dict = Depends(authenticate_request)):
     output_log(request, "DEBUG")
-    if not request.message or all(msg.strip() == "" for msg in request.message):
+    # Normalize message to a list of strings
+    if isinstance(request.message, str):
+        messages_list = [request.message]
+    else:
+        messages_list = request.message or []
+    
+    if not messages_list or all(msg.strip() == "" for msg in messages_list):
         raise HTTPException(status_code=400, detail="Empty messages")
     from handlers.chat_handlers import create_batch_response
 
     return create_batch_response(
-        request.user_name, request.message, request.image, request.config
+        request.user_name, messages_list, request.image, request.config
     )

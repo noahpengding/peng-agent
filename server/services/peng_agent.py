@@ -65,7 +65,10 @@ class PengAgent:
         self._tools_ready = True
 
     def invoke(self, state: AgentState) -> Any:
-        self._ensure_tools()
+        # Sync entrypoint cannot await async _ensure_tools
+        # For sync usage, tools must be initialized beforehand or use ainvoke instead
+        if not self._tools_ready:
+            raise RuntimeError("Tools not initialized. Use ainvoke() for async tool initialization.")
         return self.graph.invoke(state)
 
     async def ainvoke(self, state: AgentState) -> Any:
@@ -75,7 +78,10 @@ class PengAgent:
         )
 
     def stream(self, state: AgentState) -> Any:
-        self._ensure_tools()
+        # Sync entrypoint cannot await async _ensure_tools
+        # For sync usage, tools must be initialized beforehand or use astream instead
+        if not self._tools_ready:
+            raise RuntimeError("Tools not initialized. Use astream() for async tool initialization.")
         return self.graph.stream(state, stream_mode="custom")
 
     async def astream(self, state: AgentState) -> Any:
@@ -127,7 +133,6 @@ class PengAgent:
 
     async def call_tools(self, state: AgentState):
         writer = get_stream_writer()
-        print(self.total_tool_calls)
         self.total_tool_calls -= 1
         last_message = list(state["messages"])[-1]
         # Not an AI message

@@ -39,6 +39,14 @@ def add_human_message_to_prompt(message):
 
 
 def add_image_to_prompt(model_name, images, mime_type="image/png"):
+    # Normalize images to a list
+    if isinstance(images, str):
+        if not images:
+            return None
+        images = [images]
+    elif not images:
+        return None
+    
     messages = []
     m = MinioStorage()
     with tempfile.TemporaryDirectory() as temp_dir:
@@ -48,18 +56,23 @@ def add_image_to_prompt(model_name, images, mime_type="image/png"):
             success = m.file_download(file_name=image, download_path=temp_path)
             if success:
                 with open(temp_path, "rb") as f:
-                    messages.append(f.read())
+                    img_data = f.read()
+                    # Compute per-image mime_type from file extension
+                    file_ext = file_name.split('.')[-1]
+                    img_mime_type = f"image/{file_ext}" if file_ext else mime_type
+                    messages.append({
+                        "data": img_data,
+                        "mime_type": img_mime_type
+                    })
     if check_multimodal(model_name) and messages:
-        if mime_type == "image/png":
-            mime_type = f"image/{file_name.split('.')[-1]}"
         return HumanMessage(
             content_blocks=[
                 {
                     "type": "image",
-                    "base64": base64.b64encode(img_data),
-                    "mime_type": mime_type,
+                    "base64": base64.b64encode(msg["data"]),
+                    "mime_type": msg["mime_type"],
                 }
-                for img_data in messages
+                for msg in messages
             ]
         )
     return None

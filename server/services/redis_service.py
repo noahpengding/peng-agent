@@ -54,19 +54,21 @@ def get_table_record(
         cached = redis_cache.get_record(table, record_id)
         if cached:
             return cached
-    records = mysql_client.read_records(table, {"id": record_id})
+    # Use the correct field name for lookup based on TABLES_ID
+    lookup_field = TABLES_ID[table]
+    records = mysql_client.read_records(table, {lookup_field: record_id})
     if not records:
         return None
-    redis_cache.save_record(table, records[0])
+    redis_cache.save_record(table, records[0], id=lookup_field)
     return records[0]
 
 
 def create_table_record(table: str, record: Dict[str, Any], redis_id: Optional[str] = "id") -> Dict[str, Any]:
     """Create a new record in both MySQL and Redis."""
     _validate_table(table)
-    mysql_client.create_record(table, record)
-    redis_cache.save_record(table, record, id=redis_id)
-    return record
+    created_record = mysql_client.create_record(table, record)
+    redis_cache.save_record(table, created_record, id=redis_id)
+    return created_record
 
 def update_table_record(table: str, record: Dict[str, Any], conditions: Dict[str, Any], redis_id: Optional[str] = "id") -> int:
     """Update records in both MySQL and Redis."""
