@@ -1,6 +1,6 @@
 [project]
 name = "Peng-Agent"
-version = "2.4.0"
+version = "2.3.0"
 description = "A LLM ongoing chat agent for learning"
 authors = [
     { name = "Noah Ding", email = "noah@dingyipeng.com" },

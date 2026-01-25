@@ -7,7 +7,7 @@ env:
   REGISTRY: ghcr.io
   SERVER_IMAGE: ghcr.io/${{ github.repository }}/server
   WEB_IMAGE: ghcr.io/${{ github.repository }}/front
-  VERSION: v2.4.0
+  VERSION: v2.3.0
 
 
 jobs:

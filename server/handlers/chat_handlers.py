@@ -249,7 +249,7 @@ def create_batch_response(
         )
     prompts = []
     for message in messages:
-        prompt, params = _generate_prompt_params(message, image, chat_config)
+        prompt, params = _generate_prompt_params(user_name, message, image, chat_config), {}
         prompts.append(prompt.invoke(params))
     full_response = base_model_ins.batch(prompts)
     reponses = [
