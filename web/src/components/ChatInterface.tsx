@@ -257,7 +257,7 @@ const ChatbotUI = () => {
             const toolMessage: Message = {
               role: 'assistant',
               content: chunk,
-              type: 'tool_calls',
+              type: type,
               folded: false,
               messageId,
             };

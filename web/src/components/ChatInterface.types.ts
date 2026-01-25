@@ -3,7 +3,7 @@ export interface Message {
   content: string;
   images?: string[]; // Changed from image to images array for multiple image support
   // type distinguishes different message types: tool_calls, reasoning_summary, output_text
-  type?: 'tool_calls' | 'reasoning_summary' | 'output_text' | 'user' | 'assistant';
+  type?: 'tool_calls' | 'tool_output' | 'reasoning_summary' | 'output_text' | 'user' | 'assistant';
   // folded indicates messages should be initially collapsed
   folded?: boolean;
   // messageId to track related messages

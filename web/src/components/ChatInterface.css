@@ -399,6 +399,31 @@
   cursor: pointer;
   color: #9ca3af;
   padding: 0.5rem;
+  background: transparent;
+  border: none;
+  width: 100%;
+  text-align: left;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.tool-summary:focus-visible {
+  outline: 2px solid rgba(255, 255, 255, 0.35);
+  outline-offset: 2px;
+  border-radius: 6px;
+}
+
+.fold-arrow {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-right: 0;
+  background: transparent;
+}
+
+.folded-clickable {
+  cursor: pointer;
 }
 .tool-text {
   white-space: pre-wrap;

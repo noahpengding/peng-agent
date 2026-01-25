@@ -27,5 +27,7 @@ def phoenix_setup():
     register(
         project_name=config.phoenix_project,
         endpoint=config.phoenix_endpoint,
+        batch=True,
+        set_global_tracer_provider=False,
         auto_instrument=True,
     )

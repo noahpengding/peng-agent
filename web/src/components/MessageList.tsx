@@ -16,10 +16,10 @@ interface MessageListProps {
 export const MessageList: React.FC<MessageListProps> = ({ messages, isLoading }) => {
   const [foldedMessages, setFoldedMessages] = useState<Record<string, boolean>>({});
 
-  const toggleFolded = (index: number) => {
+  const toggleFolded = (index: number, currentState: boolean) => {
     setFoldedMessages((prev) => ({
       ...prev,
-      [index]: !prev[index],
+      [index]: !currentState,
     }));
   };
 
@@ -34,7 +34,7 @@ export const MessageList: React.FC<MessageListProps> = ({ messages, isLoading })
   return (
     <div className="messages-list">
       {messages.map((message, index) => {
-        const isFolded = message.folded || foldedMessages[index];
+        const isFolded = foldedMessages[index] ?? message.folded ?? false;
         const messageClass =
           message.role === 'user'
             ? 'user-message'
@@ -44,14 +44,41 @@ export const MessageList: React.FC<MessageListProps> = ({ messages, isLoading })
                 ? 'reasoning-message'
                 : 'assistant-message';
 
+        const isFoldable = message.type === 'tool_calls' || message.type === 'reasoning_summary';
+
         return (
-          <div key={index} className={`message ${messageClass}`}>
+          <div
+            key={index}
+            className={`message ${messageClass} ${isFoldable && isFolded ? 'folded-clickable' : ''}`}
+            onClick={() => {
+              if (isFoldable && isFolded) {
+                toggleFolded(index, isFolded);
+              }
+            }}
+          >
             {/* For foldable messages (tool_calls, reasoning_summary), show a toggle */}
-            {(message.type === 'tool_calls' || message.type === 'reasoning_summary') && (
-              <div className="tool-summary" onClick={() => toggleFolded(index)} style={{ cursor: 'pointer', userSelect: 'none' }}>
-                <span style={{ marginRight: '8px' }}>{isFolded ? '▶' : '▼'}</span>
-                <strong>{message.type === 'tool_calls' ? 'Tool Execution' : 'Reasoning Process'}</strong>
-              </div>
+            {isFoldable && (
+              <button
+                type="button"
+                className="tool-summary"
+                onClick={(event) => {
+                  event.stopPropagation();
+                  toggleFolded(index, isFolded);
+                }}
+              >
+                <span className="fold-arrow" aria-hidden="true">
+                  {isFolded ? '' : '▼'}
+                </span>
+                <strong>{
+                  message.type === 'tool_calls'
+                    ? 'Tool Call'
+                    : message.type === 'tool_output'
+                      ? 'Tool Output'
+                      : message.type === 'reasoning_summary'
+                        ? 'Reasoning Summary'
+                        : 'Message'
+                }</strong>
+              </button>
             )}
 
             {/* Show content unless folded */}

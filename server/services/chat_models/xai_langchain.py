@@ -49,6 +49,7 @@ class CustomXAIResponse(BaseChatModel):
         output_log(f"Translated prompt: {prompt_translated}", "debug")
         request_params = {
             "model": self.model_name,
+            "messages": prompt_translated,
         }
         if self.reasoning_effect != "not a reasoning model" and self.reasoning_effect != "medium":
             request_params["reasoning_effort"] = self.reasoning_effect
@@ -62,7 +63,7 @@ class CustomXAIResponse(BaseChatModel):
                     parameters=tool_sample.get("function", {}).get("parameters", {}),
                 ))
 
-        return request_params, prompt_translated
+        return request_params
 
     def _generate(
         self,
@@ -71,33 +72,30 @@ class CustomXAIResponse(BaseChatModel):
         run_manager: Optional[CallbackManagerForLLMRun] = None,
         **kwargs: Any,
     ) -> ChatResult:
-        request_params, prompt_translated = self._xai_prepare(prompt, **kwargs)
+        request_params = self._xai_prepare(prompt, **kwargs)
         chat = self.client.chat.create(**request_params)
-        chat.append(prompt_translated)
         responses = chat.sample()
         generate_message = None
-        for response in responses.output:
-            if response.type == "message":
-                message_content = response.content[0].text
-                generate_message = AIMessage(
-                    content_blocks=[
-                        {
-                            "type": "text",
-                            "text": message_content,
-                        }
-                    ]
-                )
-            elif response.type == "function_call":
-                generate_message = AIMessage(
-                    content_blocks=[
-                        {
-                            "type": "tool_call",
-                            "name": response.name,
-                            "args": ast.literal_eval(response.arguments),
-                            "id": response.call_id,
-                        }
-                    ]
-                )
+        if get_tool_call_type(responses) == "client_side_tool":
+            generate_message = AIMessage(
+                content_blocks=[
+                    {
+                        "type": "tool_call",
+                        "name": responses.function.name,
+                        "args": ast.literal_eval(responses.function.arguments),
+                        "id": responses.id,
+                    }
+                ]
+            )
+        else:
+            generate_message = AIMessage(
+                content_blocks=[
+                    {
+                        "type": "text",
+                        "text": responses.content,
+                    }
+                ]
+            )
         generation = ChatGeneration(message=generate_message)
         return ChatResult(generations=[generation])
 
@@ -108,9 +106,8 @@ class CustomXAIResponse(BaseChatModel):
         run_manager: Optional[CallbackManagerForLLMRun] = None,
         **kwargs: Any,
     ) -> Iterator[ChatGenerationChunk]:
-        request_params, prompt_translated = self._xai_prepare(prompt, **kwargs)
+        request_params = self._xai_prepare(prompt, **kwargs)
         chat = self.client.chat.create(**request_params)
-        chat.append(prompt_translated)
         for _, chunk in chat.stream():
             for tool_call in chunk.tool_calls:
                 if get_tool_call_type(tool_call) == "client_side_tool":
