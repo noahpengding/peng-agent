@@ -20,7 +20,7 @@ from xai_sdk.tools import get_tool_call_type
 from utils.log import output_log
 
 from collections.abc import Sequence
-from typing import Any, Callable, Dict, Literal, Optional, Union, List, Iterator
+from typing import Any, Callable, Dict, Optional, Union, List, Iterator
 from langchain_core.tools import BaseTool
 from langchain_core.runnables import Runnable
 from langchain_core.language_models import LanguageModelInput

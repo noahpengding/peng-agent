@@ -29,7 +29,6 @@ from langchain_core.language_models import LanguageModelInput
 import ast
 import json
 import uuid
-import base64
 
 
 class CustomGemini(BaseChatModel):

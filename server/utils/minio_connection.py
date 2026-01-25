@@ -3,7 +3,6 @@ from botocore.exceptions import ClientError
 from config.config import config
 from utils.log import output_log
 import os
-from io import BytesIO
 
 
 class MinioStorage:

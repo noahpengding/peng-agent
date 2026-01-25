@@ -1,6 +1,5 @@
-from typing import Dict, List, Optional, Any, Type
-from sqlalchemy import and_, or_, not_
-from sqlalchemy.orm import Session
+from typing import List, Optional, Type
+from sqlalchemy import and_
 from sqlalchemy.exc import SQLAlchemyError
 from contextlib import contextmanager
 
@@ -18,7 +17,6 @@ from models.db_models import (
     Model,
     Tools,
     get_session_maker,
-    create_db_engine,
 )
 from utils.log import output_log
 
