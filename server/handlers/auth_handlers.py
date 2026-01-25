@@ -60,7 +60,7 @@ def create_user(user_data: UserCreate) -> Optional[Dict]:
             raise HTTPException(status_code=400, detail="User already exists")
         hashed_password = get_password_hash(user_data.password)
         api_token = create_access_token({"sub": user_data.username}, None)
-        user_record = mysql.create_record(
+        mysql.create_record(
             "user",
             {
                 "user_name": user_data.username,
