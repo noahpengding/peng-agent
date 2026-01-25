@@ -8,7 +8,14 @@ export interface Model {
   type: string;
   model_name: string;
   isAvailable: boolean;
-  isMultimodal: boolean;
+  input_text: boolean;
+  output_text: boolean;
+  input_image: boolean;
+  output_image: boolean;
+  input_audio: boolean;
+  output_audio: boolean;
+  input_video: boolean;
+  output_video: boolean;
   reasoning_effect: string;
 }
 
@@ -48,12 +55,12 @@ export const useModelApi = () => {
     }
   };
 
-  const toggleModelMultimodal = async (modelName: string): Promise<string> => {
+  const toggleModelMultimodal = async (modelName: string, column: string): Promise<string> => {
     setIsLoading(true);
     setError(null);
 
     try {
-      const message = await ModelService.toggleModelMultimodal(modelName);
+      const message = await ModelService.toggleModelMultimodal(modelName, column);
       return message;
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Unknown error occurred';

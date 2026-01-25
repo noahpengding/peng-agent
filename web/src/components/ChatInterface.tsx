@@ -247,7 +247,7 @@ const ChatbotUI = () => {
             return;
           }
 
-          if (type === 'tool_calls') {
+          if (type === 'tool_calls' || type === 'tool_output') {
             // Add individual tool message chunk as a separate message
             const toolMessage: Message = {
               role: 'assistant',
@@ -317,6 +317,47 @@ const ChatbotUI = () => {
         },
         // On complete
         () => {
+          // Fold tool_calls and reasoning_summary messages, keep output_text unfolded
+          setMessages((current) =>
+            current.map((m) => {
+              if (m.messageId === messageId) {
+                if (m.type === 'tool_calls' || m.type === 'reasoning_summary') {
+                  return { ...m, folded: true };
+                } else if (m.type === 'output_text') {
+                  // Clean up double newlines in output text
+                  return { ...m, content: m.content.replace(/\n\n+/g, '\n') };
+                }
+              }
+              return m;
+            })
+          );
+
+          // Add each type of content as separate entries to short-term memory
+          setShortTermMemory((prev) => {
+            const newMemories = [...prev];
+
+            // Add the human input first
+            newMemories.push('human: ' + input);
+
+            // Add tool calls if any
+            if (allToolCallsContent.length > 0) {
+              const toolCallsText = allToolCallsContent.join('\n');
+              newMemories.push('assistant: Tool Calls: ' + toolCallsText);
+            }
+
+            // Add reasoning if any
+            if (lastReasoningContent.trim()) {
+              newMemories.push('assistant: Reasoning: ' + lastReasoningContent.trim());
+            }
+
+            // Add output text if any
+            if (outputContent.trim()) {
+              newMemories.push('assistant: Response: ' + outputContent.trim());
+            }
+
+            return newMemories;
+          });
+
           setIsLoading(false);
         }
       );

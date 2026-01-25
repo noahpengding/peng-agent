@@ -14,8 +14,6 @@ const ModelInterface: React.FC = () => {
   // Filter states
   const [operators, setOperators] = useState<string[]>([]);
   const [selectedOperator, setSelectedOperator] = useState<string>('');
-  const [types, setTypes] = useState<string[]>([]);
-  const [selectedType, setSelectedType] = useState<string>('');
   const [availabilityFilter, setAvailabilityFilter] = useState<string>('all');
 
   const [error, setError] = useState<string>('');
@@ -30,16 +28,14 @@ const ModelInterface: React.FC = () => {
   useEffect(() => {
     applyFilters();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [models, selectedOperator, selectedType, availabilityFilter, searchTerm]);
+  }, [models, selectedOperator, availabilityFilter, searchTerm]);
 
   // Extract unique operators and types for filters
   useEffect(() => {
     if (models.length > 0) {
       const uniqueOperators = Array.from(new Set(models.map((model) => model.operator)));
-      const uniqueTypes = Array.from(new Set(models.map((model) => model.type)));
 
       setOperators(uniqueOperators);
-      setTypes(uniqueTypes);
     }
   }, [models]);
 
@@ -71,16 +67,82 @@ const ModelInterface: React.FC = () => {
     }
   };
 
-  const handleModelMultimodal = async (modelName: string) => {
+  const handleModelMultimodal = async (modelName: string, column: keyof Model) => {
     try {
-      await toggleModelMultimodal(modelName);
-      // Update the local state to reflect the change
+      await toggleModelMultimodal(modelName, column as string);
       setModels((prevModels) =>
-        prevModels.map((model) => (model.model_name === modelName ? { ...model, isMultimodal: !model.isMultimodal } : model))
+        prevModels.map((model) =>
+          model.model_name === modelName
+            ? {
+                ...model,
+                [column]: !model[column],
+              }
+            : model
+        )
       );
     } catch (error) {
       setError(`Failed to toggle multimodal for model ${modelName}: ${error}`);
     }
+  };
+
+  const renderModalityButtons = (model: Model, column: 'input' | 'output') => {
+    const items = [
+      { key: `${column}_text` as keyof Model, label: 'Text', icon: 'text' },
+      { key: `${column}_image` as keyof Model, label: 'Image', icon: 'image' },
+      { key: `${column}_audio` as keyof Model, label: 'Audio', icon: 'audio' },
+      { key: `${column}_video` as keyof Model, label: 'Video', icon: 'video' },
+    ];
+
+    const renderIcon = (icon: 'text' | 'image' | 'audio' | 'video') => {
+      switch (icon) {
+        case 'text':
+          return (
+            <svg viewBox="0 0 24 24" aria-hidden="true" className="modality-icon">
+              <path d="M4 6h16M4 12h10M4 18h14" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+            </svg>
+          );
+        case 'image':
+          return (
+            <svg viewBox="0 0 24 24" aria-hidden="true" className="modality-icon">
+              <rect x="3" y="5" width="18" height="14" rx="2" stroke="currentColor" strokeWidth="2" fill="none" />
+              <circle cx="9" cy="10" r="2" fill="currentColor" />
+              <path d="M7 17l4-4 3 3 3-3 4 4" stroke="currentColor" strokeWidth="2" fill="none" />
+            </svg>
+          );
+        case 'audio':
+          return (
+            <svg viewBox="0 0 24 24" aria-hidden="true" className="modality-icon">
+              <path d="M4 9h4l5-4v14l-5-4H4z" fill="currentColor" />
+              <path d="M16 9a4 4 0 010 6M18.5 6.5a7 7 0 010 11" stroke="currentColor" strokeWidth="2" strokeLinecap="round" fill="none" />
+            </svg>
+          );
+        case 'video':
+          return (
+            <svg viewBox="0 0 24 24" aria-hidden="true" className="modality-icon">
+              <rect x="3" y="6" width="12" height="12" rx="2" stroke="currentColor" strokeWidth="2" fill="none" />
+              <path d="M15 10l6-4v12l-6-4" fill="currentColor" />
+            </svg>
+          );
+      }
+    };
+
+    return (
+      <div className="modality-grid">
+        {items.map((item) => (
+          <button
+            key={item.key}
+            className={`modality-button ${model[item.key] ? 'active' : 'inactive'}`}
+            onClick={() => handleModelMultimodal(model.model_name, item.key)}
+            type="button"
+            aria-pressed={Boolean(model[item.key])}
+            aria-label={`${column} ${item.label}`}
+            title={`${column} ${item.label}`}
+          >
+            {renderIcon(item.icon as 'text' | 'image' | 'audio' | 'video')}
+          </button>
+        ))}
+      </div>
+    );
   };
 
   const handleModelReasoningEffect = async (modelName: string, reasoningEffect: string) => {
@@ -105,11 +167,6 @@ const ModelInterface: React.FC = () => {
     // Apply operator filter
     if (selectedOperator) {
       result = result.filter((model) => model.operator === selectedOperator);
-    }
-
-    // Apply type filter
-    if (selectedType) {
-      result = result.filter((model) => model.type === selectedType);
     }
 
     // Apply availability filter
@@ -143,19 +200,6 @@ const ModelInterface: React.FC = () => {
                 {operators.map((operator) => (
                   <option key={operator} value={operator}>
                     {operator}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            {/* Type Filter */}
-            <div className="filter-group">
-              <div className="filter-title">Type</div>
-              <select className="form-select" value={selectedType} onChange={(e) => setSelectedType(e.target.value)}>
-                <option value="">All Types</option>
-                {types.map((type) => (
-                  <option key={type} value={type}>
-                    {type}
                   </option>
                 ))}
               </select>
@@ -200,10 +244,10 @@ const ModelInterface: React.FC = () => {
                   <thead>
                     <tr>
                       <th>Operator</th>
-                      <th>Type</th>
                       <th>Model Name</th>
                       <th>Available</th>
-                      <th>Multimodal</th>
+                      <th>Input</th>
+                      <th>Output</th>
                       <th>Reasoning Effect</th>
                     </tr>
                   </thead>
@@ -211,7 +255,6 @@ const ModelInterface: React.FC = () => {
                     {filteredModels.map((model) => (
                       <tr key={model.id}>
                         <td>{model.operator}</td>
-                        <td>{model.type}</td>
                         <td>{model.model_name}</td>
                         <td>
                           <input
@@ -221,14 +264,8 @@ const ModelInterface: React.FC = () => {
                             onChange={() => handleAvailabilityToggle(model.model_name)}
                           />
                         </td>
-                        <td>
-                          <input
-                            type="checkbox"
-                            className="multimodal-checkbox"
-                            checked={model.isMultimodal}
-                            onChange={() => handleModelMultimodal(model.model_name)}
-                          />
-                        </td>
+                        <td className="modality-cell">{renderModalityButtons(model, 'input')}</td>
+                        <td className="modality-cell">{renderModalityButtons(model, 'output')}</td>
                         <td>
                           <select
                             className="reasoning-effect-select"
