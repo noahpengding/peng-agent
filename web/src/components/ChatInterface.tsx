@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, memo } from 'react';
 import { useChatApi } from '../hooks/ChatAPI';
 import { Memory } from '../hooks/MemoryAPI';
 import { Tool, useToolApi } from '../hooks/ToolAPI';
@@ -109,8 +109,13 @@ const ChatbotUI = () => {
           const memoryStr = `Memory: ${memory.human_input} - ${memory.ai_response}`;
           formattedMemories.push(memoryStr);
           memoryMessages.push({
+            role: 'user',
+            content: memory.human_input,
+            type: 'user',
+          });
+          memoryMessages.push({
             role: 'assistant',
-            content: memoryStr,
+            content: memory.ai_response,
             type: 'assistant',
           });
         });

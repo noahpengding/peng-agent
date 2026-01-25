@@ -8,6 +8,7 @@ export interface Memory {
   type: string;
   base_model: string;
   human_input: string;
+  other_input: string;
   ai_response: string;
   timestamp?: string;
 }

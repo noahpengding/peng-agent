@@ -29,6 +29,7 @@ from langchain_core.language_models import LanguageModelInput
 import ast
 import json
 import uuid
+import base64
 
 
 class CustomGemini(BaseChatModel):
@@ -55,6 +56,10 @@ class CustomGemini(BaseChatModel):
             "max_output_tokens": self.max_tokens,
             "temperature": self.temperature,
         }
+        if self.reasoning_effect != "not a reasoning model":
+            request_params["config"] = types.GenerateContentConfig(
+                thinking_config=types.ThinkingConfig(thinking_level=self.reasoning_effect)
+            )
         tools = kwargs.get("tools")
         if tools:
             request_params["tools"] = []
@@ -141,9 +146,13 @@ class CustomGemini(BaseChatModel):
                                 "name": fc.name,
                                 "args": ast.literal_eval(json.dumps(fc.args)),
                                 "id": fc.id,
+                                "extras": {
+                                    "thought_signature": part.thought_signature
+                                }
                             }
                         ]
                     )
+                    print(message_chunk)
                     yield ChatGenerationChunk(message=message_chunk)
                 elif getattr(part, "thought", None):
                     message_chunk = AIMessageChunk(
@@ -151,7 +160,9 @@ class CustomGemini(BaseChatModel):
                             {
                                 "type": "reasoning",
                                 "reasoning": part.thought,
-                                "extras": {},
+                                "extras": {
+                                    "thought_signature": part.thought_signature
+                                },
                             }
                         ]
                     )
@@ -247,9 +258,12 @@ class CustomGemini(BaseChatModel):
                             types.Content(
                                 role="model",
                                 parts=[
-                                    types.Part.from_function_call(
-                                        name=m["name"],
-                                        args=ast.literal_eval(json.dumps(m["args"])),
+                                    types.Part(
+                                        function_call=types.FunctionCall(
+                                            name=m["name"],
+                                            args=ast.literal_eval(json.dumps(m["args"])),
+                                        ),
+                                        thought_signature=m["extras"]["thought_signature"],
                                     )
                                 ],
                             )
@@ -258,7 +272,12 @@ class CustomGemini(BaseChatModel):
                         prompt_text.append(
                             types.Content(
                                 role="model",
-                                parts=[types.Part.from_thought(text=m["reasoning"])],
+                                parts=[
+                                    types.Part(
+                                        thought=m["reasoning"],
+                                        thought_signature=m["extras"]["thought_signature"],
+                                    )
+                                ],
                             )
                         )
             elif isinstance(message, HumanMessage):

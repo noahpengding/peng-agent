@@ -135,7 +135,6 @@ async def chat_handler(
                         + "\n"
                     )
                     full_response += chunk_content
-
     except Exception as e:
         output_log(f"Error during streaming: {e}", "error")
         yield (
@@ -144,7 +143,14 @@ async def chat_handler(
             )
             + "\n"
         )
-    yield json.dumps({"chunk": "", "done": True}) + "\n"
+    finally:
+        if pre_chunk_type in ["output_text", "reasoning_summary"] and full_response != "":
+            save_chat_response(
+                chat_id,
+                pre_chunk_type,
+                full_response,
+            )
+        yield json.dumps({"chunk": "", "done": True}) + "\n"
 
 def save_chat_response(chat_id: int, message_type: str, content: str, **kwargs):
     mysql = MysqlConnect()
