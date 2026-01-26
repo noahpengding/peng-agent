@@ -1,6 +1,6 @@
 [project]
 name = "Peng-Agent"
-version = "2.3.0"
+version = "2.3.1"
 description = "A LLM ongoing chat agent for learning"
 authors = [
     { name = "Noah Ding", email = "noah@dingyipeng.com" },
@@ -16,7 +16,7 @@ dependencies = [
     "google-genai>=1.30.0",
     "importlib>=1.0.4",
     "langchain[openai]>=1.0.3",
-    "langchain-core>=1.0.3",
+    "langchain-core>=1.2.5",
     "langchain-openai>=1.0.2",
     "langchain-qdrant>=1.1.0",
     "langgraph>=0.5.3",
@@ -31,7 +31,7 @@ dependencies = [
     "pydantic>=2.10.6",
     "pyjwt>=2.10.1",
     "pymupdf>=1.25.5",
-    "pypdf>=5.3.1",
+    "pypdf>=6.6.0",
     "python-dotenv>=1.0.1",
     "python-multipart>=0.0.20",
     "qdrant-client>=1.13.3",
@@ -45,13 +45,21 @@ dependencies = [
     "openinference-instrumentation-langchain>=0.1.49",
     "sqlalchemy>=2.0.39",
     "pymysql>=1.1.1",
-    "crawl4ai>=0.7.4",
+    "crawl4ai>=0.8.0",
     "tavily-python>=0.7.11",
     "paramiko>=4.0.0",
     "langchain-mcp-adapters>=0.1.9",
     "langchain-community>=0.4.1",
     "xai-sdk>=1.5.0",
     "openrouter>=0.1.3",
+    "urllib3>=2.6.3",
+    "azure-core>=1.38.0",
+    "mcp>=1.23.0",
+    "aiohttp>=3.13.3",
+    "brotli>=1.2.0",
+    "filelock>=3.20.3",
+    "pyasn1>=0.6.2",
+    "orjson>=3.11.5",
 ]
 requires-python = ">=3.12"
 
