@@ -3,24 +3,11 @@ import { useChatApi } from '../hooks/ChatAPI';
 import { Memory } from '../hooks/MemoryAPI';
 import { Tool, useToolApi } from '../hooks/ToolAPI';
 import { useAuth } from '../contexts/AuthContext';
-import ReactMarkdown from 'react-markdown';
-import remarkGfm from 'remark-gfm';
-import remarkMath from 'remark-math';
-import rehypeKatex from 'rehype-katex';
-import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
-import { vscDarkPlus } from 'react-syntax-highlighter/dist/esm/styles/prism';
-import 'katex/dist/katex.min.css';
 import './ChatInterface.css';
 import { apiCall } from '../utils/apiUtils';
-
-// Define interfaces for model objects
-interface ModelInfo {
-  id: string;
-  operator: string;
-  type: string;
-  model_name: string;
-  isAvailable: boolean;
-}
+import { Message, ModelInfo, UploadedImage } from './ChatInterface.types';
+import { InputArea } from './InputArea';
+import { MessageList } from './MessageList';
 
 // Main App Component
 const ChatbotUI = () => {
@@ -29,48 +16,10 @@ const ChatbotUI = () => {
   const [messages, setMessages] = useState<Message[]>([]);
   // State to control sidebar visibility
   const [isSidebarHidden, setIsSidebarHidden] = useState(false);
-  interface Message {
-    role: string;
-    content: string;
-    image?: string;
-    // type distinguishes different message types: tool_calls, reasoning_summary, output_text
-    type?: 'tool_calls' | 'reasoning_summary' | 'output_text' | 'user' | 'assistant';
-    // folded indicates messages should be initially collapsed
-    folded?: boolean;
-    // messageId to track related messages
-    messageId?: string;
-  }
 
   const [isLoading, setIsLoading] = useState(false);
-  const [image, setImage] = useState<string | null>(null);
+  const [uploadedImages, setUploadedImages] = useState<UploadedImage[]>([]);
   const [error, setError] = useState<string | null>(null);
-
-  // Add state to force re-render of Markdown content
-  const [forceRerender, setForceRerender] = useState(0);
-
-  // Textarea behavior: auto-grow with max height and character cap
-  const MAX_TEXTAREA_HEIGHT = 240; // px, ~8-10 lines depending on styles
-  const MAX_INPUT_CHARS = 4000; // character limit for the input box
-
-  // Create ref for file input
-  const fileInputRef = useRef<HTMLInputElement>(null);
-  // Ref for textarea to focus after certain actions
-  const textareaRef = useRef<HTMLTextAreaElement>(null);
-
-  // Helper: adjust textarea height based on content up to max
-  const adjustTextareaSize = () => {
-    const el = textareaRef.current;
-    if (!el) return;
-    el.style.height = 'auto';
-    const next = Math.min(el.scrollHeight, MAX_TEXTAREA_HEIGHT);
-    el.style.height = `${next}px`;
-    el.style.overflowY = el.scrollHeight > MAX_TEXTAREA_HEIGHT ? ('auto' as const) : ('hidden' as const);
-  };
-
-  // Adjust when content changes or on mount
-  useEffect(() => {
-    adjustTextareaSize();
-  }, [input]);
 
   // Initialize the chat API hook
   const { sendMessage, error: apiError } = useChatApi();
@@ -113,8 +62,6 @@ const ChatbotUI = () => {
 
         if (Array.isArray(data) && data.length > 0) {
           setAvailableBaseModels(data);
-          // Set default to first available model's model_name
-          setbaseModel(data[0].model_name);
         }
       } catch (error) {
         setError(`Failed to fetch base models: ${error instanceof Error ? error.message : String(error)}`);
@@ -159,19 +106,26 @@ const ChatbotUI = () => {
         // Prepare initial messages to display in chat
         const memoryMessages: Message[] = [];
         parsedMemories.forEach((memory) => {
-          formattedMemories.push('human: ' + memory.human_input);
-          formattedMemories.push('assistant: ' + memory.ai_response);
-          // Add as chat messages
-          memoryMessages.push({ role: 'user', content: memory.human_input });
-          memoryMessages.push({ role: 'assistant', content: memory.ai_response });
+          const memoryStr = `Memory: ${memory.human_input} - ${memory.ai_response}`;
+          formattedMemories.push(memoryStr);
+          memoryMessages.push({
+            role: 'user',
+            content: memory.human_input,
+            type: 'user',
+          });
+          memoryMessages.push({
+            role: 'assistant',
+            content: memory.ai_response,
+            type: 'assistant',
+          });
         });
         setShortTermMemory(formattedMemories);
         // Preload messages to display selected memories
         setMessages(memoryMessages);
-        // Optionally clear localStorage after loading
+        // Clear saved memories from localStorage after loading
         localStorage.removeItem('selectedMemories');
       } catch (error) {
-        setError(`Error parsing saved memories: ${error instanceof Error ? error.message : String(error)}`);
+        throw new Error(error instanceof Error ? error.message : 'Failed to parse saved memories');
       }
     }
   }, []);
@@ -242,66 +196,23 @@ const ChatbotUI = () => {
     };
   }, [isMenuOpen]);
 
-  // Function to handle image uploads
-  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onload = (event) => {
-        if (event.target?.result) {
-          setImage(event.target.result as string);
-        }
-      };
-      reader.readAsDataURL(file);
-    }
-  };
-
-  // Function to handle clearing the image
-  const handleClearImage = () => {
-    setImage(null);
-    if (fileInputRef.current) {
-      fileInputRef.current.value = '';
-    }
-  };
-
-  // Function to handle keyboard events for the textarea
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    // Ctrl+Enter to submit the form
-    if (e.key === 'Enter' && e.ctrlKey) {
-      e.preventDefault();
-      handleSubmit(e as React.FormEvent);
-    }
-  };
-
-  // Function to handle paste events (for images)
-  const handlePaste = (e: React.ClipboardEvent) => {
-    const items = e.clipboardData?.items;
-    if (items) {
-      for (let i = 0; i < items.length; i++) {
-        if (items[i].type.indexOf('image') !== -1) {
-          const blob = items[i].getAsFile();
-          if (blob) {
-            const reader = new FileReader();
-            reader.onload = (event) => {
-              if (event.target?.result) {
-                setImage(event.target.result as string);
-              }
-            };
-            reader.readAsDataURL(blob);
-            break;
-          }
-        }
-      }
-    }
-  };
-
   // Handle form submission
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!input.trim() && !image) return;
+    if (!input.trim() && uploadedImages.length === 0) return;
 
-    // Add user message to chat
-    const newMessages = [...messages, { role: 'user', content: input, type: 'user' as const }];
+    // Collect image paths from uploaded images
+    const imagePaths = uploadedImages.map((img) => img.path);
+
+    // Add user message to chat (with preview images for display)
+    const userMessage: Message = {
+      role: 'user',
+      content: input,
+      type: 'user',
+      images: uploadedImages.map((img) => img.preview), // Use preview for display
+    };
+
+    const newMessages = [...messages, userMessage];
     setMessages(newMessages);
     setIsLoading(true);
     setError(null);
@@ -314,16 +225,16 @@ const ChatbotUI = () => {
       const config = {
         operator: getOperatorForModel(baseModel),
         base_model: baseModel,
-        tools_name: selectedToolNames, // Use selected tool names
-        short_term_memory: shortTermMemory, // Now already includes selected memories
+        tools_name: selectedToolNames,
+        short_term_memory: shortTermMemory,
         long_term_memory: longTermMemory,
       };
 
-      // Prepare the request
+      // Prepare the request with image paths (not base64)
       const request = {
         user_name: username,
         message: input,
-        image: image || undefined,
+        image: imagePaths.length > 0 ? imagePaths : undefined,
         config: config,
       };
 
@@ -341,12 +252,12 @@ const ChatbotUI = () => {
             return;
           }
 
-          if (type === 'tool_calls') {
+          if (type === 'tool_calls' || type === 'tool_output') {
             // Add individual tool message chunk as a separate message
             const toolMessage: Message = {
               role: 'assistant',
               content: chunk,
-              type: 'tool_calls',
+              type: type,
               folded: false,
               messageId,
             };
@@ -369,57 +280,53 @@ const ChatbotUI = () => {
                   ...updated[updated.length - 1],
                   content: lastReasoningContent,
                 };
-                return updated;
               } else {
-                // Start a new reasoning message
+                // Start new reasoning message
                 lastReasoningContent = chunk;
-                const reasoningMessage: Message = {
+                updated.push({
                   role: 'assistant',
                   content: chunk,
                   type: 'reasoning_summary',
                   folded: false,
                   messageId,
-                };
-                return [...updated, reasoningMessage];
+                });
               }
+              return updated;
             });
           } else if (type === 'output_text') {
-            // Accumulate output content
+            // Accumulate output_text chunks
             outputContent += chunk;
-
             setMessages((currentMessages) => {
               const updated = [...currentMessages];
-              // Check if there's already an output message for this messageId
-              const existingOutputIndex = updated.findIndex((msg) => msg.messageId === messageId && msg.type === 'output_text');
+              const lastMessage = updated[updated.length - 1];
+              const isOutputContinuation = lastMessage && lastMessage.type === 'output_text' && lastMessage.messageId === messageId;
 
-              if (existingOutputIndex >= 0) {
-                // Update existing output message
-                updated[existingOutputIndex] = {
-                  ...updated[existingOutputIndex],
+              if (isOutputContinuation) {
+                // Update the last output message
+                updated[updated.length - 1] = {
+                  ...updated[updated.length - 1],
                   content: outputContent,
                 };
-                return updated;
               } else {
-                // Create new output message
-                const outputMessage: Message = {
+                // Start a new output message
+                updated.push({
                   role: 'assistant',
                   content: outputContent,
                   type: 'output_text',
-                  folded: false,
                   messageId,
-                };
-                return [...updated, outputMessage];
+                });
               }
+              return updated;
             });
           }
         },
-        // Handle completion
+        // On complete
         () => {
           // Fold tool_calls and reasoning_summary messages, keep output_text unfolded
           setMessages((current) =>
             current.map((m) => {
               if (m.messageId === messageId) {
-                if (m.type === 'tool_calls' || m.type === 'reasoning_summary') {
+                if (m.type === 'tool_calls' || m.type === 'tool_output' || m.type === 'reasoning_summary') {
                   return { ...m, folded: true };
                 } else if (m.type === 'output_text') {
                   // Clean up double newlines in output text
@@ -429,11 +336,6 @@ const ChatbotUI = () => {
               return m;
             })
           );
-
-          // Force Markdown re-render by toggling the forceRerender state
-          setTimeout(() => {
-            setForceRerender((prev) => prev + 1);
-          }, 10);
 
           // Add each type of content as separate entries to short-term memory
           setShortTermMemory((prev) => {
@@ -467,9 +369,9 @@ const ChatbotUI = () => {
     } catch (err) {
       // Error is already being handled in the next blocks
       if (err instanceof Error) {
-        setError(`Error: ${err.message}`);
+        setError(err.message);
       } else {
-        setError('An unknown error occurred.');
+        setError('An unknown error occurred');
       }
 
       // Add error message
@@ -487,15 +389,7 @@ const ChatbotUI = () => {
       setIsLoading(false);
     } finally {
       setInput('');
-      setImage(null);
-      // Reset file input
-      if (fileInputRef.current) {
-        fileInputRef.current.value = '';
-      }
-      // Focus back on textarea after submitting
-      if (textareaRef.current) {
-        textareaRef.current.focus();
-      }
+      setUploadedImages([]);
     }
   };
 
@@ -660,136 +554,19 @@ const ChatbotUI = () => {
           </div>
           {/* Messages Display */}
           <div className="messages-container">
-            <div className="messages-list">
-              {messages.map((msg, index) => (
-                <div key={index} className={`message ${msg.role === 'user' ? 'user-message' : 'assistant-message'}`}>
-                  {msg.role === 'user' && msg.image && (
-                    <div className="message-image-container">
-                      <img src={msg.image} alt="User uploaded" className="message-image" />
-                    </div>
-                  )}
-                  {msg.type === 'tool_calls' ? (
-                    <details className="tool-details" open={!msg.folded}>
-                      <summary className="tool-summary">Tool Calls</summary>
-                      <div className="message-text tool-text">{msg.content}</div>
-                    </details>
-                  ) : msg.type === 'reasoning_summary' ? (
-                    <details className="tool-details" open={!msg.folded}>
-                      <summary className="tool-summary">Reasoning</summary>
-                      <div className="message-text tool-text">{msg.content}</div>
-                    </details>
-                  ) : msg.role === 'assistant' ? (
-                    <div className="message-text">
-                      <div className="markdown-content">
-                        <ReactMarkdown
-                          key={`${msg.messageId}-${forceRerender}`}
-                          remarkPlugins={[remarkGfm, remarkMath]}
-                          rehypePlugins={[rehypeKatex]}
-                          components={{
-                            p: ({ ...props }) => <p className="tight-paragraph" {...props} />,
-                            li: ({ ...props }) => <li className="tight-list-item" {...props} />,
-                            code: (props: { inline?: boolean; className?: string; children?: React.ReactNode }) => {
-                              const { inline, className, children, ...rest } = props;
-                              const cls = className || '';
-                              const langToken = cls.split(' ').find((c) => c.startsWith('language-'));
-                              const lang = !inline && langToken ? langToken.replace('language-', '') : undefined;
-                              return !inline && lang ? (
-                                <SyntaxHighlighter style={vscDarkPlus as Record<string, React.CSSProperties>} language={lang} PreTag="div" {...rest}>
-                                  {String(children).replace(/\n$/, '')}
-                                </SyntaxHighlighter>
-                              ) : (
-                                <code className={className} {...rest}>
-                                  {children}
-                                </code>
-                              );
-                            },
-                          }}
-                        >
-                          {msg.content}
-                        </ReactMarkdown>
-                      </div>
-                    </div>
-                  ) : (
-                    <p className="message-text">{msg.content}</p>
-                  )}
-                </div>
-              ))}
-            </div>
+            <MessageList messages={messages} isLoading={isLoading} />
           </div>
 
           {/* Input Area */}
-          <div className="input-container">
-            <form onSubmit={handleSubmit} className="input-form">
-              {/* Display uploaded image preview if there is one */}
-              {image && (
-                <div className="image-preview-container">
-                  <img src={image} alt="Upload preview" className="image-preview" />
-                  <button type="button" className="clear-image-button" onClick={handleClearImage}>
-                    &times;
-                  </button>
-                </div>
-              )}
-              <div className="input-row">
-                <textarea
-                  ref={textareaRef}
-                  className="input-textarea"
-                  placeholder="Type your message here... (Ctrl+Enter to send)"
-                  rows={3}
-                  value={input}
-                  maxLength={MAX_INPUT_CHARS}
-                  onChange={(e) => {
-                    setInput(e.target.value);
-                    // Adjust size immediately for snappy UX
-                    adjustTextareaSize();
-                  }}
-                  onKeyDown={handleKeyDown}
-                  onPaste={handlePaste}
-                />
-
-                {/* Character counter */}
-                <div className="char-counter">
-                  {input.length} / {MAX_INPUT_CHARS}
-                </div>
-
-                <div className="input-actions">
-                  <input ref={fileInputRef} type="file" accept="image/*" className="file-input" onChange={handleImageUpload} id="image-upload" />
-                  <label htmlFor="image-upload" className="upload-button">
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      width="22"
-                      height="22"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="2"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    >
-                      <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
-                      <circle cx="8.5" cy="8.5" r="1.5" />
-                      <polyline points="21 15 16 10 5 21" />
-                    </svg>
-                  </label>
-                  <button type="submit" className="send-button" disabled={isLoading || (!input.trim() && !image)}>
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      width="24"
-                      height="24"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="2"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    >
-                      <line x1="22" y1="2" x2="11" y2="13" />
-                      <polygon points="22 2 15 22 11 13 2 9 22 2" />
-                    </svg>
-                  </button>
-                </div>
-              </div>
-            </form>
-          </div>
+          <InputArea
+            input={input}
+            setInput={setInput}
+            uploadedImages={uploadedImages}
+            setUploadedImages={setUploadedImages}
+            isLoading={isLoading}
+            onSubmit={handleSubmit}
+            onError={setError}
+          />
         </div>
       </div>
 

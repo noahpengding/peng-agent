@@ -399,6 +399,31 @@
   cursor: pointer;
   color: #9ca3af;
   padding: 0.5rem;
+  background: transparent;
+  border: none;
+  width: 100%;
+  text-align: left;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.tool-summary:focus-visible {
+  outline: 2px solid rgba(255, 255, 255, 0.35);
+  outline-offset: 2px;
+  border-radius: 6px;
+}
+
+.fold-arrow {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-right: 0;
+  background: transparent;
+}
+
+.folded-clickable {
+  cursor: pointer;
 }
 .tool-text {
   white-space: pre-wrap;
@@ -490,43 +515,61 @@
 }
 
 /* Image preview styles */
+.image-preview-list {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
+  flex-wrap: wrap;
+}
+
 .image-preview-container {
   position: relative;
-  margin-bottom: 0.5rem;
-  max-width: 200px;
+  width: 80px;
+  height: 80px;
   border-radius: 0.25rem;
   overflow: hidden;
 }
 
 .image-preview {
   width: 100%;
+  height: 100%;
+  object-fit: cover;
   display: block;
 }
 
 .clear-image-button {
   position: absolute;
-  top: 0.25rem;
-  right: 0.25rem;
-  background-color: rgba(0, 0, 0, 0.6);
+  top: -0.25rem;
+  right: -0.25rem;
+  background-color: #b91c1c;
   color: white;
   border: none;
   border-radius: 50%;
-  width: 1.5rem;
-  height: 1.5rem;
+  width: 1.25rem;
+  height: 1.25rem;
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
+  font-size: 1rem;
+  line-height: 1;
+  padding: 0;
 }
 
 .clear-image-button:hover {
-  background-color: rgba(0, 0, 0, 0.8);
+  background-color: #991b1b;
 }
 
 /* Message image styles */
-.message-image-container {
+.message-images-container {
+  display: flex;
+  gap: 0.5rem;
   margin-bottom: 0.5rem;
-  max-width: 300px;
+  flex-wrap: wrap;
+}
+
+.message-image-container {
+  max-width: 200px;
 }
 
 .message-image {

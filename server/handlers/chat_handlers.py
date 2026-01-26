@@ -1,6 +1,7 @@
 from models.chat_config import ChatConfig
-from services.peng_agent import save_chat, PengAgent, AgentState
+from services.peng_agent import PengAgent, AgentState
 from utils.log import output_log
+from utils.mysql_connect import MysqlConnect
 from services.response_formatter import response_formatter_main
 import services.prompt_generator as prompt_generator
 from handlers.model_utils import get_model_instance_by_operator
@@ -9,21 +10,18 @@ import json
 from typing import AsyncIterator
 
 
-def _generate_prompt_params(message: str, image: str, chat_config: ChatConfig):
-    prompt = prompt_generator.prompt_template(
-        model_name=chat_config.base_model,
-    )
-    params = prompt_generator.base_prompt_generate(
-        message=message,
-        short_term_memory=chat_config.short_term_memory,
-        long_term_memory=chat_config.long_term_memory,
-    )
-    params = prompt_generator.add_image_to_prompt(
-        model_name=chat_config.base_model,
-        params=params,
-        image=image,
-    )
-    return prompt, params
+def _generate_prompt_params(
+    user_name: str, message: str, image: str, chat_config: ChatConfig
+):
+    prompt = [
+        prompt_generator.system_prompt(user_name),
+        prompt_generator.add_long_term_memory_to_prompt(chat_config.long_term_memory),
+        prompt_generator.add_short_term_memory_to_prompt(chat_config.short_term_memory),
+        prompt_generator.add_image_to_prompt(chat_config.base_model, image),
+        prompt_generator.add_human_message_to_prompt(message),
+    ]
+    prompt = [p for p in prompt if p is not None]
+    return prompt
 
 
 async def chat_handler(
@@ -34,7 +32,29 @@ async def chat_handler(
         "debug",
     )
 
-    prompt, params = _generate_prompt_params(message, image, chat_config)
+    prompt = _generate_prompt_params(user_name, message, image, chat_config)
+    mysql = MysqlConnect()
+    chat = mysql.create_record(
+        table="chat",
+        data={
+            "user_name": user_name,
+            "type": "chat",
+            "base_model": chat_config.base_model,
+            "human_input": message,
+        }
+    )
+    chat_id = chat["id"]
+    mysql.create_record(
+        table="user_input",
+        data={
+            "chat_id": chat_id,
+            "input_content": message,
+            "input_type": "chat",
+            "input_location": "|".join(image) if image else "",
+        }
+    )
+    mysql.close()
+    output_log(f"Generated Prompt: {prompt}", "DEBUG")
 
     agent = PengAgent(
         user_name,
@@ -48,28 +68,65 @@ async def chat_handler(
     )
 
     full_response = ""
+    pre_chunk_type = ""
     try:
-        async for chunk in agent.astream(AgentState(prompt.invoke(params))):
+        async for chunk in agent.astream(AgentState(messages=prompt)):
             output_log(f"Received chunk: {chunk}", "DEBUG")
             if chunk:
                 if "call_model" in chunk and "messages" in chunk["call_model"]:
-                    chunk_content = str(chunk["call_model"]["messages"].content)
-                    chunk_type = chunk["call_model"]["messages"].additional_kwargs.get(
-                        "type", "output_text"
-                    )
+                    message = chunk["call_model"]["messages"]
+                    if message["type"] == "text":
+                        chunk_content = message["text"]
+                        chunk_type = "output_text"
+                    elif message["type"] == "reasoning":
+                        chunk_content = message["reasoning"]
+                        chunk_type = "reasoning_summary"
+                    # Tool call from chat model
+                    elif message["type"] == "tool_call":
+                        chunk_content = (
+                            f"Tool Call: {message['name']} with args {message['args']}"
+                        )
+                        chunk_type = "tool_calls"
+                        save_chat_response(
+                            chat_id,
+                            chunk_type,
+                            chunk_content,
+                            call_id=message["id"],
+                            tool_name=message["name"],
+                            tool_args=str(message["args"]),
+                        )
+                # Tool message after execution the tool
                 elif "call_tools" in chunk and "messages" in chunk["call_tools"]:
                     chunk_content = chunk["call_tools"]["messages"]
                     if isinstance(chunk_content, list):
+                        tool_call_id = chunk_content[0].tool_call_id
                         chunk_content = chunk_content[0].content
                     else:
+                        tool_call_id = chunk_content.tool_call_id
                         chunk_content = chunk_content.content
-                    chunk_type = "tool_calls"
+                    if isinstance(chunk_content, list):
+                        chunk_content = "".join(
+                            [part for part in chunk_content if isinstance(part, str)]
+                        )
+                    chunk_type = "tool_output"
+                    save_chat_response(
+                        chat_id,
+                        chunk_type,
+                        chunk_content,
+                        call_id=tool_call_id,
+                    )
                 else:
                     chunk_content = ""
-                    continue
-                chunk_content = response_formatter_main(
-                    chat_config.operator, chunk_content
-                )
+                    chunk_type = ""
+                if pre_chunk_type == "" or pre_chunk_type != chunk_type:
+                    if pre_chunk_type in ["output_text", "reasoning_summary"] and full_response != "":
+                        save_chat_response(
+                            chat_id,
+                            pre_chunk_type,
+                            full_response,
+                        )
+                    pre_chunk_type = chunk_type
+                    full_response = ""
                 if isinstance(chunk_content, str):
                     yield (
                         json.dumps(
@@ -86,8 +143,53 @@ async def chat_handler(
             )
             + "\n"
         )
-    yield json.dumps({"chunk": "", "done": True}) + "\n"
+    finally:
+        if pre_chunk_type in ["output_text", "reasoning_summary"] and full_response != "":
+            save_chat_response(
+                chat_id,
+                pre_chunk_type,
+                full_response,
+            )
+        yield json.dumps({"chunk": "", "done": True}) + "\n"
 
+def save_chat_response(chat_id: int, message_type: str, content: str, **kwargs):
+    mysql = MysqlConnect()
+    if message_type == "output_text":
+        mysql.create_record(
+            table="ai_response",
+            data={
+                "chat_id": chat_id,
+                "ai_response": content[:10240],
+            }
+        )
+    elif message_type == "reasoning_summary":
+        mysql.create_record(
+            table="ai_reasoning",
+            data={
+                "chat_id": chat_id,
+                "reasoning_process": content[:10240],
+            }
+        )
+    elif message_type == "tool_calls":
+        mysql.create_record(
+            table="tool_call",
+            data={
+                "chat_id": chat_id,
+                "call_id": kwargs.get("call_id", ""),
+                "tools_name": kwargs.get("tool_name", ""),
+                "tools_argument": kwargs.get("tool_args", ""),
+                "problem": content,
+            }
+        )
+    elif message_type == "tool_output":
+        mysql.create_record(
+            table="tool_output",
+            data={
+                "chat_id": chat_id,
+                "call_id": kwargs.get("call_id", ""),
+                "output_content": content[:10240],
+            }
+        )
 
 def create_streaming_response(
     user_name: str, message: str, image: str, chat_config: ChatConfig
@@ -106,7 +208,7 @@ async def chat_completions_handler(
         "debug",
     )
 
-    prompt, params = _generate_prompt_params(message, image, chat_config)
+    prompt = _generate_prompt_params(user_name, message, image, chat_config)
 
     agent = PengAgent(
         operater=chat_config.operator,
@@ -114,12 +216,8 @@ async def chat_completions_handler(
         tools=chat_config.tools_name,
         user_name=user_name,
     )
-    response = await agent.ainvoke(prompt.invoke(params))
-    full_response = response_formatter_main(
-        chat_config.operator,
-        response["messages"][-2].content if "messages" in response else str(response),
-    )
-    return full_response
+    response = await agent.ainvoke(prompt)
+    return response
 
 
 async def create_completion_response(
@@ -151,21 +249,13 @@ def create_batch_response(
         )
     prompts = []
     for message in messages:
-        prompt, params = _generate_prompt_params(message, image, chat_config)
-        prompts.append(prompt.invoke(params))
+        prompt = _generate_prompt_params(user_name, message, image, chat_config)
+        prompts.append(AgentState(messages=prompt))
     full_response = base_model_ins.batch(prompts)
     reponses = [
         response_formatter_main(chat_config.operator, response.content)
         for response in full_response
     ]
-    for message, response in zip(messages, reponses):
-        save_chat(
-            user_name,
-            "assistant",
-            chat_config.base_model,
-            message,
-            response,
-        )
     return JSONResponse(
         content=reponses,
         media_type="application/json",

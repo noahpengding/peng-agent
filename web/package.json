@@ -1,10 +1,11 @@
 {
   "name": "peng-agent-web",
   "private": true,
-  "version": "2.2.6",
+  "version": "2.3.0",
   "type": "module",
   "scripts": {
-    "dev": "vite",
+    "dev": "bun --env-file=../test/.env run vite",
+    "dev:serve": "vite",
     "build": "tsc -b && vite build",
     "lint": "eslint .",
     "format": "prettier --write .",
@@ -14,7 +15,7 @@
     "@types/react-syntax-highlighter": "^15.5.13",
     "@vitejs/plugin-react": "^4.3.4",
     "axios": "^1.8.3",
-    "caniuse-lite": "^1.0.30001741",
+    "caniuse-lite": "^1.0.30001766",
     "eslint-plugin-prettier": "^5.5.3",
     "jwt-decode": "^4.0.0",
     "react": "^19.0.0",

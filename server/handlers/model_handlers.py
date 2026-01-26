@@ -4,7 +4,6 @@ from utils.log import output_log
 from utils.minio_connection import MinioStorage
 from handlers.operator_handlers import get_all_operators, update_operator
 from config.config import config
-import re
 import pandas as pd
 
 
@@ -39,24 +38,6 @@ def get_model():
     models.sort(key=lambda x: model_order.get(x["operator"], float("inf")))
     mysql.close()
     return models
-
-
-def _check_new_model(
-    operator: str, model_name: str, patterns, model_type: str
-) -> ModelConfig:
-    if not patterns:
-        return None
-    for pattern in patterns.split(";"):
-        if pattern == "*" or re.search(str(pattern), model_name) is not None:
-            return ModelConfig(
-                operator=operator,
-                type=model_type,
-                model_name=model_name,
-                isAvailable=False,
-                isMultimodal=False,
-                reasoning_effect="not a reasoning model",
-            )
-    return None
 
 
 # Refersh will check all operators and sync local model changes
@@ -94,23 +75,14 @@ def refresh_models():
             if server_match is not None:
                 continue
             else:
-                # Check new model based on priority patterns
-                for pattern_attr, model_type in [
-                    ("embedding_pattern", "embedding"),
-                    ("image_pattern", "image"),
-                    ("audio_pattern", "audio"),
-                    ("video_pattern", "video"),
-                    ("chat_pattern", "chat"),
-                ]:
-                    new_model = _check_new_model(
-                        operator.operator,
-                        model,
-                        getattr(operator, pattern_attr),
-                        model_type,
-                    )
-                    if new_model:
-                        responses.append(new_model)
-                        break
+                new_model = ModelConfig(
+                    operator=operator.operator,
+                    model_name=model,
+                    isAvailable=False,
+                    reasoning_effect="not a reasoning model",
+                )
+                if new_model:
+                    responses.append(new_model)
     for local_model in local_models:
         if not any(
             local_model.model_name == response.model_name for response in responses
@@ -142,16 +114,9 @@ def flip_avaliable(model_name: int):
     return _flip_record(model_name, "isAvailable")
 
 
-def avaliable_models(type: str):
+def avaliable_models():
     mysql = MysqlConnect()
-    if type == "embedding":
-        models = mysql.read_record_v2(
-            "model", {"type=": "embedding", "isAvailable=": 1}
-        )
-    else:
-        models = mysql.read_record_v2(
-            "model", {"type<>": "embedding", "isAvailable=": 1}
-        )
+    models = mysql.read_records("model", {"isAvailable=": 1})
     operator = mysql.read_records("operator")
     operator_dict = {
         op["operator"]: i for i, op in enumerate(operator) if isinstance(op, dict)
@@ -171,23 +136,20 @@ def check_multimodal(model_name: str) -> bool:
     mysql = MysqlConnect()
     model = mysql.read_records("model", {"model_name": model_name})
     if model:
-        return model[0]["isMultimodal"]
+        return model[0]["input_image"] or model[0]["input_audio"] or model[0]["input_video"]
     mysql.close()
     return False
 
 
-def flip_multimodal(model_name: str):
-    return _flip_record(model_name, "isMultimodal")
+def flip_multimodal(model_name: str, column: str):
+    if column not in ["input_text", "output_text", "input_image", "output_image", "input_audio", "output_audio", "input_video", "output_video"]:
+        return f"Invalid column name: {column}"
+    return _flip_record(model_name, column)
 
 
 def get_all_available_models():
     mysql = MysqlConnect()
-    return mysql.read_record_v2("model", {"isAvailable=": 1})
-
-
-def get_all_multimodal_models():
-    mysql = MysqlConnect()
-    return mysql.read_record_v2("model", {"isMultimodal=": 1})
+    return mysql.read_records("model", {"isAvailable=": 1})
 
 
 def update_reasoning_effect(model_name: str, reasoning_effect: str):

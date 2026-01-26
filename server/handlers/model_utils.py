@@ -53,6 +53,24 @@ def get_model_instance_by_operator(operator_name, model_name: str = ""):
             model=model_name,
             reasoning_effect=get_reasoning_effect(model_name),
         )
+    elif operator.runtime == "xai":
+        from services.chat_models.xai_langchain import CustomXAIResponse
+
+        base_model_ins = CustomXAIResponse(
+            base_url=operator.endpoint,
+            api_key=operator.api_key,
+            model=model_name,
+            reasoning_effect=get_reasoning_effect(model_name),
+        )
+    elif operator.runtime == "openrouter":
+        from services.chat_models.openrouter_langchain import CustomOpenRouterCompletion
+
+        base_model_ins = CustomOpenRouterCompletion(
+            base_url=operator.endpoint,
+            api_key=operator.api_key,
+            model=model_name,
+            reasoning_effect=get_reasoning_effect(model_name),
+        )
     elif operator.runtime == "huggingface":
         from langchain_huggingface import ChatHuggingFace, HuggingFacePipeline
 
