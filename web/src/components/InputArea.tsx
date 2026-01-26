@@ -81,9 +81,19 @@ export const InputArea: React.FC<InputAreaProps> = ({
 
   // Function to handle image uploads from file input
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      processAndUploadImage(file);
+    const files = e.target.files;
+    if (files) {
+      const maxImages = 5;
+      const remainingSlots = maxImages - uploadedImages.length;
+      const filesToProcess = Math.min(files.length, remainingSlots);
+
+      if (filesToProcess < files.length) {
+        onError(`Only ${remainingSlots} more image(s) can be added. Maximum is ${maxImages} images.`);
+      }
+
+      for (let i = 0; i < filesToProcess; i++) {
+        processAndUploadImage(files[i]);
+      }
     }
   };
 

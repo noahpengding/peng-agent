@@ -249,8 +249,8 @@ def create_batch_response(
         )
     prompts = []
     for message in messages:
-        prompt, params = _generate_prompt_params(user_name, message, image, chat_config), {}
-        prompts.append(prompt.invoke(params))
+        prompt = _generate_prompt_params(user_name, message, image, chat_config)
+        prompts.append(AgentState(messages=prompt))
     full_response = base_model_ins.batch(prompts)
     reponses = [
         response_formatter_main(chat_config.operator, response.content)

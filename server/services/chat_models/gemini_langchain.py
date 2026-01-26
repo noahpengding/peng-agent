@@ -151,7 +151,6 @@ class CustomGemini(BaseChatModel):
                             }
                         ]
                     )
-                    print(message_chunk)
                     yield ChatGenerationChunk(message=message_chunk)
                 elif getattr(part, "thought", None):
                     message_chunk = AIMessageChunk(
