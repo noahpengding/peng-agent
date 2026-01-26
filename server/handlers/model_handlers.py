@@ -142,7 +142,7 @@ def check_multimodal(model_name: str) -> bool:
 
 
 def flip_multimodal(model_name: str, column: str):
-    if column not in ["input_image", "output_image", "input_audio", "output_audio", "input_video", "output_video"]:
+    if column not in ["input_text", "output_text", "input_image", "output_image", "input_audio", "output_audio", "input_video", "output_video"]:
         return f"Invalid column name: {column}"
     return _flip_record(model_name, column)
 

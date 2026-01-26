@@ -87,6 +87,7 @@ const ModelInterface: React.FC = () => {
 
   const renderModalityButtons = (model: Model, column: 'input' | 'output') => {
     const items = [
+      { key: `${column}_text` as keyof Model, label: 'Text', icon: 'text' },
       { key: `${column}_image` as keyof Model, label: 'Image', icon: 'image' },
       { key: `${column}_audio` as keyof Model, label: 'Audio', icon: 'audio' },
       { key: `${column}_video` as keyof Model, label: 'Video', icon: 'video' },
