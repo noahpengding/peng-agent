@@ -38,13 +38,13 @@ export const MessageList: React.FC<MessageListProps> = ({ messages, isLoading })
         const messageClass =
           message.role === 'user'
             ? 'user-message'
-            : message.type === 'tool_calls'
+            : message.type === 'tool_calls' || message.type === 'tool_output'
               ? 'tool-message'
               : message.type === 'reasoning_summary'
                 ? 'reasoning-message'
                 : 'assistant-message';
 
-        const isFoldable = message.type === 'tool_calls' || message.type === 'reasoning_summary';
+        const isFoldable = message.type === 'tool_calls' || message.type === 'tool_output' || message.type === 'reasoning_summary';
 
         return (
           <div
@@ -67,7 +67,7 @@ export const MessageList: React.FC<MessageListProps> = ({ messages, isLoading })
                 }}
               >
                 <span className="fold-arrow" aria-hidden="true">
-                  {isFolded ? '' : '▼'}
+                  {isFolded ? '⇨' : '⇩'}
                 </span>
                 <strong>{
                   message.type === 'tool_calls'
