@@ -30,6 +30,11 @@ export const UploadService = {
         credentials: 'include',
       });
 
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`Upload failed (${response.status}): ${errorText}`);
+      }
+
       const data: UploadResponse = await response.json();
       return [data.upload_path, data.success];
     } catch (error) {

@@ -107,7 +107,7 @@ class AIResponse(Base):
     id = Column(Integer, primary_key=True, autoincrement=True)
     chat_id = Column(Integer, ForeignKey("chat.id"))
     ai_response = Column(
-        VARCHAR(config.input_max_length, charset='utf8mb4', collation='utf8mb4_unicode_ci'),
+        VARCHAR(config.output_max_length, charset='utf8mb4', collation='utf8mb4_unicode_ci'),
         nullable=False
     )
     created_at = Column(TIMESTAMP, default=datetime.now)

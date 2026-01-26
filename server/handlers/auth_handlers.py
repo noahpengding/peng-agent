@@ -58,9 +58,6 @@ def create_user(user_data: UserCreate) -> Optional[Dict]:
         if user_records and len(user_records) > 0:
             output_log(f"User already exists: {user_data.username}", "warning")
             raise HTTPException(status_code=400, detail="User already exists")
-        if user_records and len(user_records) > 0:
-            output_log(f"User already exists: {user_data.username}", "warning")
-            raise HTTPException(status_code=400, detail="User already exists")
         hashed_password = get_password_hash(user_data.password)
         api_token = create_access_token({"sub": user_data.username}, None)
         mysql.create_record(
@@ -74,7 +71,6 @@ def create_user(user_data: UserCreate) -> Optional[Dict]:
                 "default_output_model": user_data.default_based_model,
                 "default_embedding_model": user_data.default_embedding_model,
             },
-            redis_id="user_name",
         )
         return {
             "user_name": user_data.username,

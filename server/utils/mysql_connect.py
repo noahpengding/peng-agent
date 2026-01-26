@@ -142,6 +142,7 @@ class MysqlConnect:
             
             count = query.update(data, synchronize_session=False)
             output_log(f"Updated {count} records in {table} with data: {data}", "debug")
+            return count
 
     def delete_record(self, table: str, conditions: Optional[dict]):
         """Delete records from the specified table matching the conditions"""

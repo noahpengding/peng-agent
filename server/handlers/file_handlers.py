@@ -47,10 +47,12 @@ def file_upload_frontend(file_content: str, content_type: str):
     if content_type.startswith("image/"):
         extention = content_type.split("/")[1]
         upload_path = f"{config.s3_base_path}/uploads/{datetime.datetime.now().strftime('%Y/%m/%d/')}/temp_{int(datetime.datetime.now().timestamp()*1000)}.{extention}"
+        # Remove data URL prefix if present
         if "base64," in file_content:
             file_content = re.sub(r"^data:image/.+;base64,", "", file_content)
-            padded_content = file_content + ("=" * (-len(file_content) % 4))
-            return file_uploader(base64.b64decode(padded_content), content_type, upload_path)
+        # Add padding regardless of whether prefix was present
+        padded_content = file_content + ("=" * (-len(file_content) % 4))
+        return file_uploader(base64.b64decode(padded_content), content_type, upload_path)
     elif content_type == "application/pdf":
         return ["PDF upload not supported", False]
     else:
