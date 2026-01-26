@@ -326,7 +326,7 @@ const ChatbotUI = () => {
           setMessages((current) =>
             current.map((m) => {
               if (m.messageId === messageId) {
-                if (m.type === 'tool_calls' || m.type === 'reasoning_summary') {
+                if (m.type === 'tool_calls' || m.type === 'tool_output' || m.type === 'reasoning_summary') {
                   return { ...m, folded: true };
                 } else if (m.type === 'output_text') {
                   // Clean up double newlines in output text
