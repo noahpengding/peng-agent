@@ -2,11 +2,13 @@ from handlers.model_handlers import check_multimodal
 from langchain_core.messages import (
     SystemMessage,
     HumanMessage,
+    AIMessage,
 )
 from utils.minio_connection import MinioStorage
 import base64
 import tempfile
 import os
+import re
 
 
 def system_prompt(user_name):
@@ -29,8 +31,19 @@ def add_long_term_memory_to_prompt(long_term_memory):
 
 
 def add_short_term_memory_to_prompt(short_term_memory):
-    if short_term_memory:
-        return SystemMessage(short_term_memory)
+    result = []
+    if isinstance(short_term_memory, list):
+        for msg in short_term_memory:
+            human_pattern = r"^human:\s*(.*)$"
+            ai_pattern = r"^assistant:\s*(.*)$"
+            human_match = re.match(human_pattern, msg, re.DOTALL)
+            ai_match = re.match(ai_pattern, msg, re.DOTALL)
+            if human_match:
+                content = human_match.group(1).strip()
+                result.append(HumanMessage(content))
+            elif ai_match:
+                content = ai_match.group(1).strip()
+                result.append(AIMessage(content))
     return None
 
 

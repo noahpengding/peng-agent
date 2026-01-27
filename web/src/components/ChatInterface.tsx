@@ -106,8 +106,8 @@ const ChatbotUI = () => {
         // Prepare initial messages to display in chat
         const memoryMessages: Message[] = [];
         parsedMemories.forEach((memory) => {
-          const memoryStr = `Memory: ${memory.human_input} - ${memory.ai_response}`;
-          formattedMemories.push(memoryStr);
+          formattedMemories.push("human: " + memory.human_input);
+          formattedMemories.push("assistant: " + memory.ai_response);
           memoryMessages.push({
             role: 'user',
             content: memory.human_input,

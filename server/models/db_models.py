@@ -106,10 +106,7 @@ class AIResponse(Base):
 
     id = Column(Integer, primary_key=True, autoincrement=True)
     chat_id = Column(Integer, ForeignKey("chat.id"))
-    ai_response = Column(
-        VARCHAR(config.output_max_length, charset='utf8mb4', collation='utf8mb4_unicode_ci'),
-        nullable=False
-    )
+    ai_response = Column(Text)
     created_at = Column(TIMESTAMP, default=datetime.now)
 
     def to_dict(self):
