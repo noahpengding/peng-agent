@@ -53,7 +53,6 @@ async def chat_handler(
             "input_location": "|".join(image) if image else "",
         }
     )
-    mysql.close()
     output_log(f"Generated Prompt: {prompt}", "DEBUG")
 
     agent = PengAgent(
@@ -154,6 +153,7 @@ async def chat_handler(
                 full_response,
                 mysql_conn=mysql,
             )
+        mysql.close()
         yield json.dumps({"chunk": "", "done": True}) + "\n"
 
 def save_chat_response(chat_id: int, message_type: str, content: str, mysql_conn: MysqlConnect = None, **kwargs):
