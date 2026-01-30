@@ -4,6 +4,7 @@ from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.dialects.mysql import VARCHAR
 from config.config import config
+import threading
 
 Base = declarative_base()
 
@@ -277,15 +278,30 @@ def get_database_url():
     return f"mysql+mysqlconnector://{config.mysql_user}:{config.mysql_password}@{config.mysql_host}/{config.mysql_database}"
 
 
+_engine = None
+_session_maker = None
+_lock = threading.RLock()
+
+
 def create_db_engine():
-    return create_engine(
-        get_database_url(),
-        pool_pre_ping=True,
-        pool_recycle=3600,
-        echo=False,
-    )
+    global _engine
+    if _engine is None:
+        with _lock:
+            if _engine is None:
+                _engine = create_engine(
+                    get_database_url(),
+                    pool_pre_ping=True,
+                    pool_recycle=3600,
+                    echo=False,
+                )
+    return _engine
 
 
 def get_session_maker():
-    engine = create_db_engine()
-    return sessionmaker(bind=engine)
+    global _session_maker
+    if _session_maker is None:
+        with _lock:
+            if _session_maker is None:
+                engine = create_db_engine()
+                _session_maker = sessionmaker(bind=engine)
+    return _session_maker

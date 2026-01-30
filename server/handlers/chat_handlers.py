@@ -91,6 +91,7 @@ async def chat_handler(
                             chat_id,
                             chunk_type,
                             chunk_content,
+                            mysql_conn=mysql,
                             call_id=message["id"],
                             tool_name=message["name"],
                             tool_args=str(message["args"]),
@@ -113,6 +114,7 @@ async def chat_handler(
                         chat_id,
                         chunk_type,
                         chunk_content,
+                        mysql_conn=mysql,
                         call_id=tool_call_id,
                     )
                 else:
@@ -124,6 +126,7 @@ async def chat_handler(
                             chat_id,
                             pre_chunk_type,
                             full_response,
+                            mysql_conn=mysql,
                         )
                     pre_chunk_type = chunk_type
                     full_response = ""
@@ -149,11 +152,12 @@ async def chat_handler(
                 chat_id,
                 pre_chunk_type,
                 full_response,
+                mysql_conn=mysql,
             )
         yield json.dumps({"chunk": "", "done": True}) + "\n"
 
-def save_chat_response(chat_id: int, message_type: str, content: str, **kwargs):
-    mysql = MysqlConnect()
+def save_chat_response(chat_id: int, message_type: str, content: str, mysql_conn: MysqlConnect = None, **kwargs):
+    mysql = mysql_conn if mysql_conn else MysqlConnect()
     if message_type == "output_text":
         mysql.create_record(
             table="ai_response",

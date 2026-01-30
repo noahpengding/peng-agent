@@ -98,7 +98,9 @@ class PengAgent:
 
         writer = get_stream_writer()
         await self._ensure_tools()
-        llm = get_model_instance_by_operator(self.operator, self.model)
+        if not hasattr(self, "_llm_instance") or self._llm_instance is None:
+            self._llm_instance = get_model_instance_by_operator(self.operator, self.model)
+        llm = self._llm_instance
         llm = llm.bind_tools(list(self.tools.values()))
         final_response = ""
         final_reasoning = ""
