@@ -92,22 +92,42 @@ const ChatbotUI = () => {
 
   // Legacy state for UI components
   const [baseModel, setbaseModel] = useState('gpt-4');
-  const [shortTermMemory, setShortTermMemory] = useState<string[]>([]);
+  const [shortTermMemory, setShortTermMemory] = useState<number[]>([]);
   const [longTermMemory] = useState([]);
+
+  // Track latest chat id returned by backend
+  const latestChatIdRef = useRef<number | null>(null);
+
+  const extractChatIdFromChunk = (chunk: string): number | null => {
+    const trimmed = chunk.trim();
+    if (!trimmed) return null;
+
+    // Try JSON parsing first
+    try {
+      const parsed = JSON.parse(trimmed);
+      const candidate = parsed?.chat_id ?? parsed?.chatId ?? parsed?.id;
+      const id = Number(candidate);
+      if (Number.isInteger(id)) return id;
+    } catch {
+      // Fall through to regex parsing
+    }
+
+    const match = trimmed.match(/-?\d+/);
+    if (!match) return null;
+    const id = Number(match[0]);
+    return Number.isInteger(id) ? id : null;
+  };
 
   // Load any selected memories from localStorage on component mount
   useEffect(() => {
     const savedMemories = localStorage.getItem('selectedMemories');
+    const savedMemoryIds = localStorage.getItem('selectedMemoryIds');
     if (savedMemories) {
       try {
         const parsedMemories: Memory[] = JSON.parse(savedMemories);
-        // Prepare both the short-term memory strings for API config
-        const formattedMemories: string[] = [];
         // Prepare initial messages to display in chat
         const memoryMessages: Message[] = [];
         parsedMemories.forEach((memory) => {
-          formattedMemories.push("human: " + memory.human_input);
-          formattedMemories.push("assistant: " + memory.ai_response);
           memoryMessages.push({
             role: 'user',
             content: memory.human_input,
@@ -119,11 +139,18 @@ const ChatbotUI = () => {
             type: 'assistant',
           });
         });
-        setShortTermMemory(formattedMemories);
+        if (savedMemoryIds) {
+          const parsedIds: number[] = JSON.parse(savedMemoryIds);
+          setShortTermMemory(parsedIds.filter((id) => Number.isInteger(id)));
+        } else {
+          const derivedIds = parsedMemories.map((memory) => Number(memory.id)).filter((id) => Number.isInteger(id));
+          setShortTermMemory(derivedIds);
+        }
         // Preload messages to display selected memories
         setMessages(memoryMessages);
         // Clear saved memories from localStorage after loading
         localStorage.removeItem('selectedMemories');
+        localStorage.removeItem('selectedMemoryIds');
       } catch (error) {
         throw new Error(error instanceof Error ? error.message : 'Failed to parse saved memories');
       }
@@ -241,13 +268,19 @@ const ChatbotUI = () => {
       // Keep track of accumulated content for each type in a more straightforward way
       let outputContent = '';
       let lastReasoningContent = '';
-      let allToolCallsContent: string[] = [];
 
       // Stream the message to get chunks (type-aware)
       await sendMessage(
         request,
         // Handle each chunk with its type
         (chunk: string, type: string, done: boolean) => {
+          if (done) {
+            const chatId = extractChatIdFromChunk(chunk);
+            if (chatId !== null) {
+              latestChatIdRef.current = chatId;
+              return;
+            }
+          }
           if (done && !chunk) {
             return;
           }
@@ -262,8 +295,6 @@ const ChatbotUI = () => {
               messageId,
             };
             setMessages((current) => [...current, toolMessage]);
-            // Track tool calls content for memory
-            allToolCallsContent.push(chunk);
             // Reset reasoning tracking for new sequence
             lastReasoningContent = '';
           } else if (type === 'reasoning_summary') {
@@ -337,31 +368,15 @@ const ChatbotUI = () => {
             })
           );
 
-          // Add each type of content as separate entries to short-term memory
+          // Add latest chat id to short-term memory
           setShortTermMemory((prev) => {
             const newMemories = [...prev];
-
-            // Add the human input first
-            newMemories.push('human: ' + input);
-
-            // Add tool calls if any
-            if (allToolCallsContent.length > 0) {
-              const toolCallsText = allToolCallsContent.join('\n');
-              newMemories.push('assistant: Tool Calls: ' + toolCallsText);
+            if (latestChatIdRef.current !== null) {
+              newMemories.push(latestChatIdRef.current);
             }
-
-            // Add reasoning if any
-            if (lastReasoningContent.trim()) {
-              newMemories.push('assistant: Reasoning: ' + lastReasoningContent.trim());
-            }
-
-            // Add output text if any
-            if (outputContent.trim()) {
-              newMemories.push('assistant: Response: ' + outputContent.trim());
-            }
-
             return newMemories;
           });
+          latestChatIdRef.current = null;
 
           setIsLoading(false);
         }

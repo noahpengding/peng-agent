@@ -11,16 +11,14 @@ from typing import AsyncIterator
 
 
 def _generate_prompt_params(
-    user_name: str, message: str, image: str, chat_config: ChatConfig
+    user_name: str, message: str, image: str, chat_config: ChatConfig, mysql_conn: MysqlConnect = None
 ):
-    prompt = [
-        prompt_generator.system_prompt(user_name),
-        prompt_generator.add_long_term_memory_to_prompt(chat_config.long_term_memory),
-        prompt_generator.add_short_term_memory_to_prompt(chat_config.short_term_memory),
-        prompt_generator.add_image_to_prompt(chat_config.base_model, image),
-        prompt_generator.add_human_message_to_prompt(message),
-    ]
-    prompt = [p for p in prompt if p is not None]
+    prompt = []
+    prompt += prompt_generator.system_prompt(user_name)
+    prompt += prompt_generator.add_long_term_memory_to_prompt(chat_config.long_term_memory)
+    prompt += prompt_generator.add_short_term_memory_to_prompt(chat_config.short_term_memory, mysql_conn)
+    prompt += prompt_generator.add_image_to_prompt(chat_config.base_model, image)
+    prompt += prompt_generator.add_human_message_to_prompt(message)
     return prompt
 
 
@@ -32,8 +30,8 @@ async def chat_handler(
         "debug",
     )
 
-    prompt = _generate_prompt_params(user_name, message, image, chat_config)
     mysql = MysqlConnect()
+    prompt = _generate_prompt_params(user_name, message, image, chat_config, mysql)
     chat = mysql.create_record(
         table="chat",
         data={
@@ -154,7 +152,7 @@ async def chat_handler(
                 mysql_conn=mysql,
             )
         mysql.close()
-        yield json.dumps({"chunk": "", "done": True}) + "\n"
+        yield json.dumps({"chunk": f"{chat_id}", "done": True}) + "\n"
 
 def save_chat_response(chat_id: int, message_type: str, content: str, mysql_conn: MysqlConnect = None, **kwargs):
     mysql = mysql_conn if mysql_conn else MysqlConnect()

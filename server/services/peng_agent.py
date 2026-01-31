@@ -104,6 +104,7 @@ class PengAgent:
         llm = llm.bind_tools(list(self.tools.values()))
         final_response = ""
         final_reasoning = ""
+        tool_calls = ""
         async for chunk in llm.astream(state["messages"]):
             if isinstance(chunk, AIMessage) and chunk.content_blocks:
                 writer({"call_model": {"messages": chunk.content_blocks[0]}})
@@ -112,17 +113,18 @@ class PengAgent:
                 elif chunk.content_blocks[0]["type"] == "reasoning":
                     final_reasoning += chunk.content_blocks[0]["reasoning"]
                 elif chunk.content_blocks[0]["type"] == "tool_call":
-                    return {"messages": chunk}
-        final_response = AIMessage(
-            content_blocks=[
-                {
-                    "type": "text",
-                    "text": final_response,
-                }
-            ]
-        )
+                    tool_calls = chunk
+        if final_response != "":
+            final_response = AIMessage(
+                content_blocks=[
+                    {
+                        "type": "text",
+                        "text": final_response,
+                    }
+                ]
+            )
         if final_reasoning != "":
-            final_reasooning = AIMessage(
+            final_reasoning = AIMessage(
                 content_blocks=[
                     {
                         "type": "reasoning",
@@ -130,8 +132,7 @@ class PengAgent:
                     }
                 ]
             )
-            return {"messages": [final_response, final_reasooning]}
-        return {"messages": final_response}
+        return {"messages": [response for response in [final_response, final_reasoning, tool_calls] if response != ""]}
 
     async def call_tools(self, state: AgentState):
         writer = get_stream_writer()

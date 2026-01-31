@@ -67,7 +67,7 @@ def refresh_models():
                 (
                     server_model
                     for server_model in server_models
-                    if server_model.model_name == model
+                    if server_model.model_name == model and server_model.operator == operator.operator
                 ),
                 None,
             )
@@ -85,14 +85,15 @@ def refresh_models():
                     responses.append(new_model)
     for local_model in local_models:
         if not any(
-            local_model.model_name == response.model_name for response in responses
+            local_model.model_name == response.model_name and local_model.operator == response.operator
+            for response in responses
         ):
             responses.append(local_model)
     _save_local_models(responses)
     mysql = MysqlConnect()
     try:
         for response in responses:
-            mysql.delete_record("model", {"model_name": response.model_name})
+            mysql.delete_record("model", {"model_name": response.model_name, "operator": response.operator})
             mysql.create_record("model", response.to_dict())
     finally:
         mysql.close()
