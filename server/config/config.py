@@ -1,10 +1,12 @@
 import json
 import os
 from pydantic import BaseModel
+import importlib.metadata
 
 
 class Config(BaseModel):
     app_name: str
+    env: str
     log_level: str
     host: str
     port: int
@@ -22,8 +24,9 @@ class Config(BaseModel):
     embedding_operator: str
     embedding_model: str
     embedding_size: int
-    phoenix_endpoint: str
-    phoenix_project: str
+    dd_api_key: str
+    dd_site: str
+    dd_service: str
     mysql_host: str
     mysql_user: str
     mysql_password: str
@@ -51,6 +54,7 @@ try:
     config_data = {}
     env_vars = {
         "app_name": os.environ.get("APP_NAME") or "peng-chat",
+        "env": os.environ.get("ENV") or "prod",
         "log_level": os.environ.get("LOG_LEVEL") or "INFO",
         "host": os.environ.get("HOST") or "0.0.0.0",
         "port": int(os.environ.get("PORT")) if os.environ.get("PORT") else 8000,
@@ -96,12 +100,15 @@ try:
         "embedding_size": int(os.environ.get("EMBEDDING_SIZE"))
         if os.environ.get("EMBEDDING_SIZE")
         else 1536,
-        "phoenix_endpoint": os.environ.get("PHOENIX_COLLECTOR_ENDPOINT")
-        if os.environ.get("PHOENIX_COLLECTOR_ENDPOINT")
-        else "https://llm.aassdasdas.com/v1/traces",
-        "phoenix_project": os.environ.get("PHOENIX_PROJECT")
-        if os.environ.get("PHOENIX_PROJECT")
-        else "test",
+        "dd_api_key": os.environ.get("DD_API_KEY")
+        if os.environ.get("DD_API_KEY")
+        else "asdasdasdsadasdasdas",
+        "dd_site": os.environ.get("DD_SITE")
+        if os.environ.get("DD_SITE")
+        else "us5.datadoghq.com",
+        "dd_service": os.environ.get("DD_SERVICE")
+        if os.environ.get("DD_SERVICE")
+        else "peng-agent",
         "input_max_length": int(os.environ.get("INPUT_MAX_LENGTH"))
         if os.environ.get("INPUT_MAX_LENGTH")
         else 4096,
@@ -168,6 +175,12 @@ try:
         if value is not None:
             config_data[key] = value
     config = Config(**config_data)
+
+    # Datadog Related
+    os.environ["DD_TRACE_ENABLED"] = "true"
+    os.environ["DD_ENV"] = config.env
+    os.environ["DD_SERVICE"] = config.dd_service
+    os.environ["DD_VERSION"] = importlib.metadata.version("Peng-Agent")
 except (json.JSONDecodeError, FileNotFoundError) as e:
     print(f"Error reading config file: {e}")
     raise

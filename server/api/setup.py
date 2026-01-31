@@ -17,7 +17,8 @@ def set_up():
         output_log(f"Error creating database tables: {e}", "error")
         raise
 
-    phoenix_setup()
+    # phoenix_setup()
+    dd_setup()
 
 
 def phoenix_setup():
@@ -30,4 +31,17 @@ def phoenix_setup():
         batch=True,
         set_global_tracer_provider=False,
         auto_instrument=True,
+    )
+
+def dd_setup():
+    from ddtrace.llmobs import LLMObs
+    output_log("Setting up Datadog APM integration...", "info")
+
+    LLMObs.enable(
+        ml_app=config.app_name,
+        api_key=config.dd_api_key,
+        site=config.dd_site,
+        agentless_enabled=True,
+        service=config.dd_service,
+        env=config.env,
     )
