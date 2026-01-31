@@ -33,20 +33,21 @@ def add_short_term_memory_to_prompt(short_term_memory, mysql_conn) -> list:
     result = []
     if isinstance(short_term_memory, list):
         for msg_id in short_term_memory:
-            reasoings = mysql_conn.read_records("ai_reasoning", conditions={"chat_id": msg_id})
+            reasonings = mysql_conn.read_records("ai_reasoning", conditions={"chat_id": msg_id})
             responses = mysql_conn.read_records("ai_response", conditions={"chat_id": msg_id})
             chat = mysql_conn.read_records("chat", conditions={"id": msg_id})
             if chat:
                 chat = chat[0]
                 result.append(HumanMessage(chat["human_input"]))
-                result.append(AIMessage(content_blocks=[
-                    {
-                        "type": "reasoning",
-                        "reasoning": reasoning["reasoning_process"],
+                if reasonings:
+                    result.append(AIMessage(content_blocks=[
+                        {
+                            "type": "reasoning",
+                            "reasoning": reasoning["reasoning_process"],
 
-                    }
-                    for reasoning in reasoings
-                ]))
+                        }
+                        for reasoning in reasonings
+                    ]))
                 for response in responses:
                     result.append(AIMessage(response["ai_response"]))
     return result

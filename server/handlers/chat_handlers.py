@@ -155,7 +155,7 @@ async def chat_handler(
         yield json.dumps({"chunk": f"{chat_id}", "done": True}) + "\n"
 
 def save_chat_response(chat_id: int, message_type: str, content: str, mysql_conn: MysqlConnect = None, **kwargs):
-    mysql = mysql_conn if mysql_conn else MysqlConnect()
+    mysql = mysql_conn
     if message_type == "output_text":
         mysql.create_record(
             table="ai_response",

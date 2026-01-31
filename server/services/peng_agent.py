@@ -132,7 +132,7 @@ class PengAgent:
                     }
                 ]
             )
-        return {"messages": [response for response in [final_response, final_reasoning, tool_calls] if response != ""]}
+        return {"messages": [response for response in [final_reasoning, final_response, tool_calls] if response != ""]}
 
     async def call_tools(self, state: AgentState):
         writer = get_stream_writer()
