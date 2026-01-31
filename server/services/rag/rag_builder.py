@@ -33,12 +33,14 @@ class RagBuilder:
             port=config.qdrant_port,
             collection_name=self.collection_name,
         )
+        self.mysql = MysqlConnect()
+        self.minio = MinioStorage()
 
     def _add_to_db(
         self, local_path, type_of_file, file_path, create_by="Python RAG Builder"
     ):
         title = local_path.split("/")[-1]
-        mysql = MysqlConnect()
+        mysql = self.mysql
         if (
             len(
                 mysql.read_records(
@@ -69,10 +71,9 @@ class RagBuilder:
                     "created_by": create_by,
                 },
             )
-        mysql.close()
 
     def file_process(self, file_path, type_of_file) -> None:
-        m = MinioStorage()
+        m = self.minio
         local_path = os.path.join(self.temp_dir, os.path.basename(file_path))
         m.file_download(file_path, local_path)
         if type_of_file == "standard":

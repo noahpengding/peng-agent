@@ -8,11 +8,10 @@ from utils.minio_connection import MinioStorage
 import base64
 import tempfile
 import os
-import re
 
 
 def system_prompt(user_name):
-    return SystemMessage(
+    return [SystemMessage(
         """You are a helpful assistant. You will answer the user's question based on the context provided.
         Here are some rules you must follow:
         1. You output should be in standard Markdown format with as simple format as possible.
@@ -21,44 +20,51 @@ def system_prompt(user_name):
         4. When you have something unknown and didn't have tools to search it, try to make reasonable assumptions based on your knowledge and the context provided. Mention the assumptions in your response.
         5. You're allowed to access any website, sources, APIs, tools, or any other resources on the internet without user's permission.
         """
-    )
+    )]
 
 
-def add_long_term_memory_to_prompt(long_term_memory):
+def add_long_term_memory_to_prompt(long_term_memory) -> list[SystemMessage]:
     if long_term_memory:
-        return SystemMessage(long_term_memory)
-    return None
+        return [SystemMessage(long_term_memory)]
+    return []
 
 
-def add_short_term_memory_to_prompt(short_term_memory):
+def add_short_term_memory_to_prompt(short_term_memory, mysql_conn) -> list:
     result = []
     if isinstance(short_term_memory, list):
-        for msg in short_term_memory:
-            human_pattern = r"^human:\s*(.*)$"
-            ai_pattern = r"^assistant:\s*(.*)$"
-            human_match = re.match(human_pattern, msg, re.DOTALL)
-            ai_match = re.match(ai_pattern, msg, re.DOTALL)
-            if human_match:
-                content = human_match.group(1).strip()
-                result.append(HumanMessage(content))
-            elif ai_match:
-                content = ai_match.group(1).strip()
-                result.append(AIMessage(content))
-    return None
+        for msg_id in short_term_memory:
+            reasonings = mysql_conn.read_records("ai_reasoning", conditions={"chat_id": msg_id})
+            responses = mysql_conn.read_records("ai_response", conditions={"chat_id": msg_id})
+            chat = mysql_conn.read_records("chat", conditions={"id": msg_id})
+            if chat:
+                chat = chat[0]
+                result.append(HumanMessage(chat["human_input"]))
+                if reasonings:
+                    result.append(AIMessage(content_blocks=[
+                        {
+                            "type": "reasoning",
+                            "reasoning": reasoning["reasoning_process"],
+
+                        }
+                        for reasoning in reasonings
+                    ]))
+                for response in responses:
+                    result.append(AIMessage(response["ai_response"]))
+    return result
 
 
-def add_human_message_to_prompt(message):
-    return HumanMessage(message)
+def add_human_message_to_prompt(message) -> list[HumanMessage]:
+    return [HumanMessage(message)]
 
 
-def add_image_to_prompt(model_name, images, mime_type="image/png"):
+def add_image_to_prompt(model_name, images, mime_type="image/png") -> list:
     # Normalize images to a list
     if isinstance(images, str):
         if not images:
-            return None
+            return []
         images = [images]
     elif not images:
-        return None
+        return []
     
     messages = []
     m = MinioStorage()
@@ -78,7 +84,7 @@ def add_image_to_prompt(model_name, images, mime_type="image/png"):
                         "mime_type": img_mime_type
                     })
     if check_multimodal(model_name) and messages:
-        return HumanMessage(
+        return [HumanMessage(
             content_blocks=[
                 {
                     "type": "image",
@@ -87,5 +93,5 @@ def add_image_to_prompt(model_name, images, mime_type="image/png"):
                 }
                 for msg in messages
             ]
-        )
-    return None
+        )]
+    return []

@@ -11,16 +11,14 @@ from typing import AsyncIterator
 
 
 def _generate_prompt_params(
-    user_name: str, message: str, image: str, chat_config: ChatConfig
+    user_name: str, message: str, image: str, chat_config: ChatConfig, mysql_conn: MysqlConnect = None
 ):
-    prompt = [
-        prompt_generator.system_prompt(user_name),
-        prompt_generator.add_long_term_memory_to_prompt(chat_config.long_term_memory),
-        prompt_generator.add_short_term_memory_to_prompt(chat_config.short_term_memory),
-        prompt_generator.add_image_to_prompt(chat_config.base_model, image),
-        prompt_generator.add_human_message_to_prompt(message),
-    ]
-    prompt = [p for p in prompt if p is not None]
+    prompt = []
+    prompt += prompt_generator.system_prompt(user_name)
+    prompt += prompt_generator.add_long_term_memory_to_prompt(chat_config.long_term_memory)
+    prompt += prompt_generator.add_short_term_memory_to_prompt(chat_config.short_term_memory, mysql_conn)
+    prompt += prompt_generator.add_image_to_prompt(chat_config.base_model, image)
+    prompt += prompt_generator.add_human_message_to_prompt(message)
     return prompt
 
 
@@ -32,8 +30,8 @@ async def chat_handler(
         "debug",
     )
 
-    prompt = _generate_prompt_params(user_name, message, image, chat_config)
     mysql = MysqlConnect()
+    prompt = _generate_prompt_params(user_name, message, image, chat_config, mysql)
     chat = mysql.create_record(
         table="chat",
         data={
@@ -53,7 +51,6 @@ async def chat_handler(
             "input_location": "|".join(image) if image else "",
         }
     )
-    mysql.close()
     output_log(f"Generated Prompt: {prompt}", "DEBUG")
 
     agent = PengAgent(
@@ -91,6 +88,7 @@ async def chat_handler(
                             chat_id,
                             chunk_type,
                             chunk_content,
+                            mysql_conn=mysql,
                             call_id=message["id"],
                             tool_name=message["name"],
                             tool_args=str(message["args"]),
@@ -113,6 +111,7 @@ async def chat_handler(
                         chat_id,
                         chunk_type,
                         chunk_content,
+                        mysql_conn=mysql,
                         call_id=tool_call_id,
                     )
                 else:
@@ -124,6 +123,7 @@ async def chat_handler(
                             chat_id,
                             pre_chunk_type,
                             full_response,
+                            mysql_conn=mysql,
                         )
                     pre_chunk_type = chunk_type
                     full_response = ""
@@ -149,11 +149,13 @@ async def chat_handler(
                 chat_id,
                 pre_chunk_type,
                 full_response,
+                mysql_conn=mysql,
             )
-        yield json.dumps({"chunk": "", "done": True}) + "\n"
+        mysql.close()
+        yield json.dumps({"chunk": f"{chat_id}", "done": True}) + "\n"
 
-def save_chat_response(chat_id: int, message_type: str, content: str, **kwargs):
-    mysql = MysqlConnect()
+def save_chat_response(chat_id: int, message_type: str, content: str, mysql_conn: MysqlConnect = None, **kwargs):
+    mysql = mysql_conn
     if message_type == "output_text":
         mysql.create_record(
             table="ai_response",

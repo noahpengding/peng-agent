@@ -22,6 +22,7 @@ def index_all(user_name, folder_path, type_of_file, collection_name):
         f"Indexing all files in {folder_path} into the collection {collection_name}",
         "debug",
     )
+    rag_builder = RagBuilder(user_name, collection_name)
     for file in m.file_list_name(prefix=folder_path):
         if not file.endswith(".pdf"):
             output_log(
@@ -29,7 +30,8 @@ def index_all(user_name, folder_path, type_of_file, collection_name):
                 "info",
             )
             continue
-        index_file(user_name, file, type_of_file, collection_name)
+        rag_builder.file_process(file, type_of_file)
+        output_log(f"File {file} is put into the collection {collection_name}", "info")
     output_log(
         f"All files in {folder_path} are put into the collection {collection_name}",
         "info",

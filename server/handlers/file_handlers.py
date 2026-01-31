@@ -13,11 +13,6 @@ def file_downloader(message_file_path: str):
     if len(message_file_path.split("://")) > 1:
         bucket_name = message_file_path.split("://")[0]
         message_file_path = message_file_path.split("://")[1]
-    if not m.file_exists(message_file_path, bucket_name):
-        return [
-            f"File {message_file_path} does not exist in bucket {bucket_name}",
-            False,
-        ]
     download_path = f"tmp/{message_file_path}"
     if not m.file_download(message_file_path, download_path, bucket_name):
         return [

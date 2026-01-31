@@ -3,6 +3,11 @@ from botocore.exceptions import ClientError
 from config.config import config
 from utils.log import output_log
 import os
+import threading
+
+
+_client = None
+_lock = threading.RLock()
 
 
 class MinioStorage:
@@ -11,17 +16,22 @@ class MinioStorage:
         self.access_key = config.s3_access_key
         self.secret_key = config.s3_secret_key
         self.region = config.s3_region
-        output_log(
-            f"S3 connection to {self.entrypoint}",
-            "debug",
-        )
-        self.client = boto3.client(
-            's3',
-            endpoint_url=self.entrypoint,
-            aws_access_key_id=self.access_key,
-            aws_secret_access_key=self.secret_key,
-            region_name=self.region,
-        )
+        global _client
+        if _client is None:
+            with _lock:
+                if _client is None:
+                    output_log(
+                        f"S3 connection to {self.entrypoint}",
+                        "debug",
+                    )
+                    _client = boto3.client(
+                        's3',
+                        endpoint_url=self.entrypoint,
+                        aws_access_key_id=self.access_key,
+                        aws_secret_access_key=self.secret_key,
+                        region_name=self.region,
+                    )
+        self.client = _client
 
     # @file_path: Local file path
     # @file_name: File name to be saved in S3

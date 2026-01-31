@@ -313,6 +313,7 @@ class CustomOpenAICompletion(BaseChatModel):
                             {
                                 "role": "assistant",
                                 "content": m["reasoning"],
+                                "reasoning_content": m["reasoning"],
                             }
                         )
                     elif m["type"] == "text":
