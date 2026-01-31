@@ -9,7 +9,7 @@ interface ChatRequest {
     operator: string;
     base_model: string;
     tools_name: string[];
-    short_term_memory: string[];
+    short_term_memory: number[];
     long_term_memory: string[];
   };
 }
