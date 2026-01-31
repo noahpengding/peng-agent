@@ -64,9 +64,15 @@ const MemoryPage: React.FC = () => {
   // Handle primary button click - save if memories are selected, otherwise exit
   const handlePrimaryAction = () => {
     if (selectedMemoryIds.length > 0) {
-      // Save selected memories
+      // Save selected memories for UI display
       const selectedMemories = memories.filter((memory) => selectedMemoryIds.includes(memory.id));
       localStorage.setItem('selectedMemories', JSON.stringify(selectedMemories));
+
+      // Save selected memory IDs (chat IDs) for backend
+      const selectedChatIds = selectedMemories
+        .map((memory) => Number(memory.id))
+        .filter((id) => Number.isInteger(id));
+      localStorage.setItem('selectedMemoryIds', JSON.stringify(selectedChatIds));
     }
 
     // In all cases, navigate back to chat interface

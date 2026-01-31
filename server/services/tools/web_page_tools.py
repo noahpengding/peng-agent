@@ -6,7 +6,7 @@ async def adaptive_web_crawler(url: str, query: str) -> str:
     from crawl4ai import AsyncWebCrawler, AdaptiveCrawler, AdaptiveConfig
 
     adaptive_config = AdaptiveConfig(
-        confidence_threshold=0.8, max_pages=20, top_k_links=10, min_gain_threshold=0.05
+        confidence_threshold=0.8, max_pages=10, top_k_links=5, min_gain_threshold=0.05
     )
 
     async with AsyncWebCrawler() as crawler:
@@ -32,7 +32,7 @@ async def deep_web_crawler(url: str) -> str:
 
     config = CrawlerRunConfig(
         deep_crawl_strategy=BFSDeepCrawlStrategy(
-            max_depth=3, include_external=True, max_pages=20, score_threshold=0.2
+            max_depth=5, include_external=True, max_pages=10, score_threshold=0.2
         ),
         scraping_strategy=LXMLWebScrapingStrategy(),
         verbose=False,

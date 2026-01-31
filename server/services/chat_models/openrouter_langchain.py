@@ -170,7 +170,7 @@ class CustomOpenRouterCompletion(BaseChatModel):
                 tool_calls_name = ""
                 tool_calls_args = ""
             elif choice.finish_reason is None:
-                if getattr(token, "reasoning_content", None):
+                if getattr(token, "reasoning_content", None) and token.reasoning_content != "":
                     message_chunk = AIMessageChunk(
                         content_blocks=[
                             {
@@ -181,7 +181,7 @@ class CustomOpenRouterCompletion(BaseChatModel):
                         ]
                     )
                     yield ChatGenerationChunk(message=message_chunk)
-                elif getattr(token, "reasoning", None):
+                elif getattr(token, "reasoning", None) and token.reasoning != "":
                     message_chunk = AIMessageChunk(
                         content_blocks=[
                             {
@@ -203,6 +203,8 @@ class CustomOpenRouterCompletion(BaseChatModel):
                         ]
                     )
                     yield ChatGenerationChunk(message=message_chunk)
+                else:
+                    continue
 
     def bind_tools(
         self,
