@@ -253,8 +253,8 @@ const ChatbotUI = () => {
         operator: getOperatorForModel(baseModel),
         base_model: baseModel,
         tools_name: selectedToolNames,
-        short_term_memory: shortTermMemory,
-        long_term_memory: longTermMemory,
+        short_term_memory: shortTermMemory.map(String),
+        long_term_memory: longTermMemory.map(String),
       };
 
       // Prepare the request with image paths (not base64)
