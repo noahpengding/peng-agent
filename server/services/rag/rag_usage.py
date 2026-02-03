@@ -1,6 +1,6 @@
 from services.rag.qdrant_api import Qdrant
 import services.prompt_generator as prompt_generator
-from handlers.model_utils import get_model_instance_by_operator
+from handlers.model_utils import get_model_instance
 from config.config import config
 from langchain.chains.combine_documents import create_stuff_documents_chain
 from langchain.chains import create_retrieval_chain
@@ -17,9 +17,9 @@ class RagUsage:
     ):
         self.user_name = user_name
         self.collection_name = collection_name
-        self.llm = get_model_instance_by_operator(
-            config.default_operator,
-            config.default_base_model,
+        self.llm = get_model_instance(
+            model_name=config.default_base_model,
+            operator_name=config.default_operator,
         )
 
     def setup(self, prompt):

@@ -1,7 +1,7 @@
 from langchain_community.document_loaders import PyPDFLoader
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from services.rag.qdrant_api import Qdrant
-from handlers.model_utils import get_embedding_instance_by_operator
+from handlers.model_utils import get_embedding_instance
 from config.config import config
 from utils.minio_connection import MinioStorage
 from utils.mysql_connect import MysqlConnect
@@ -24,9 +24,9 @@ class RagBuilder:
         self.user_name = user_name
         self.collection_name = collection_name
         self.temp_dir = tempfile.mkdtemp()
-        self.embeddings = get_embedding_instance_by_operator(
-            operator_name=config.embedding_operator,
+        self.embeddings = get_embedding_instance(
             model_name=config.embedding_model,
+            operator_name=config.embedding_operator,
         )
         self.qdrant = Qdrant(
             host=config.qdrant_host,
@@ -125,7 +125,7 @@ class RagBuilder:
         return chunks
 
     def _process_single_image(self, base64_image):
-        from handlers.model_utils import get_model_instance_by_operator
+        from handlers.model_utils import get_model_instance
 
         prompt = [
             (
@@ -141,9 +141,9 @@ class RagBuilder:
             ),
             ("human", base64_image),
         ]
-        base_model_ins = get_model_instance_by_operator(
-            config.default_operator,
-            config.default_base_model,
+        base_model_ins = get_model_instance(
+            model_name=config.default_base_model,
+            operator_name=config.default_operator,
         )
         return base_model_ins.invoke(prompt).content
 
