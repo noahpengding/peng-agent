@@ -4,8 +4,9 @@ from utils.log import output_log
 from utils.mysql_connect import MysqlConnect
 from services.response_formatter import response_formatter_main
 import services.prompt_generator as prompt_generator
-from handlers.model_utils import get_model_instance_by_operator
+from handlers.model_utils import get_model_instance
 from fastapi.responses import StreamingResponse, JSONResponse
+from typing import List
 import json
 from typing import AsyncIterator
 
@@ -16,14 +17,14 @@ def _generate_prompt_params(
     prompt = []
     prompt += prompt_generator.system_prompt(user_name)
     prompt += prompt_generator.add_long_term_memory_to_prompt(chat_config.long_term_memory)
-    prompt += prompt_generator.add_short_term_memory_to_prompt(chat_config.short_term_memory, mysql_conn)
+    prompt += prompt_generator.add_short_term_memory_to_prompt(chat_config.short_term_memory, mysql_conn, chat_config.base_model)
     prompt += prompt_generator.add_image_to_prompt(chat_config.base_model, image)
     prompt += prompt_generator.add_human_message_to_prompt(message)
     return prompt
 
 
 async def chat_handler(
-    user_name: str, message: str, image: str, chat_config: ChatConfig
+    user_name: str, message: str, image: List[str], chat_config: ChatConfig
 ) -> AsyncIterator[str]:
     output_log(
         f"Streaming chat for User: {user_name}, Message: {message}, Image: {image}, Config: {chat_config}",
@@ -203,7 +204,7 @@ def create_streaming_response(
 
 
 async def chat_completions_handler(
-    user_name: str, message: str, image: str, chat_config: ChatConfig
+    user_name: str, message: str, image: List[str], chat_config: ChatConfig
 ) -> str:
     output_log(
         f"Chat Completion for User: {user_name}, Message: {message}, Image: {image}, Config: {chat_config}",
@@ -218,12 +219,12 @@ async def chat_completions_handler(
         tools=chat_config.tools_name,
         user_name=user_name,
     )
-    response = await agent.ainvoke(prompt)
-    return response
+    response = await agent.ainvoke(AgentState(messages=prompt))
+    return response["messages"]
 
 
 async def create_completion_response(
-    user_name: str, message: str, image: str, chat_config: ChatConfig
+    user_name: str, message: str, image: List[str], chat_config: ChatConfig
 ) -> JSONResponse:
     result = await chat_completions_handler(user_name, message, image, chat_config)
     return JSONResponse(
@@ -233,15 +234,14 @@ async def create_completion_response(
 
 
 def create_batch_response(
-    user_name: str, messages: list[str], image: str, chat_config: ChatConfig
+    user_name: str, messages: list[str], image: List[str], chat_config: ChatConfig
 ) -> JSONResponse:
     if not isinstance(messages, list) or not messages:
         return JSONResponse(
             content={"error": "Invalid messages format."},
             status_code=400,
         )
-    base_model_ins = get_model_instance_by_operator(
-        chat_config.operator,
+    base_model_ins = get_model_instance(
         chat_config.base_model,
     )
     if base_model_ins is None:

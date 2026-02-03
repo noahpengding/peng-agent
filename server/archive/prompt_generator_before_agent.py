@@ -49,7 +49,7 @@ def add_image_to_prompt(model_name, params, image):
 
 def add_websearch_to_prompt(params, query):
     from archive.websearch import websearch_main
-    from handlers.model_utils import get_model_instance_by_operator
+    from handlers.model_utils import get_model_instance
 
     prompt = [
         (
@@ -77,9 +77,9 @@ def add_websearch_to_prompt(params, query):
         ),
         ("human", "User query:{query}"),
     ]
-    openai = get_model_instance_by_operator(
-        config.default_operator,
-        config.default_base_model,
+    openai = get_model_instance(
+        model_name=config.default_base_model,
+        operator_name=config.default_operator,
     )
     websearch_queries = openai.invoke(
         ChatPromptTemplate(prompt).invoke({"query": query})

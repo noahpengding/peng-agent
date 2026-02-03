@@ -5,6 +5,7 @@ from langchain_core.messages import (
     AIMessage,
 )
 from utils.minio_connection import MinioStorage
+from utils.log import output_log
 import base64
 import tempfile
 import os
@@ -29,27 +30,29 @@ def add_long_term_memory_to_prompt(long_term_memory) -> list[SystemMessage]:
     return []
 
 
-def add_short_term_memory_to_prompt(short_term_memory, mysql_conn) -> list:
+def add_short_term_memory_to_prompt(short_term_memory, mysql_conn, model_name) -> list:
     result = []
     if isinstance(short_term_memory, list):
         for msg_id in short_term_memory:
             reasonings = mysql_conn.read_records("ai_reasoning", conditions={"chat_id": msg_id})
             responses = mysql_conn.read_records("ai_response", conditions={"chat_id": msg_id})
-            chat = mysql_conn.read_records("chat", conditions={"id": msg_id})
-            if chat:
-                chat = chat[0]
-                result.append(HumanMessage(chat["human_input"]))
-                if reasonings:
-                    result.append(AIMessage(content_blocks=[
-                        {
-                            "type": "reasoning",
-                            "reasoning": reasoning["reasoning_process"],
+            user_input = mysql_conn.read_records("user_input", conditions={"chat_id": msg_id})
 
-                        }
-                        for reasoning in reasonings
-                    ]))
-                for response in responses:
-                    result.append(AIMessage(response["ai_response"]))
+            result += add_human_message_to_prompt(user_input[0]["input_content"]) if user_input[0]["input_content"] else []
+            result += add_image_to_prompt(model_name, user_input[0]["input_location"]) if user_input[0]["input_location"] else []
+            if reasonings:
+                result.append(AIMessage(content_blocks=[
+                    {
+                        "type": "reasoning",
+                        "reasoning": reasoning["reasoning_process"],
+
+                    }
+                    for reasoning in reasonings
+                ]))
+            for response in responses:
+                result.append(AIMessage(response["ai_response"]))
+
+    output_log(f"Short-term memory added to prompt: {result}", "debug")
     return result
 
 
@@ -58,14 +61,13 @@ def add_human_message_to_prompt(message) -> list[HumanMessage]:
 
 
 def add_image_to_prompt(model_name, images, mime_type="image/png") -> list:
-    # Normalize images to a list
-    if isinstance(images, str):
-        if not images:
-            return []
-        images = [images]
-    elif not images:
+    if images is None or images == "":
         return []
+
+    if not isinstance(images, list):
+        images = [images]
     
+    output_log(f"Adding images to prompt for model {model_name}: {images}", "debug")
     messages = []
     m = MinioStorage()
     with tempfile.TemporaryDirectory() as temp_dir:

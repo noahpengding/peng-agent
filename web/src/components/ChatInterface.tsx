@@ -63,6 +63,8 @@ const ChatbotUI = () => {
         if (Array.isArray(data) && data.length > 0) {
           setAvailableBaseModels(data);
         }
+
+        setbaseModel(data[0]?.model_name || 'gpt-4');
       } catch (error) {
         setError(`Failed to fetch base models: ${error instanceof Error ? error.message : String(error)}`);
         // Fallback to default models as simple strings to maintain compatibility
@@ -101,17 +103,6 @@ const ChatbotUI = () => {
   const extractChatIdFromChunk = (chunk: string): number | null => {
     const trimmed = chunk.trim();
     if (!trimmed) return null;
-
-    // Try JSON parsing first
-    try {
-      const parsed = JSON.parse(trimmed);
-      const candidate = parsed?.chat_id ?? parsed?.chatId ?? parsed?.id;
-      const id = Number(candidate);
-      if (Number.isInteger(id)) return id;
-    } catch {
-      // Fall through to regex parsing
-    }
-
     const match = trimmed.match(/-?\d+/);
     if (!match) return null;
     const id = Number(match[0]);
@@ -159,11 +150,13 @@ const ChatbotUI = () => {
 
   // Function to determine operator based on model name
   const getOperatorForModel = (modelName: string): string => {
-    // Find the model in available base models
-    const matchingModel = availableBaseModels.find((model) => model.model_name === modelName);
+    // Check if the model name includes the operator
+    if (modelName.includes('/')) {
+      return modelName.split('/')[0];
+    }
 
     // Return the operator if found, or default to "openai"
-    return matchingModel?.operator || 'openai';
+    return 'openai';
   };
 
   // Tool management functions
@@ -368,11 +361,12 @@ const ChatbotUI = () => {
             })
           );
 
+          const chatIdToStore = latestChatIdRef.current;
           // Add latest chat id to short-term memory
           setShortTermMemory((prev) => {
             const newMemories = [...prev];
-            if (latestChatIdRef.current !== null) {
-              newMemories.push(latestChatIdRef.current);
+            if (chatIdToStore !== null) {
+              newMemories.push(chatIdToStore);
             }
             return newMemories;
           });

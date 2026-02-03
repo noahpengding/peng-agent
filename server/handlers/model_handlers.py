@@ -51,9 +51,9 @@ def refresh_models():
     responses = server_models.copy()
     for operator in get_all_operators():
         try:
-            from handlers.model_utils import get_model_instance_by_operator
+            from handlers.model_utils import get_model_instance
 
-            model_ins = get_model_instance_by_operator(operator.operator)
+            model_ins = get_model_instance(model_name="", operator_name=operator.operator)
             if model_ins is None:
                 continue
             models = model_ins.list_models()
@@ -63,11 +63,13 @@ def refresh_models():
             )
             continue
         for model in models.split("\n"):
+            model_name = f"{operator.operator}/{model}"
             server_match = next(
                 (
                     server_model
                     for server_model in server_models
-                    if server_model.model_name == model and server_model.operator == operator.operator
+                    if server_model.model_name == model_name
+                    and server_model.operator == operator.operator
                 ),
                 None,
             )
@@ -77,7 +79,7 @@ def refresh_models():
             else:
                 new_model = ModelConfig(
                     operator=operator.operator,
-                    model_name=model,
+                    model_name=model_name,
                     isAvailable=False,
                     reasoning_effect="not a reasoning model",
                 )

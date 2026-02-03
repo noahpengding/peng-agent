@@ -43,9 +43,9 @@ async def deep_web_crawler(url: str) -> str:
     response = ""
     for result in results:
         if len(str(result.html)) > 1000:
-            from handlers.model_utils import get_model_instance_by_operator
+            from handlers.model_utils import get_model_instance
 
-            llm = get_model_instance_by_operator("openai", "gpt-4.1-mini")
+            llm = get_model_instance("openai/gpt-4.1-mini")
             summary = await llm.ainvoke(
                 f"Extract useful information from the following web page content do not summary or modify them:\n{result.html}"
             )

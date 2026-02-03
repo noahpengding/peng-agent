@@ -243,7 +243,7 @@ class CustomGemini(BaseChatModel):
                     )
                 )
             elif isinstance(message, AIMessage):
-                for m in message.content:
+                for m in message.content_blocks:
                     if m["type"] == "text":
                         prompt_text.append(
                             types.Content(

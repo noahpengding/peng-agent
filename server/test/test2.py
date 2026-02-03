@@ -11,14 +11,14 @@ load_dotenv(dotenv_path)
 SCRIPT_DIR = os.path.dirname(os.path.realpath(__file__))
 sys.path.append(os.path.dirname(SCRIPT_DIR + "../"))
 
-from handlers.model_utils import get_model_instance_by_operator
+from handlers.model_utils import get_model_instance
 from langchain_core.messages import (
     SystemMessage,
     HumanMessage,
 )
 
 
-model = get_model_instance_by_operator("openai", "gpt-5-mini")
+model = get_model_instance("openai/gpt-5-mini")
 
 messages = [
     SystemMessage(content="You are a helpful assistant."),
