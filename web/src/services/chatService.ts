@@ -50,6 +50,10 @@ export const ChatService = {
       let isCompleted = false; // Flag to prevent duplicate completion calls
 
       while (true) {
+        if (isCompleted) {
+          onComplete();
+          break;
+        }
 
         const { done, value } = await reader.read();
 

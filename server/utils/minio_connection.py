@@ -74,9 +74,6 @@ class MinioStorage:
                 Body=file_content,
                 ContentType=content_type,
             )
-        except ClientError as e:
-            output_log(f"Error uploading file to S3: {e}", "error")
-            return False
         except Exception as e:
             output_log(f"Error uploading file to S3: {e}", "error")
             return False
@@ -90,9 +87,6 @@ class MinioStorage:
             file_name = file_name.replace("\\", "/")
             file_name = file_name.replace("//", "/")
             self.client.download_file(bucket_name, file_name, download_path)
-        except ClientError as e:
-            output_log(f"Error downloading file from S3: {e}", "error")
-            return False
         except Exception as e:
             output_log(f"Error downloading file from S3: {e}", "error")
             return False
