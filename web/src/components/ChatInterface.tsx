@@ -154,11 +154,9 @@ const ChatbotUI = () => {
     if (modelName.includes('/')) {
       return modelName.split('/')[0];
     }
-    // Find the model in available base models
-    const matchingModel = availableBaseModels.find((model) => model.model_name === modelName);
 
     // Return the operator if found, or default to "openai"
-    return matchingModel?.operator || 'openai';
+    return 'openai';
   };
 
   // Tool management functions
