@@ -59,12 +59,8 @@ def add_human_message_to_prompt(message) -> list[HumanMessage]:
 
 def add_image_to_prompt(model_name, images, mime_type="image/png") -> list:
     # Normalize images to a list
-    if isinstance(images, str):
-        if not images:
-            return []
+    if not isinstance(images, list):
         images = [images]
-    elif not images:
-        return []
     
     messages = []
     m = MinioStorage()

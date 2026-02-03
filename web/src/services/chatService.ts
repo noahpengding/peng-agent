@@ -50,6 +50,11 @@ export const ChatService = {
       let isCompleted = false; // Flag to prevent duplicate completion calls
 
       while (true) {
+        if (isCompleted) {
+          onComplete();
+          break;
+        }
+
         const { done, value } = await reader.read();
 
         if (done) {
@@ -67,15 +72,15 @@ export const ChatService = {
         buffer = lines.pop() || ''; // Keep the last incomplete line in the buffer
 
         for (const line of lines) {
+          if (isCompleted) {
+            break;
+          }
           if (line.trim()) {
             try {
               const data = JSON.parse(line);
-              if (!data.done) {
-                // pass chunk and its type
-                onChunk(data.chunk, data.type, data.done);
-              } else {
+              onChunk(data.chunk, data.type, data.done);
+              if (data.done) {
                 isCompleted = true;
-                onComplete();
               }
             } catch {
               // Silently handle JSON parsing errors to avoid console warnings
