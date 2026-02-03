@@ -4,7 +4,7 @@ from utils.log import output_log
 from utils.mysql_connect import MysqlConnect
 from services.response_formatter import response_formatter_main
 import services.prompt_generator as prompt_generator
-from handlers.model_utils import get_model_instance_by_operator
+from handlers.model_utils import get_model_instance
 from fastapi.responses import StreamingResponse, JSONResponse
 import json
 from typing import AsyncIterator
@@ -240,8 +240,7 @@ def create_batch_response(
             content={"error": "Invalid messages format."},
             status_code=400,
         )
-    base_model_ins = get_model_instance_by_operator(
-        chat_config.operator,
+    base_model_ins = get_model_instance(
         chat_config.base_model,
     )
     if base_model_ins is None:

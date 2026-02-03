@@ -159,6 +159,10 @@ const ChatbotUI = () => {
 
   // Function to determine operator based on model name
   const getOperatorForModel = (modelName: string): string => {
+    // Check if the model name includes the operator
+    if (modelName.includes('/')) {
+      return modelName.split('/')[0];
+    }
     // Find the model in available base models
     const matchingModel = availableBaseModels.find((model) => model.model_name === modelName);
 

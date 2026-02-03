@@ -1,7 +1,7 @@
 from qdrant_client import QdrantClient, models
 from qdrant_client.models import VectorParams, Distance
 from langchain_qdrant import QdrantVectorStore, RetrievalMode
-from handlers.model_utils import get_embedding_instance_by_operator
+from handlers.model_utils import get_embedding_instance
 from utils.log import output_log
 from config.config import config
 
@@ -15,9 +15,9 @@ class Qdrant:
     ):
         self.client = QdrantClient(host=host, port=port)
         self.collection_name = collection_name
-        self.embedding = get_embedding_instance_by_operator(
-            operator_name=config.embedding_operator,
+        self.embedding = get_embedding_instance(
             model_name=config.embedding_model,
+            operator_name=config.embedding_operator,
         )
         if not self.client.collection_exists(collection_name):
             output_log(
