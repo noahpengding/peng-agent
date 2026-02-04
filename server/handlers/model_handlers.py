@@ -1,9 +1,14 @@
-from utils.mysql_connect import MysqlConnect
 from models.model_config import ModelConfig
 from utils.log import output_log
 from utils.minio_connection import MinioStorage
 from handlers.operator_handlers import get_all_operators, update_operator
 from config.config import config
+from services.redis_service import (
+    create_table_record,
+    get_table_record,
+    get_table_records,
+    update_table_record,
+)
 import pandas as pd
 
 
@@ -30,13 +35,11 @@ def _save_local_models(models: list[ModelConfig]):
 
 
 def get_model():
-    mysql = MysqlConnect()
-    operator_record = mysql.read_records("operator")
+    operator_record = get_table_records("operator")
     operator = [op["operator"] for op in operator_record if isinstance(op, dict)]
-    models = mysql.read_records("model")
+    models = get_table_records("model")
     model_order = {val: i for i, val in enumerate(operator)}
     models.sort(key=lambda x: model_order.get(x["operator"], float("inf")))
-    mysql.close()
     return models
 
 
@@ -92,35 +95,46 @@ def refresh_models():
         ):
             responses.append(local_model)
     _save_local_models(responses)
-    mysql = MysqlConnect()
-    try:
-        for response in responses:
-            mysql.delete_record("model", {"model_name": response.model_name, "operator": response.operator})
-            mysql.create_record("model", response.to_dict())
-    finally:
-        mysql.close()
+    for response in responses:
+        existing = get_table_record("model", response.model_name)
+        if existing:
+            update_table_record(
+                "model",
+                response.to_dict(),
+                {"model_name": response.model_name},
+                redis_id="model_name",
+            )
+        else:
+            create_table_record(
+                "model",
+                response.to_dict(),
+                redis_id="model_name",
+            )
     return get_model()
 
 
 def _flip_record(model_name: str, field: str):
-    mysql = MysqlConnect()
-    model = mysql.read_records("model", {"model_name": model_name})
+    model = get_table_record("model", model_name)
     if model:
-        pre_value = model[0][field]
-        mysql.update_record("model", {field: not pre_value}, {"model_name": model_name})
+        pre_value = model[field]
+        update_table_record(
+            "model",
+            {field: not pre_value},
+            {"model_name": model_name},
+            redis_id="model_name",
+        )
         return f"Model {model_name}'s {field} status changed to {not pre_value}"
-    mysql.close()
     return f"Model {model_name} not found"
 
 
-def flip_avaliable(model_name: int):
+def flip_avaliable(model_name: str):
     return _flip_record(model_name, "isAvailable")
 
 
 def avaliable_models():
-    mysql = MysqlConnect()
-    models = mysql.read_records("model", {"isAvailable=": 1})
-    operator = mysql.read_records("operator")
+    models = get_table_records("model")
+    models = [model for model in models if model.get("isAvailable") in (True, 1)]
+    operator = get_table_records("operator")
     operator_dict = {
         op["operator"]: i for i, op in enumerate(operator) if isinstance(op, dict)
     }
@@ -131,16 +145,13 @@ def avaliable_models():
             x["model_name"],
         )
     )
-    mysql.close()
     return models
 
 
 def check_multimodal(model_name: str) -> bool:
-    mysql = MysqlConnect()
-    model = mysql.read_records("model", {"model_name": model_name})
+    model = get_table_record("model", model_name)
     if model:
-        return model[0]["input_image"] or model[0]["input_audio"] or model[0]["input_video"]
-    mysql.close()
+        return model["input_image"] or model["input_audio"] or model["input_video"]
     return False
 
 
@@ -151,26 +162,25 @@ def flip_multimodal(model_name: str, column: str):
 
 
 def get_all_available_models():
-    mysql = MysqlConnect()
-    return mysql.read_records("model", {"isAvailable=": 1})
+    models = get_table_records("model")
+    return [model for model in models if model.get("isAvailable") in (True, 1)]
 
 
 def update_reasoning_effect(model_name: str, reasoning_effect: str):
-    mysql = MysqlConnect()
-    model = mysql.read_records("model", {"model_name": model_name})
+    model = get_table_record("model", model_name)
     if model:
-        mysql.update_record(
-            "model", {"reasoning_effect": reasoning_effect}, {"model_name": model_name}
+        update_table_record(
+            "model",
+            {"reasoning_effect": reasoning_effect},
+            {"model_name": model_name},
+            redis_id="model_name",
         )
         return f"Model {model_name}'s reasoning effect updated to {reasoning_effect}"
-    mysql.close()
     return f"Model {model_name} not found"
 
 
 def get_reasoning_effect(model_name: str):
-    mysql = MysqlConnect()
-    model = mysql.read_records("model", {"model_name": model_name})
+    model = get_table_record("model", model_name)
     if model:
-        return model[0]["reasoning_effect"]
-    mysql.close()
+        return model["reasoning_effect"]
     return "not a reasoning model"
