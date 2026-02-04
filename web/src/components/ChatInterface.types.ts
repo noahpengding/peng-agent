@@ -22,3 +22,10 @@ export interface UploadedImage {
   path: string;
   preview: string; // Base64 for UI preview
 }
+
+export interface Tool {
+  id: string;
+  name: string;
+  type: string;
+  url: string;
+}

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import remarkMath from 'remark-math';
@@ -15,6 +15,7 @@ interface MessageListProps {
 
 export const MessageList: React.FC<MessageListProps> = ({ messages, isLoading }) => {
   const [foldedMessages, setFoldedMessages] = useState<Record<string, boolean>>({});
+  const messageRefs = useRef<Record<number, HTMLDivElement | null>>({});
 
   const toggleFolded = (index: number, currentState: boolean) => {
     setFoldedMessages((prev) => ({
@@ -22,6 +23,25 @@ export const MessageList: React.FC<MessageListProps> = ({ messages, isLoading })
       [index]: !currentState,
     }));
   };
+
+  // Auto-scroll logic for streaming long messages
+  useEffect(() => {
+    const lastMessageIndex = messages.length - 1;
+    if (lastMessageIndex >= 0) {
+      const lastMessage = messages[lastMessageIndex];
+      const isLongMessage =
+        lastMessage.type === 'tool_calls' || lastMessage.type === 'tool_output' || lastMessage.type === 'reasoning_summary';
+
+      const isFolded = foldedMessages[lastMessageIndex] ?? lastMessage.folded ?? false;
+
+      if (isLongMessage && !isFolded) {
+        const el = messageRefs.current[lastMessageIndex];
+        if (el) {
+          el.scrollTop = el.scrollHeight;
+        }
+      }
+    }
+  }, [messages, foldedMessages]);
 
   if (messages.length === 0 && !isLoading) {
     return (
@@ -50,6 +70,9 @@ export const MessageList: React.FC<MessageListProps> = ({ messages, isLoading })
           <div
             key={index}
             className={`message ${messageClass} ${isFoldable && isFolded ? 'folded-clickable' : ''}`}
+            ref={(el) => {
+              messageRefs.current[index] = el;
+            }}
             onClick={() => {
               if (isFoldable && isFolded) {
                 toggleFolded(index, isFolded);
@@ -69,15 +92,15 @@ export const MessageList: React.FC<MessageListProps> = ({ messages, isLoading })
                 <span className="fold-arrow" aria-hidden="true">
                   {isFolded ? '⇨' : '⇩'}
                 </span>
-                <strong>{
-                  message.type === 'tool_calls'
+                <strong>
+                  {message.type === 'tool_calls'
                     ? 'Tool Call'
                     : message.type === 'tool_output'
                       ? 'Tool Output'
                       : message.type === 'reasoning_summary'
                         ? 'Reasoning Summary'
-                        : 'Message'
-                }</strong>
+                        : 'Message'}
+                </strong>
               </button>
             )}
 
@@ -106,7 +129,12 @@ export const MessageList: React.FC<MessageListProps> = ({ messages, isLoading })
                         const langToken = cls.split(' ').find((c) => c.startsWith('language-'));
                         const lang = !inline && langToken ? langToken.replace('language-', '') : undefined;
                         return !inline && lang ? (
-                          <SyntaxHighlighter style={vscDarkPlus as Record<string, React.CSSProperties>} language={lang} PreTag="div" {...rest}>
+                          <SyntaxHighlighter
+                            style={vscDarkPlus as Record<string, React.CSSProperties>}
+                            language={lang}
+                            PreTag="div"
+                            {...rest}
+                          >
                             {String(children).replace(/\n$/, '')}
                           </SyntaxHighlighter>
                         ) : (

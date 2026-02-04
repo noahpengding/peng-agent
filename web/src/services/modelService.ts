@@ -20,6 +20,10 @@ export const ModelService = {
     }
   },
 
+  async getAvailableBaseModels(): Promise<Model[]> {
+    return this.getAvailableModels('base');
+  },
+
   async toggleModelAvailability(modelName: string): Promise<string> {
     try {
       const response = await apiCall('POST', '/model_avaliable', { model_name: modelName });
