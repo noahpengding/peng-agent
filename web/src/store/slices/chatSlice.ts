@@ -114,6 +114,16 @@ const chatSlice = createSlice({
     setSelectedToolNames: (state, action: PayloadAction<string[]>) => {
       state.selectedToolNames = action.payload;
     },
+    toggleToolName: (state, action: PayloadAction<{ toolName: string; isSelected: boolean }>) => {
+      const { toolName, isSelected } = action.payload;
+      if (isSelected) {
+        if (!state.selectedToolNames.includes(toolName)) {
+          state.selectedToolNames.push(toolName);
+        }
+      } else {
+        state.selectedToolNames = state.selectedToolNames.filter((name) => name !== toolName);
+      }
+    },
     setShortTermMemory: (state, action: PayloadAction<number[]>) => {
       state.shortTermMemory = action.payload;
     },
@@ -206,7 +216,7 @@ const chatSlice = createSlice({
       })
       .addCase(sendMessage.rejected, (state, action) => {
         state.isLoading = false;
-        state.error = action.payload as string;
+        state.error = (action.payload as string) ?? action.error?.message ?? 'Unknown error';
         state.messages.push({
           role: 'assistant',
           content: 'Sorry, I encountered an error.',
@@ -228,6 +238,7 @@ export const {
   addUserMessage,
   setBaseModel,
   setSelectedToolNames,
+  toggleToolName,
   setShortTermMemory,
   setMessages,
   resetState,

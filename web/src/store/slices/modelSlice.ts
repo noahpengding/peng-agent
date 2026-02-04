@@ -37,11 +37,17 @@ const modelSlice = createSlice({
       })
       .addCase(fetchBaseModels.fulfilled, (state, action) => {
         state.loading = false;
-        state.availableBaseModels = action.payload;
+        state.availableBaseModels = Array.isArray(action.payload)
+          ? (action.payload as ModelInfo[])
+          : [];
       })
       .addCase(fetchBaseModels.rejected, (state, action) => {
         state.loading = false;
-        state.error = action.payload as string;
+        const fallbackMessage =
+          typeof action.payload === 'string'
+            ? action.payload
+            : action.error?.message || 'Failed to fetch base models';
+        state.error = fallbackMessage;
       });
   },
 });

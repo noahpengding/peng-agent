@@ -9,7 +9,7 @@ import {
   setUploadedImages,
   addUserMessage,
   setBaseModel,
-  setSelectedToolNames,
+  toggleToolName,
   setShortTermMemory,
   setMessages,
   sendMessage,
@@ -39,7 +39,7 @@ const ChatbotUI = () => {
     longTermMemory,
   } = useSelector((state: RootState) => state.chat);
 
-  const { availableBaseModels, loading: baseModelsLoading } = useSelector((state: RootState) => state.models);
+  const { availableBaseModels, loading: baseModelsLoading, error: modelsError } = useSelector((state: RootState) => state.models);
   const { availableTools, loading: toolsLoading, error: toolsError } = useSelector((state: RootState) => state.tools);
   const { user } = useSelector((state: RootState) => state.auth);
 
@@ -53,7 +53,7 @@ const ChatbotUI = () => {
     dispatch(fetchBaseModels());
   }, [dispatch]);
 
-  const displayError = error || toolsError;
+  const displayError = error || toolsError || modelsError;
 
   // Username
   const username = user || 'default_user';
@@ -115,11 +115,7 @@ const ChatbotUI = () => {
   };
 
   const handleToolSelection = (toolName: string, isSelected: boolean) => {
-    if (isSelected) {
-      dispatch(setSelectedToolNames([...selectedToolNames, toolName]));
-    } else {
-      dispatch(setSelectedToolNames(selectedToolNames.filter((name) => name !== toolName)));
-    }
+    dispatch(toggleToolName({ toolName, isSelected }));
   };
 
   const openToolPopup = () => {

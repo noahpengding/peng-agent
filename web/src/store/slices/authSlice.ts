@@ -4,7 +4,7 @@ import { jwtDecode } from 'jwt-decode';
 interface JwtPayload {
   sub?: string;
   username?: string;
-  exp: number;
+  exp?: number;
 }
 
 interface AuthState {
@@ -22,7 +22,8 @@ const getInitialState = (): AuthState => {
   try {
     const decoded = jwtDecode<JwtPayload>(token);
     const currentTime = Date.now() / 1000;
-    if (decoded.exp < currentTime) {
+    // Require a valid numeric exp that is in the future
+    if (typeof decoded.exp !== 'number' || decoded.exp < currentTime) {
       localStorage.removeItem('access_token');
       return { token: null, user: null, isAuthenticated: false };
     }
@@ -46,6 +47,15 @@ const authSlice = createSlice({
       localStorage.setItem('access_token', token);
       try {
         const decoded = jwtDecode<JwtPayload>(token);
+        const currentTime = Date.now() / 1000;
+        // Require a valid numeric exp that is in the future
+        if (typeof decoded.exp !== 'number' || decoded.exp < currentTime) {
+          state.isAuthenticated = false;
+          state.user = null;
+          state.token = null;
+          localStorage.removeItem('access_token');
+          return;
+        }
         state.user = decoded.username || decoded.sub || token;
         state.isAuthenticated = true;
       } catch {

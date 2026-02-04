@@ -30,8 +30,8 @@ export const updateTools = createAsyncThunk(
   async (_, { rejectWithValue, dispatch }) => {
     try {
       await ToolService.updateTools();
-      // After successful update, fetch tools again
-      dispatch(fetchTools());
+      // After successful update, fetch tools again and wait for completion
+      await dispatch(fetchTools()).unwrap();
       return;
     } catch (error) {
       return rejectWithValue((error as Error).message);
@@ -55,7 +55,7 @@ const toolSlice = createSlice({
       })
       .addCase(fetchTools.rejected, (state, action) => {
         state.loading = false;
-        state.error = action.payload as string;
+        state.error = (action.payload as string) ?? action.error?.message ?? 'Unknown error';
       })
       .addCase(updateTools.pending, (state) => {
         state.loading = true;
@@ -66,7 +66,7 @@ const toolSlice = createSlice({
       })
       .addCase(updateTools.rejected, (state, action) => {
         state.loading = false;
-        state.error = action.payload as string;
+        state.error = (action.payload as string) ?? action.error?.message ?? 'Unknown error';
       });
   },
 });
