@@ -13,6 +13,7 @@ import {
   setShortTermMemory,
   setMessages,
   sendMessage,
+  setError,
 } from '../store/slices/chatSlice';
 import './ChatInterface.css';
 import { Message, UploadedImage } from './ChatInterface.types';
@@ -90,8 +91,8 @@ const ChatbotUI = () => {
 
         localStorage.removeItem('selectedMemories');
         localStorage.removeItem('selectedMemoryIds');
-      } catch (error) {
-        console.error('Failed to parse saved memories', error);
+      } catch {
+        // Silently ignore memory parsing errors
       }
     }
   }, [dispatch]);
@@ -386,7 +387,7 @@ const ChatbotUI = () => {
             setUploadedImages={handleSetUploadedImages}
             isLoading={isLoading}
             onSubmit={handleSubmit}
-            onError={(msg) => console.error(msg)}
+            onError={(msg) => dispatch(setError(msg))}
           />
         </div>
       </div>

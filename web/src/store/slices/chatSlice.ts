@@ -126,6 +126,9 @@ const chatSlice = createSlice({
        state.isLoading = false;
        state.error = null;
     },
+    setError: (state, action: PayloadAction<string | null>) => {
+      state.error = action.payload;
+    },
 
     // Actions for streaming
     handleChunk: (state, action: PayloadAction<{ chunk: string; type: string; done: boolean; messageId: string }>) => {
@@ -137,7 +140,7 @@ const chatSlice = createSlice({
         state.messages.push({
           role: 'assistant',
           content: chunk,
-          type: type as any,
+          type: type as Message['type'],
           folded: false,
           messageId,
         });
@@ -228,6 +231,7 @@ export const {
   setShortTermMemory,
   setMessages,
   resetState,
+  setError,
   handleChunk,
   finishMessage,
   updateMemoryWithChatId,
