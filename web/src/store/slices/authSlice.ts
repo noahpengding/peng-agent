@@ -13,6 +13,8 @@ interface AuthState {
   isAuthenticated: boolean;
 }
 
+const getCurrentUnixTime = (): number => Date.now() / 1000;
+
 const getInitialState = (): AuthState => {
   const token = localStorage.getItem('access_token');
   if (!token) {
@@ -21,7 +23,7 @@ const getInitialState = (): AuthState => {
 
   try {
     const decoded = jwtDecode<JwtPayload>(token);
-    const currentTime = Date.now() / 1000;
+    const currentTime = getCurrentUnixTime();
     // Require a valid numeric exp that is in the future
     if (typeof decoded.exp !== 'number' || decoded.exp < currentTime) {
       localStorage.removeItem('access_token');
@@ -47,7 +49,7 @@ const authSlice = createSlice({
       localStorage.setItem('access_token', token);
       try {
         const decoded = jwtDecode<JwtPayload>(token);
-        const currentTime = Date.now() / 1000;
+        const currentTime = getCurrentUnixTime();
         // Require a valid numeric exp that is in the future
         if (typeof decoded.exp !== 'number' || decoded.exp < currentTime) {
           state.isAuthenticated = false;

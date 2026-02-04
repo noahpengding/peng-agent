@@ -43,11 +43,7 @@ const modelSlice = createSlice({
       })
       .addCase(fetchBaseModels.rejected, (state, action) => {
         state.loading = false;
-        const fallbackMessage =
-          typeof action.payload === 'string'
-            ? action.payload
-            : action.error?.message || 'Failed to fetch base models';
-        state.error = fallbackMessage;
+        state.error = (action.payload as string) ?? action.error?.message ?? 'Failed to fetch base models';
       });
   },
 });
