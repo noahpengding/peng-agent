@@ -2,6 +2,7 @@ import json
 from typing import Any, Dict, Iterable, List, Optional
 
 import redis
+from redis.exceptions import RedisError
 
 from config.config import config
 from utils.log import output_log
@@ -21,10 +22,14 @@ class RedisCache:
             password=config.redis_password,
             decode_responses=True,
         )
-        output_log(
-            f"Initialized Redis client host={config.redis_host} port={config.redis_port} db={config.redis_db}",
-            "debug",
-        )
+        try:
+            self.client.ping()
+            output_log(
+                f"Initialized Redis client host={config.redis_host} port={config.redis_port} db={config.redis_db}",
+                "debug",
+            )
+        except RedisError as exc:
+            output_log(f"Redis connection unavailable: {exc}", "warning")
 
     def _assert_table(self, table: str) -> None:
         if table not in ALLOWED_TABLES:

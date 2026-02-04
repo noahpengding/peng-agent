@@ -1,6 +1,7 @@
 from models.db_models import Base, create_db_engine
 from utils.log import output_log
 from config.config import config
+from services.redis_service import setup_redis_cache
 
 
 def set_up():
@@ -11,8 +12,8 @@ def set_up():
         output_log("Creating database tables...", "info")
         Base.metadata.create_all(engine)
         output_log("Database tables created successfully using SQLAlchemy", "info")
-        # setup_redis_cache()
-        # output_log("Redis cache setup completed", "info")
+        setup_redis_cache()
+        output_log("Redis cache setup completed", "info")
     except Exception as e:
         output_log(f"Error creating database tables: {e}", "error")
         raise

@@ -8,7 +8,7 @@ import jwt
 from config.config import config
 from models.user_models import UserCreate
 from utils.log import output_log
-from utils.mysql_connect import MysqlConnect
+from services.redis_service import get_table_record, create_table_record
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
     try:
@@ -31,12 +31,7 @@ def get_password_hash(password: str) -> str:
 
 def authenticate_user(username: str, password: str) -> Optional[Dict]:
     try:
-        mysql = MysqlConnect()
-        user_records = mysql.read_records("user", {"user_name": username})
-        if not user_records or len(user_records) == 0:
-            output_log(f"User not found: {username}", "warning")
-            return None
-        user = user_records[0]
+        user = get_table_record("user", username)
         if not user:
             output_log(f"User not found: {username}", "warning")
             return None
@@ -47,20 +42,15 @@ def authenticate_user(username: str, password: str) -> Optional[Dict]:
     except Exception as e:
         output_log(f"Authentication error: {str(e)}", "error")
         return None
-    finally:
-        mysql.close()
-
-
 def create_user(user_data: UserCreate) -> Optional[Dict]:
     try:
-        mysql = MysqlConnect()
-        user_records = mysql.read_records("user", {"user_name": user_data.username})
-        if user_records and len(user_records) > 0:
+        existing_user = get_table_record("user", user_data.username)
+        if existing_user:
             output_log(f"User already exists: {user_data.username}", "warning")
             raise HTTPException(status_code=400, detail="User already exists")
         hashed_password = get_password_hash(user_data.password)
         api_token = create_access_token({"sub": user_data.username}, None)
-        mysql.create_record(
+        created_record = create_table_record(
             "user",
             {
                 "user_name": user_data.username,
@@ -71,12 +61,13 @@ def create_user(user_data: UserCreate) -> Optional[Dict]:
                 "default_output_model": user_data.default_based_model,
                 "default_embedding_model": user_data.default_embedding_model,
             },
+            redis_id="user_name",
         )
         return {
-            "user_name": user_data.username,
+            "user_name": created_record["user_name"],
             "password": user_data.password,
-            "email": user_data.email,
-            "api_token": api_token,
+            "email": created_record.get("email"),
+            "api_token": created_record.get("api_token"),
         }
     except Exception as e:
         output_log(f"User creation error: {str(e)}", "error")
