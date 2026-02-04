@@ -2,20 +2,21 @@ from utils.mysql_connect import MysqlConnect
 from utils.minio_connection import MinioStorage
 from utils.log import output_log
 from config.config import config
+from services.redis_service import (
+    create_table_record,
+    get_table_record,
+    get_table_records,
+    refresh_table_cache,
+)
 
 
 def get_all_tools():
-    mysql = MysqlConnect()
-    tools = mysql.read_records("tools")
-    mysql.close()
+    tools = get_table_records("tools")
     return tools if tools else []
 
 
 def get_tool_by_name(tool_name: str):
-    mysql = MysqlConnect()
-    tool = mysql.read_records("tools", {"name": tool_name})
-    mysql.close()
-    return tool[0] if tool else None
+    return get_table_record("tools", tool_name)
 
 
 def update_tools():
@@ -34,7 +35,8 @@ def update_tools():
             "url": row["url"],
         }
         try:
-            mysql.create_record("tools", tool_data)
+            create_table_record("tools", tool_data, redis_id="name")
         except Exception as e:
             output_log(f"Error updating tool {tool_data['name']}: {e}", "error")
     mysql.close()
+    refresh_table_cache("tools")

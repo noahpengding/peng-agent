@@ -62,6 +62,7 @@ dependencies = [
     "protobuf>=6.33.5",
     "pynacl>=1.6.2",
     "ddtrace>=4.3.1",
+    "redis>=5.0.8",
 ]
 requires-python = ">=3.12"
 
@@ -74,4 +75,3 @@ packages = ["api", "config", "models", "handlers", "services"]
 
 [tool.ruff]
 extend-exclude = ["archive/**", "test/**"]
-
