@@ -21,8 +21,8 @@ def _validate_table(table: str) -> None:
         raise ValueError(f"Unsupported table for Redis operations: {table}")
 
 
-def _log_redis_error(action: str, error: Exception) -> None:
-    output_log(f"Redis {action} failed: {error}", "warning")
+def _log_redis_error(action: str, exc: Exception) -> None:
+    output_log(f"Redis {action} failed: {exc}", "warning")
 
 
 def refresh_table_cache(table: str) -> List[Dict[str, Any]]:
@@ -97,12 +97,7 @@ def update_table_record(table: str, record: Dict[str, Any], conditions: Dict[str
     updated_count = mysql_client.update_record(table, record, conditions)
     if updated_count > 0:
         lookup_field = TABLES_ID[table]
-        record_id = (
-            conditions.get(lookup_field)
-            or record.get(lookup_field)
-            or conditions.get("id")
-            or record.get("id")
-        )
+        record_id = conditions.get(lookup_field) or record.get(lookup_field)
         if record_id:
             updated_record = mysql_client.read_records(table, {lookup_field: record_id})
             if updated_record:

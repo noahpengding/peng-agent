@@ -50,7 +50,7 @@ def create_user(user_data: UserCreate) -> Optional[Dict]:
             raise HTTPException(status_code=400, detail="User already exists")
         hashed_password = get_password_hash(user_data.password)
         api_token = create_access_token({"sub": user_data.username}, None)
-        create_table_record(
+        created_record = create_table_record(
             "user",
             {
                 "user_name": user_data.username,
@@ -64,10 +64,10 @@ def create_user(user_data: UserCreate) -> Optional[Dict]:
             redis_id="user_name",
         )
         return {
-            "user_name": user_data.username,
+            "user_name": created_record["user_name"],
             "password": user_data.password,
-            "email": user_data.email,
-            "api_token": api_token,
+            "email": created_record.get("email"),
+            "api_token": created_record.get("api_token"),
         }
     except Exception as e:
         output_log(f"User creation error: {str(e)}", "error")
