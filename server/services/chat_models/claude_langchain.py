@@ -148,6 +148,10 @@ class CustomClaude(BaseChatModel):
                         tool_calls_input += event.delta.partial_json
                         continue
                     elif event.delta.type == "thinking_delta":
+                        output_log(
+                            f"Received thinking delta: {event.delta.thinking}",
+                            "debug",
+                        )
                         message_chunk = AIMessageChunk(
                             content_blocks=[
                                 {
