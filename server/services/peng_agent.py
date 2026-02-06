@@ -64,25 +64,12 @@ class PengAgent:
         self.tools = await self.init_tools(self._tools_input)
         self._tools_ready = True
 
-    def invoke(self, state: AgentState) -> Any:
-        # Sync entrypoint cannot await async _ensure_tools
-        # For sync usage, tools must be initialized beforehand or use ainvoke instead
-        if not self._tools_ready:
-            raise RuntimeError("Tools not initialized. Use ainvoke() for async tool initialization.")
-        return self.graph.invoke(state)
-
     async def ainvoke(self, state: AgentState) -> Any:
         await self._ensure_tools()
         return await self.graph.ainvoke(
             state, {"recursion_limit": (self.total_tool_calls + 1) * 2}
         )
 
-    def stream(self, state: AgentState) -> Any:
-        # Sync entrypoint cannot await async _ensure_tools
-        # For sync usage, tools must be initialized beforehand or use astream instead
-        if not self._tools_ready:
-            raise RuntimeError("Tools not initialized. Use astream() for async tool initialization.")
-        return self.graph.stream(state, stream_mode="custom")
 
     async def astream(self, state: AgentState) -> Any:
         await self._ensure_tools()
