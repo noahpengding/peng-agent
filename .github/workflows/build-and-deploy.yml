@@ -54,11 +54,31 @@ jobs:
 
       - name: Install dependencies
         run: bun install
-        working-directory: ./web
+        working-directory: ./app/web
 
       - name: Run ESLint
         run: bun run lint
-        working-directory: ./web
+        working-directory: ./app/web
+
+  # Mobile lint check
+  mobile-lint:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install dependencies
+        run: npm install
+        working-directory: ./app/mobile
+
+      - name: Type check
+        run: npx tsc --noEmit
+        working-directory: ./app/mobile
 
   # CodeQL security analysis - runs on all branches and outputs to Security tab
   codeql-analysis:
@@ -76,7 +96,7 @@ jobs:
           - language: python
             path: './server'
           - language: javascript
-            path: './web'
+            path: './app/web'
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -186,8 +206,8 @@ jobs:
       - name: Build and push web test image
         uses: docker/build-push-action@v5
         with:
-          context: ./web
-          file: ./web/Dockerfile
+          context: .
+          file: ./app/web/Dockerfile
           platforms: linux/amd64
           push: true
           tags: ${{ env.WEB_IMAGE }}:${{ env.VERSION }}-nightly
@@ -249,8 +269,8 @@ jobs:
       - name: Build and push web x64 image
         uses: docker/build-push-action@v5
         with:
-          context: ./web
-          file: ./web/Dockerfile
+          context: .
+          file: ./app/web/Dockerfile
           platforms: linux/amd64
           push: true
           tags: |

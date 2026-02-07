@@ -4,7 +4,7 @@
   "version": "2.3.4",
   "type": "module",
   "scripts": {
-    "dev": "bun --env-file=../test/.env run vite",
+    "dev": "bun --env-file=../../test/.env run vite",
     "dev:serve": "vite",
     "build": "tsc -b && vite build",
     "lint": "eslint .",

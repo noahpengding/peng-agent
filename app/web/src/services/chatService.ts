@@ -1,15 +1,4 @@
-interface ChatRequest {
-  user_name: string;
-  message: string;
-  image?: string[];
-  config: {
-    operator: string;
-    base_model: string;
-    tools_name: string[];
-    short_term_memory: number[];
-    long_term_memory: string[];
-  };
-}
+import { ChatRequest } from '@shared/types';
 
 export const ChatService = {
   async sendMessage(

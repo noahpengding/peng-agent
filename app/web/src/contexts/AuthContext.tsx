@@ -1,22 +1,7 @@
 import React, { createContext, useState, useContext, useEffect, ReactNode } from 'react';
 import { jwtDecode } from 'jwt-decode';
 import { useNavigate } from 'react-router-dom';
-
-interface AuthContextType {
-  isAuthenticated: boolean;
-  token: string | null;
-  user: string | null;
-  login: (token: string) => void;
-  logout: () => void;
-}
-
-// Define JWT payload interface
-interface JwtPayload {
-  sub?: string;
-  username?: string;
-  exp: number;
-  // Add other JWT fields as needed
-}
+import { AuthContextType, JwtPayload } from '@shared/types';
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
