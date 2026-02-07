@@ -21,6 +21,10 @@ def get_memory(username: str = ""):
             conditions={"chat_id": chat_ids},
         )
 
+        # Sort by id to ensure deterministic order (assuming id is auto-incrementing)
+        all_user_inputs.sort(key=lambda x: x["id"])
+        all_ai_responses.sort(key=lambda x: x["id"])
+
         user_input_map = {}
         for ui in all_user_inputs:
             user_input_map.setdefault(ui["chat_id"], []).append(ui)

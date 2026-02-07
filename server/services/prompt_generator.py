@@ -37,6 +37,11 @@ def add_short_term_memory_to_prompt(short_term_memory, mysql_conn, model_name) -
         responses_list = mysql_conn.read_records("ai_response", conditions={"chat_id": short_term_memory})
         user_input_list = mysql_conn.read_records("user_input", conditions={"chat_id": short_term_memory})
 
+        # Sort by id to ensure deterministic order (assuming id is auto-incrementing)
+        reasonings_list.sort(key=lambda x: x["id"])
+        responses_list.sort(key=lambda x: x["id"])
+        user_input_list.sort(key=lambda x: x["id"])
+
         reasonings_map = {}
         for r in reasonings_list:
             reasonings_map.setdefault(r["chat_id"], []).append(r)
