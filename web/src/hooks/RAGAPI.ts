@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useCallback, useState } from 'react';
 import { RAGService } from '../services/ragService';
 
 // Export interfaces for component use
@@ -22,7 +22,7 @@ export const useRAGApi = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const getAllRAGDocuments = async (): Promise<RAGDocument[]> => {
+  const getAllRAGDocuments = useCallback(async (): Promise<RAGDocument[]> => {
     setIsLoading(true);
     setError(null);
 
@@ -36,9 +36,9 @@ export const useRAGApi = () => {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, []);
 
-  const indexDocument = async (
+  const indexDocument = useCallback(async (
     username: string,
     filePath: string,
     collectionName: string,
@@ -64,11 +64,28 @@ export const useRAGApi = () => {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, []);
+
+  const getCollections = useCallback(async (): Promise<string[]> => {
+    setIsLoading(true);
+    setError(null);
+
+    try {
+      const data = await RAGService.getCollections();
+      return data || [];
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Unknown error occurred';
+      setError(errorMessage);
+      throw err;
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
 
   return {
     getAllRAGDocuments,
     indexDocument,
+    getCollections,
     isLoading,
     error,
   };

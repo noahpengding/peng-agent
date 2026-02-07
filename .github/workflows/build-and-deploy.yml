@@ -7,8 +7,9 @@ env:
   REGISTRY: ghcr.io
   SERVER_IMAGE: ghcr.io/${{ github.repository }}/server
   WEB_IMAGE: ghcr.io/${{ github.repository }}/front
-  VERSION: v2.3.4
-
+  VERSION: v2.3.5
+  GITHUB_REPOSITORY: ${{ github.repository }}
+  GITHUB_COMMIT_SHA: ${{ github.sha }}
 
 jobs:
   # Code quality check - runs on all branches
@@ -161,6 +162,9 @@ jobs:
           platforms: linux/amd64
           push: true
           tags: ${{ env.SERVER_IMAGE }}:${{ env.VERSION }}-nightly
+          build-args: |
+            DD_GIT_REPOSITORY_URL=${{ env.GITHUB_REPOSITORY }}
+            DD_GIT_COMMIT_SHA=${{ env.GITHUB_COMMIT_SHA }}
 
   test-web-x64:
     if: github.ref != 'refs/heads/main'
@@ -191,6 +195,9 @@ jobs:
           platforms: linux/amd64
           push: true
           tags: ${{ env.WEB_IMAGE }}:${{ env.VERSION }}-nightly
+          build-args: |
+            DD_GIT_REPOSITORY_URL=${{ env.GITHUB_REPOSITORY }}
+            DD_GIT_COMMIT_SHA=${{ env.GITHUB_COMMIT_SHA }}
 
   # Production builds for main branch
   server-x64:
@@ -224,6 +231,9 @@ jobs:
           tags: |
             ${{ env.SERVER_IMAGE }}:${{ env.VERSION }}
             ${{ env.SERVER_IMAGE }}:latest
+          build-args: |
+            DD_GIT_REPOSITORY_URL=${{ env.GITHUB_REPOSITORY }}
+            DD_GIT_COMMIT_SHA=${{ env.GITHUB_COMMIT_SHA }}
 
   web-x64:
     if: github.ref == 'refs/heads/main'
@@ -256,3 +266,6 @@ jobs:
           tags: |
             ${{ env.WEB_IMAGE }}:${{ env.VERSION }}
             ${{ env.WEB_IMAGE }}:latest
+          build-args: |
+            DD_GIT_REPOSITORY_URL=${{ env.GITHUB_REPOSITORY }}
+            DD_GIT_COMMIT_SHA=${{ env.GITHUB_COMMIT_SHA }}

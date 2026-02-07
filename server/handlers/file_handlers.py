@@ -48,10 +48,7 @@ def file_upload_frontend(file_content: str, content_type: str):
         # Add padding regardless of whether prefix was present
         padded_content = file_content + ("=" * (-len(file_content) % 4))
         return file_uploader(base64.b64decode(padded_content), content_type, upload_path)
-    elif content_type == "application/pdf":
-        return ["PDF upload not supported", False]
-    else:
-        return ["Unsupported content type", False]
+    return ["Unsupported content type", False]
 
 
 def file_operator(local_file_path: str):

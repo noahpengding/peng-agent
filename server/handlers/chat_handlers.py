@@ -6,44 +6,39 @@ from services.response_formatter import response_formatter_main
 import services.prompt_generator as prompt_generator
 from handlers.model_utils import get_model_instance
 from fastapi.responses import StreamingResponse, JSONResponse
+from langchain_core.messages import (
+    AIMessage,
+)
 from typing import List
 import json
 from typing import AsyncIterator
 
 
 def _generate_prompt_params(
-    user_name: str, message: str, image: str, chat_config: ChatConfig, mysql_conn: MysqlConnect = None
+    user_name: str, message: str, knowledge_base: str, image: str, chat_config: ChatConfig, mysql_conn: MysqlConnect = None
 ):
-    prompt = []
-    prompt += prompt_generator.system_prompt(user_name)
-    prompt += prompt_generator.add_long_term_memory_to_prompt(chat_config.long_term_memory)
-    prompt += prompt_generator.add_short_term_memory_to_prompt(chat_config.short_term_memory, mysql_conn, chat_config.base_model)
-    prompt += prompt_generator.add_image_to_prompt(chat_config.base_model, image)
-    prompt += prompt_generator.add_human_message_to_prompt(message)
-    return prompt
-
-
-async def chat_handler(
-    user_name: str, message: str, image: List[str], chat_config: ChatConfig
-) -> AsyncIterator[str]:
-    output_log(
-        f"Streaming chat for User: {user_name}, Message: {message}, Image: {image}, Config: {chat_config}",
-        "debug",
-    )
-
-    mysql = MysqlConnect()
-    prompt = _generate_prompt_params(user_name, message, image, chat_config, mysql)
-    chat = mysql.create_record(
+    chat = mysql_conn.create_record(
         table="chat",
         data={
             "user_name": user_name,
             "type": "chat",
             "base_model": chat_config.base_model,
+            "knowledge_base": knowledge_base,
             "human_input": message,
         }
     )
+
+    prompt = []
+    prompt += prompt_generator.system_prompt(user_name)
+    prompt += prompt_generator.add_long_term_memory_to_prompt(chat_config.long_term_memory)
+    prompt += prompt_generator.add_short_term_memory_to_prompt(chat_config.short_term_memory, mysql_conn, chat_config.base_model)
+    prompt += prompt_generator.add_image_to_prompt(chat_config.base_model, image)
+    prompt += prompt_generator.add_knowledge_base_to_prompt(knowledge_base, message)
+    prompt += prompt_generator.add_human_message_to_prompt(message)
+    output_log(f"Generated Prompt: {prompt}", "DEBUG")
+
     chat_id = chat["id"]
-    mysql.create_record(
+    mysql_conn.create_record(
         table="user_input",
         data={
             "chat_id": chat_id,
@@ -52,7 +47,19 @@ async def chat_handler(
             "input_location": "|".join(image) if image else "",
         }
     )
-    output_log(f"Generated Prompt: {prompt}", "DEBUG")
+    return prompt, chat_id
+
+
+async def chat_handler(
+    user_name: str, message: str, knowledge_base: str, image: List[str], chat_config: ChatConfig
+) -> AsyncIterator[str]:
+    output_log(
+        f"Streaming chat for User: {user_name}, Message: {message}, Knowedge_Base: {knowledge_base}, Image: {image}, Config: {chat_config}",
+        "debug",
+    )
+
+    mysql = MysqlConnect()
+    prompt, chat_id = _generate_prompt_params(user_name, message, knowledge_base, image, chat_config, mysql)
 
     agent = PengAgent(
         user_name,
@@ -85,7 +92,7 @@ async def chat_handler(
                             f"Tool Call: {message['name']} with args {message['args']}"
                         )
                         chunk_type = "tool_calls"
-                        save_chat_response(
+                        _save_chat_response(
                             chat_id,
                             chunk_type,
                             chunk_content,
@@ -108,7 +115,7 @@ async def chat_handler(
                             [part for part in chunk_content if isinstance(part, str)]
                         )
                     chunk_type = "tool_output"
-                    save_chat_response(
+                    _save_chat_response(
                         chat_id,
                         chunk_type,
                         chunk_content,
@@ -120,7 +127,7 @@ async def chat_handler(
                     chunk_type = ""
                 if pre_chunk_type == "" or pre_chunk_type != chunk_type:
                     if pre_chunk_type in ["output_text", "reasoning_summary"] and full_response != "":
-                        save_chat_response(
+                        _save_chat_response(
                             chat_id,
                             pre_chunk_type,
                             full_response,
@@ -146,7 +153,7 @@ async def chat_handler(
         )
     finally:
         if pre_chunk_type in ["output_text", "reasoning_summary"] and full_response != "":
-            save_chat_response(
+            _save_chat_response(
                 chat_id,
                 pre_chunk_type,
                 full_response,
@@ -155,7 +162,7 @@ async def chat_handler(
         mysql.close()
         yield json.dumps({"chunk": f"{chat_id}", "done": True}) + "\n"
 
-def save_chat_response(chat_id: int, message_type: str, content: str, mysql_conn: MysqlConnect = None, **kwargs):
+def _save_chat_response(chat_id: int, message_type: str, content: str, mysql_conn: MysqlConnect = None, **kwargs):
     mysql = mysql_conn
     if message_type == "output_text":
         mysql.create_record(
@@ -195,23 +202,24 @@ def save_chat_response(chat_id: int, message_type: str, content: str, mysql_conn
         )
 
 def create_streaming_response(
-    user_name: str, message: str, image: str, chat_config: ChatConfig
+    user_name: str, message: str, knowledge_base: str, image: str, chat_config: ChatConfig
 ) -> StreamingResponse:
     return StreamingResponse(
-        chat_handler(user_name, message, image, chat_config),
+        chat_handler(user_name, message, knowledge_base, image, chat_config),
         media_type="text/event-stream",
     )
 
 
 async def chat_completions_handler(
-    user_name: str, message: str, image: List[str], chat_config: ChatConfig
+    user_name: str, message: str, knowledge_base: str, image: List[str], chat_config: ChatConfig
 ) -> str:
     output_log(
-        f"Chat Completion for User: {user_name}, Message: {message}, Image: {image}, Config: {chat_config}",
+        f"Chat Completion for User: {user_name}, Base: {knowledge_base}, Message: {message}, Image: {image}, Config: {chat_config}",
         "debug",
     )
 
-    prompt = _generate_prompt_params(user_name, message, image, chat_config)
+    mysql = MysqlConnect()
+    prompt, chat_id = _generate_prompt_params(user_name, message, knowledge_base, image, chat_config, mysql)
 
     agent = PengAgent(
         operater=chat_config.operator,
@@ -219,14 +227,53 @@ async def chat_completions_handler(
         tools=chat_config.tools_name,
         user_name=user_name,
     )
-    response = await agent.ainvoke(AgentState(messages=prompt))
-    return response["messages"]
+    responses = await agent.ainvoke(AgentState(messages=prompt))
+    for response in responses["messages"]:
+        if not isinstance(response, AIMessage):
+            continue
+        if hasattr(response, "content_blocks") and response.content_blocks:
+            for content_blocks in response.content_blocks:
+                if content_blocks["type"] == "text":
+                    _save_chat_response(
+                        chat_id,
+                        "output_text",
+                        content_blocks["text"],
+                        mysql_conn=mysql,
+                    )
+                elif content_blocks["type"] == "reasoning":
+                    _save_chat_response(
+                        chat_id,
+                        "reasoning_summary",
+                        content_blocks["reasoning"],
+                        mysql_conn=mysql,
+                    )
+                elif content_blocks["type"] == "tool_call":
+                    _save_chat_response(
+                        chat_id,
+                        "tool_calls",
+                        f"Tool Call: {content_blocks['name']} with args {content_blocks['args']}",
+                        mysql_conn=mysql,
+                        call_id=content_blocks.get("id", ""),
+                        tool_name=content_blocks.get("name", ""),
+                        tool_args=str(content_blocks.get("args", "")),
+                    )
+                elif content_blocks["type"] == "tool_output":
+                    _save_chat_response(
+                        chat_id,
+                        "tool_output",
+                        content_blocks.get("content", ""),
+                        mysql_conn=mysql,
+                        call_id=content_blocks.get("call_id", ""),
+                    )
+        else:
+            continue
+    return responses["messages"]
 
 
 async def create_completion_response(
-    user_name: str, message: str, image: List[str], chat_config: ChatConfig
+    user_name: str, message: str, knowledge_base: str, image: List[str], chat_config: ChatConfig
 ) -> JSONResponse:
-    result = await chat_completions_handler(user_name, message, image, chat_config)
+    result = await chat_completions_handler(user_name, message, knowledge_base, image, chat_config)
     return JSONResponse(
         content=result,
         media_type="application/json",
@@ -234,7 +281,7 @@ async def create_completion_response(
 
 
 def create_batch_response(
-    user_name: str, messages: list[str], image: List[str], chat_config: ChatConfig
+    user_name: str, messages: list[str], knowledge_base: str, image: List[str], chat_config: ChatConfig
 ) -> JSONResponse:
     if not isinstance(messages, list) or not messages:
         return JSONResponse(
@@ -251,7 +298,7 @@ def create_batch_response(
         )
     prompts = []
     for message in messages:
-        prompt = _generate_prompt_params(user_name, message, image, chat_config)
+        prompt, _ = _generate_prompt_params(user_name, message, knowledge_base, image, chat_config)
         prompts.append(AgentState(messages=prompt))
     full_response = base_model_ins.batch(prompts)
     reponses = [

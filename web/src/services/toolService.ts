@@ -1,5 +1,5 @@
 import { apiCall } from '../utils/apiUtils';
-import { Tool } from '../hooks/ToolAPI';
+import { Tool } from '../components/ChatInterface.types';
 
 export const ToolService = {
   async getAllTools(): Promise<Tool[]> {

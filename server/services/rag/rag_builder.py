@@ -1,5 +1,5 @@
 from langchain_community.document_loaders import PyPDFLoader
-from langchain.text_splitter import RecursiveCharacterTextSplitter
+from langchain_text_splitters import RecursiveCharacterTextSplitter
 from services.rag.qdrant_api import Qdrant
 from handlers.model_utils import get_embedding_instance
 from config.config import config
@@ -112,14 +112,14 @@ class RagBuilder:
         loader = PyPDFLoader(file_path)
         documents = loader.load()
         text_splitter = RecursiveCharacterTextSplitter(
-            chunk_size=300, chunk_overlap=20, length_function=len
+            chunk_size=600, chunk_overlap=120, length_function=len
         )
         chunks = text_splitter.split_documents(documents)
         return chunks
 
     def _pure_text_text_process(self, text):
         text_splitter = RecursiveCharacterTextSplitter(
-            chunk_size=300, chunk_overlap=20, length_function=len
+            chunk_size=600, chunk_overlap=120, length_function=len
         )
         chunks = text_splitter.split_text(text)
         return chunks

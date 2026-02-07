@@ -3,7 +3,6 @@ from handlers.model_handlers import get_reasoning_effect
 from utils.log import output_log
 from config.config import config
 import os
-import pickle
 
 
 def get_model_instance(model_name: str = "", operator_name: str = None):
@@ -111,50 +110,10 @@ def get_model_instance(model_name: str = "", operator_name: str = None):
 
 def get_embedding_instance(model_name: str = "", operator_name: str = None):
     real_model_name = model_name
-    if operator_name is None:
-        if "/" in model_name:
-            operator_name, real_model_name = model_name.split("/", 1)
-        else:
-            output_log(
-                f"Operator not provided and not found in model name: {model_name}",
-                "error",
-            )
-            return None
 
     operator = get_operator(operator_name)
     embedding_model_ins = None
-    if operator is None:
-        output_log(
-            f"Operator {operator_name} not found in the database.",
-            "error",
-        )
-        return None
-    if operator.runtime == "huggingface":
-        from langchain_huggingface import HuggingFaceEmbeddings
-
-        if os.path.exists(
-            f"{config.huggingface_cache_dir}/{real_model_name.split('/')[-1]}.pickle"
-        ):
-            pickle_file = open(
-                f"{config.huggingface_cache_dir}/{real_model_name.split('/')[-1]}.pickle",
-                "rb",
-            )
-            embedding_model_ins = pickle.load(pickle_file)
-            pickle_file.close()
-        else:
-            encode_kwargs = {"normalize_embeddings": False}
-            embedding_model_ins = HuggingFaceEmbeddings(
-                cache_folder=config.huggingface_cache_dir,
-                model_name=real_model_name,
-                encode_kwargs=encode_kwargs,
-            )
-            pickle_file = open(
-                f"{config.huggingface_cache_dir}/{real_model_name.split('/')[-1]}.pickle",
-                "wb",
-            )
-            pickle.dump(embedding_model_ins, pickle_file)
-            pickle_file.close()
-    elif operator.runtime == "openai_response":
+    if operator.runtime == "openai_response":
         from langchain_openai import OpenAIEmbeddings
 
         embedding_model_ins = OpenAIEmbeddings(
@@ -162,11 +121,5 @@ def get_embedding_instance(model_name: str = "", operator_name: str = None):
             api_key=operator.api_key,
             model=real_model_name,
         )
-    elif operator.runtime == "gemini":
-        from langchain_gemini import GeminiEmbeddings
 
-        embedding_model_ins = GeminiEmbeddings(
-            api_key=operator.api_key,
-            model=real_model_name,
-        )
     return embedding_model_ins

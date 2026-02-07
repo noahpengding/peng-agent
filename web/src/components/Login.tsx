@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useAuth } from '../contexts/AuthContext';
+import { useDispatch } from 'react-redux';
+import { login } from '../store/slices/authSlice';
 import { login as apiLogin } from '../utils/authUtils';
 
 const Login: React.FC = () => {
@@ -8,7 +9,7 @@ const Login: React.FC = () => {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const { login } = useAuth();
+  const dispatch = useDispatch();
   const navigate = useNavigate();
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -18,7 +19,7 @@ const Login: React.FC = () => {
 
     try {
       const response = await apiLogin(username, password);
-      login(response.access_token);
+      dispatch(login(response.access_token));
       navigate('/');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Login failed. Please try again.');

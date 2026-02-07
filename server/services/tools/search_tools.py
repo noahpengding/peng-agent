@@ -41,11 +41,6 @@ tavily_search_tool = StructuredTool.from_function(
                 "type": "string",
                 "description": "The query to run on the web.",
             },
-            "topic": {
-                "type": "string",
-                "description": "The topic of the search, should be one of [general, news, finance].",
-                "enum": ["general", "news", "finance"],
-            },
         },
         "required": ["query"],
     },
