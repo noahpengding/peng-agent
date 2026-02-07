@@ -3,7 +3,6 @@ from handlers.model_handlers import get_reasoning_effect
 from utils.log import output_log
 from config.config import config
 import os
-import pickle
 
 
 def get_model_instance(model_name: str = "", operator_name: str = None):

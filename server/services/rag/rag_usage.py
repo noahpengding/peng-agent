@@ -1,10 +1,5 @@
 from services.rag.qdrant_api import Qdrant
-import services.prompt_generator as prompt_generator
-from handlers.model_utils import get_model_instance
 from config.config import config
-from langchain_core.messages import AIMessage
-from typing import AsyncIterator
-from utils.log import output_log
 
 def get_all_collections():
     qdrant = Qdrant(

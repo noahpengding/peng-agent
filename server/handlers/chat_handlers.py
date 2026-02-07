@@ -7,7 +7,6 @@ import services.prompt_generator as prompt_generator
 from handlers.model_utils import get_model_instance
 from fastapi.responses import StreamingResponse, JSONResponse
 from langchain_core.messages import (
-    HumanMessage,
     AIMessage,
 )
 from typing import List
