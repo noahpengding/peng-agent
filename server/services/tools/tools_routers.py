@@ -15,10 +15,6 @@ async def tools_routers(tools_name: List[str]):
 
             tools += [wikipedia_search_tool]
 
-        elif tool_name == "rag_tool":
-            from services.tools.rag_tools import rag_usage_tool
-
-            tools += [rag_usage_tool]
         elif tool_name == "requests_tools":
             from services.tools.web_page_tools import requests_tools
 

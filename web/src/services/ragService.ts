@@ -11,6 +11,15 @@ export const RAGService = {
     }
   },
 
+  async getCollections(): Promise<string[]> {
+    try {
+      const response = await apiCall('GET', '/collection');
+      return response;
+    } catch (error) {
+      throw error;
+    }
+  },
+
   async indexDocument(request: IndexDocumentRequest): Promise<string> {
     try {
       const response = await apiCall('POST', '/rag', request as unknown as Record<string, unknown>);

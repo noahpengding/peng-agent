@@ -16,7 +16,7 @@ from typing import AsyncIterator
 
 
 def _generate_prompt_params(
-    user_name: str, message: str, image: str, chat_config: ChatConfig, mysql_conn: MysqlConnect = None
+    user_name: str, message: str, knowledge_base: str, image: str, chat_config: ChatConfig, mysql_conn: MysqlConnect = None
 ):
     chat = mysql_conn.create_record(
         table="chat",
@@ -24,6 +24,7 @@ def _generate_prompt_params(
             "user_name": user_name,
             "type": "chat",
             "base_model": chat_config.base_model,
+            "knowledge_base": knowledge_base,
             "human_input": message,
         }
     )
@@ -33,6 +34,7 @@ def _generate_prompt_params(
     prompt += prompt_generator.add_long_term_memory_to_prompt(chat_config.long_term_memory)
     prompt += prompt_generator.add_short_term_memory_to_prompt(chat_config.short_term_memory, mysql_conn, chat_config.base_model)
     prompt += prompt_generator.add_image_to_prompt(chat_config.base_model, image)
+    prompt += prompt_generator.add_knowledge_base_to_prompt(knowledge_base, message)
     prompt += prompt_generator.add_human_message_to_prompt(message)
     output_log(f"Generated Prompt: {prompt}", "DEBUG")
 
@@ -50,15 +52,15 @@ def _generate_prompt_params(
 
 
 async def chat_handler(
-    user_name: str, message: str, image: List[str], chat_config: ChatConfig
+    user_name: str, message: str, knowledge_base: str, image: List[str], chat_config: ChatConfig
 ) -> AsyncIterator[str]:
     output_log(
-        f"Streaming chat for User: {user_name}, Message: {message}, Image: {image}, Config: {chat_config}",
+        f"Streaming chat for User: {user_name}, Message: {message}, Knowedge_Base: {knowledge_base}, Image: {image}, Config: {chat_config}",
         "debug",
     )
 
     mysql = MysqlConnect()
-    prompt, chat_id = _generate_prompt_params(user_name, message, image, chat_config, mysql)
+    prompt, chat_id = _generate_prompt_params(user_name, message, knowledge_base, image, chat_config, mysql)
 
     agent = PengAgent(
         user_name,
@@ -201,24 +203,24 @@ def _save_chat_response(chat_id: int, message_type: str, content: str, mysql_con
         )
 
 def create_streaming_response(
-    user_name: str, message: str, image: str, chat_config: ChatConfig
+    user_name: str, message: str, knowledge_base: str, image: str, chat_config: ChatConfig
 ) -> StreamingResponse:
     return StreamingResponse(
-        chat_handler(user_name, message, image, chat_config),
+        chat_handler(user_name, message, knowledge_base, image, chat_config),
         media_type="text/event-stream",
     )
 
 
 async def chat_completions_handler(
-    user_name: str, message: str, image: List[str], chat_config: ChatConfig
+    user_name: str, message: str, knowledge_base: str, image: List[str], chat_config: ChatConfig
 ) -> str:
     output_log(
-        f"Chat Completion for User: {user_name}, Message: {message}, Image: {image}, Config: {chat_config}",
+        f"Chat Completion for User: {user_name}, Base: {knowledge_base}, Message: {message}, Image: {image}, Config: {chat_config}",
         "debug",
     )
 
     mysql = MysqlConnect()
-    prompt, chat_id = _generate_prompt_params(user_name, message, image, chat_config, mysql)
+    prompt, chat_id = _generate_prompt_params(user_name, message, knowledge_base, image, chat_config, mysql)
 
     agent = PengAgent(
         operater=chat_config.operator,
@@ -270,9 +272,9 @@ async def chat_completions_handler(
 
 
 async def create_completion_response(
-    user_name: str, message: str, image: List[str], chat_config: ChatConfig
+    user_name: str, message: str, knowledge_base: str, image: List[str], chat_config: ChatConfig
 ) -> JSONResponse:
-    result = await chat_completions_handler(user_name, message, image, chat_config)
+    result = await chat_completions_handler(user_name, message, knowledge_base, image, chat_config)
     return JSONResponse(
         content=result,
         media_type="application/json",
@@ -280,7 +282,7 @@ async def create_completion_response(
 
 
 def create_batch_response(
-    user_name: str, messages: list[str], image: List[str], chat_config: ChatConfig
+    user_name: str, messages: list[str], knowledge_base: str, image: List[str], chat_config: ChatConfig
 ) -> JSONResponse:
     if not isinstance(messages, list) or not messages:
         return JSONResponse(
@@ -297,7 +299,7 @@ def create_batch_response(
         )
     prompts = []
     for message in messages:
-        prompt = _generate_prompt_params(user_name, message, image, chat_config)
+        prompt, _ = _generate_prompt_params(user_name, message, knowledge_base, image, chat_config)
         prompts.append(AgentState(messages=prompt))
     full_response = base_model_ins.batch(prompts)
     reponses = [

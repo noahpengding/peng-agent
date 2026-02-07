@@ -8,6 +8,10 @@ def get_rag():
     mysql = MysqlConnect()
     return mysql.read_records("knowledge_base")
 
+def get_collections():
+    from services.rag.rag_usage import get_all_collections
+    return get_all_collections()
+
 
 def index_file(user_name, file_path, type_of_file, collection_name):
     rag_builder = RagBuilder(user_name, collection_name)

@@ -9,6 +9,7 @@ import {
   setUploadedImages,
   addUserMessage,
   setBaseModel,
+  setKnowledgeBase,
   setSelectedToolNames,
   setShortTermMemory,
   setMessages,
@@ -20,6 +21,7 @@ import { Message, UploadedImage } from './ChatInterface.types';
 import { InputArea } from './InputArea';
 import { MessageList } from './MessageList';
 import { Memory } from '../hooks/MemoryAPI';
+import { useRAGApi } from '../hooks/RAGAPI';
 
 // Main App Component
 const ChatbotUI = () => {
@@ -34,6 +36,7 @@ const ChatbotUI = () => {
     isSidebarHidden,
     uploadedImages,
     baseModel,
+    knowledgeBase,
     selectedToolNames,
     shortTermMemory,
     longTermMemory,
@@ -42,10 +45,12 @@ const ChatbotUI = () => {
   const { availableBaseModels, loading: baseModelsLoading } = useSelector((state: RootState) => state.models);
   const { availableTools, loading: toolsLoading, error: toolsError } = useSelector((state: RootState) => state.tools);
   const { user } = useSelector((state: RootState) => state.auth);
+  const { getCollections, isLoading: collectionsLoading, error: collectionsError } = useRAGApi();
 
   // Local UI State
   const [isToolPopupOpen, setIsToolPopupOpen] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [collections, setCollections] = useState<string[]>([]);
   const menuRef = useRef<HTMLDivElement | null>(null);
 
   // Initial Data Fetching
@@ -53,7 +58,32 @@ const ChatbotUI = () => {
     dispatch(fetchBaseModels());
   }, [dispatch]);
 
-  const displayError = error || toolsError;
+  useEffect(() => {
+    let isMounted = true;
+
+    const loadCollections = async () => {
+      try {
+        const data = await getCollections();
+        if (!isMounted) return;
+        const normalized = Array.isArray(data) ? data : [];
+        setCollections(normalized);
+        if (normalized.length > 0 && !normalized.includes(knowledgeBase)) {
+          dispatch(setKnowledgeBase(normalized[0]));
+        }
+      } catch {
+        if (!isMounted) return;
+        setCollections([]);
+      }
+    };
+
+    loadCollections();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [dispatch, getCollections, knowledgeBase]);
+
+  const displayError = error || toolsError || collectionsError;
 
   // Username
   const username = user || 'default_user';
@@ -175,6 +205,7 @@ const ChatbotUI = () => {
     const request = {
       user_name: username,
       message: input,
+      knowledge_base: knowledgeBase,
       image: imagePaths.length > 0 ? imagePaths : undefined,
       config: config,
     };
@@ -217,6 +248,32 @@ const ChatbotUI = () => {
           ))}
         </select>
         {baseModelsLoading && <div className="loading-indicator">Loading base models...</div>}
+      </div>
+    );
+  };
+
+  const renderKnowledgeBaseSelection = () => {
+    const isDisabled = collectionsLoading || collections.length === 0;
+    return (
+      <div className="form-group">
+        <label className="form-label">Knowledge Base</label>
+        <select
+          className="form-select"
+          value={knowledgeBase}
+          onChange={(e) => dispatch(setKnowledgeBase(e.target.value))}
+          disabled={isDisabled}
+        >
+          {collections.length === 0 ? (
+            <option value="">No collections available</option>
+          ) : (
+            collections.map((collection) => (
+              <option key={collection} value={collection}>
+                {collection}
+              </option>
+            ))
+          )}
+        </select>
+        {collectionsLoading && <div className="loading-indicator">Loading knowledge bases...</div>}
       </div>
     );
   };
@@ -326,6 +383,7 @@ const ChatbotUI = () => {
             </div>
 
             {renderBaseModelSelection()}
+            {renderKnowledgeBaseSelection()}
 
             {/* Tool Selection */}
             <div className="form-group">

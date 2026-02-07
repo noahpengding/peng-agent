@@ -32,3 +32,14 @@ async def index_file_api(
 @router.options("/rag")
 async def options_rag():
     return Response(headers={"Allow": "POST, OPTIONS, GET"})
+
+
+@router.options("/collection")
+async def options_collection():
+    return Response(headers={"Allow": "OPTIONS, GET"})
+
+@router.get("/collection")
+async def get_collections(auth: dict = Depends(authenticate_request)):
+    from handlers.rag_handlers import get_collections
+
+    return get_collections()

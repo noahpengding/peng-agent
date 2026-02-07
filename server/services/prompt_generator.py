@@ -60,6 +60,21 @@ def add_human_message_to_prompt(message) -> list[HumanMessage]:
     return [HumanMessage(message)]
 
 
+def add_knowledge_base_to_prompt(knowledge_base, message) -> list[SystemMessage]:
+    from services.rag.rag_usage import get_all_collections
+    if knowledge_base == "default":
+        return []
+
+    if knowledge_base in get_all_collections():
+        from services.rag.rag_usage import RagUsage
+
+        rag = RagUsage(collection_name=knowledge_base)
+        result = rag.similarity_search(message, k=5, score_threshold=0.3)
+        context = "\n\n".join([doc.page_content for doc in result])
+        return [SystemMessage(f"Knowledge Base Context:\n{context}")]
+    return []
+
+
 def add_image_to_prompt(model_name, images, mime_type="image/png") -> list:
     if images is None or images == "":
         return []

@@ -6,6 +6,7 @@ import { fetchBaseModels } from './modelSlice';
 interface SendMessageArgs {
   user_name: string;
   message: string;
+  knowledge_base: string;
   image?: string[];
   config: {
     operator: string;
@@ -26,6 +27,7 @@ interface ChatState {
 
   // Selection state
   baseModel: string;
+  knowledgeBase: string;
   selectedToolNames: string[];
   shortTermMemory: number[];
   longTermMemory: string[];
@@ -40,6 +42,7 @@ const initialState: ChatState = {
   uploadedImages: [],
 
   baseModel: 'gpt-4',
+  knowledgeBase: 'default',
   selectedToolNames: [],
   shortTermMemory: [],
   longTermMemory: [],
@@ -110,6 +113,9 @@ const chatSlice = createSlice({
     },
     setBaseModel: (state, action: PayloadAction<string>) => {
       state.baseModel = action.payload;
+    },
+    setKnowledgeBase: (state, action: PayloadAction<string>) => {
+      state.knowledgeBase = action.payload;
     },
     setSelectedToolNames: (state, action: PayloadAction<string[]>) => {
       state.selectedToolNames = action.payload;
@@ -227,6 +233,7 @@ export const {
   setUploadedImages,
   addUserMessage,
   setBaseModel,
+  setKnowledgeBase,
   setSelectedToolNames,
   setShortTermMemory,
   setMessages,

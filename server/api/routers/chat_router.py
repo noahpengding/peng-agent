@@ -23,7 +23,7 @@ async def chat(request: ChatRequest, auth: dict = Depends(authenticate_request))
     from handlers.chat_handlers import create_streaming_response
 
     return create_streaming_response(
-        request.user_name, request.message, request.image, request.config
+        request.user_name, request.message, request.knowledge_base, request.image, request.config
     )
 
 
@@ -40,7 +40,7 @@ async def chat_completions(
     from handlers.chat_handlers import chat_completions_handler
 
     result = await chat_completions_handler(
-        request.user_name, request.message, request.image, request.config
+        request.user_name, request.message, request.knowledge_base, request.image, request.config
     )
     return {"response": result}
 
@@ -64,5 +64,5 @@ async def chat_batch(request: ChatRequest, auth: dict = Depends(authenticate_req
     from handlers.chat_handlers import create_batch_response
 
     return create_batch_response(
-        request.user_name, messages_list, request.image, request.config
+        request.user_name, messages_list, request.knowledge_base, request.image, request.config
     )

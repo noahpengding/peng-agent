@@ -62,6 +62,7 @@ dependencies = [
     "protobuf>=6.33.5",
     "pynacl>=1.6.2",
     "ddtrace>=4.3.1",
+    "langchain-text-splitters>=1.0.0",
 ]
 requires-python = ">=3.12"
 

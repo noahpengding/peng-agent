@@ -90,6 +90,7 @@ class Chat(Base):
         VARCHAR(config.input_max_length, charset='utf8mb4', collation='utf8mb4_unicode_ci'),
         nullable=False
     )
+    knowledge_base = Column(Text)
     created_at = Column(TIMESTAMP, default=datetime.now)
 
     def to_dict(self):
@@ -98,6 +99,7 @@ class Chat(Base):
             "user_name": self.user_name,
             "type": self.type,
             "base_model": self.base_model,
+            "knowledge_base": self.knowledge_base,
             "human_input": self.human_input,
             "created_at": self.created_at,
         }

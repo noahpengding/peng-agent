@@ -1,6 +1,7 @@
 interface ChatRequest {
   user_name: string;
   message: string;
+  knowledge_base: string;
   image?: string[];
   config: {
     operator: string;
