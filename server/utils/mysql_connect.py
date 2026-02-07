@@ -100,6 +100,8 @@ class MysqlConnect:
             elif key.endswith("<"):
                 field_name = key[:-1]
                 filters.append(getattr(model, field_name) < value)
+            elif isinstance(value, (list, tuple)):
+                filters.append(getattr(model, key).in_(value))
             else:
                 # Default to equals
                 filters.append(getattr(model, key) == value)

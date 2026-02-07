@@ -32,14 +32,33 @@ def add_long_term_memory_to_prompt(long_term_memory) -> list[SystemMessage]:
 
 def add_short_term_memory_to_prompt(short_term_memory, mysql_conn, model_name) -> list:
     result = []
-    if isinstance(short_term_memory, list):
-        for msg_id in short_term_memory:
-            reasonings = mysql_conn.read_records("ai_reasoning", conditions={"chat_id": msg_id})
-            responses = mysql_conn.read_records("ai_response", conditions={"chat_id": msg_id})
-            user_input = mysql_conn.read_records("user_input", conditions={"chat_id": msg_id})
+    if isinstance(short_term_memory, list) and short_term_memory:
+        reasonings_list = mysql_conn.read_records("ai_reasoning", conditions={"chat_id": short_term_memory})
+        responses_list = mysql_conn.read_records("ai_response", conditions={"chat_id": short_term_memory})
+        user_input_list = mysql_conn.read_records("user_input", conditions={"chat_id": short_term_memory})
 
-            result += add_human_message_to_prompt(user_input[0]["input_content"]) if user_input[0]["input_content"] else []
-            result += add_image_to_prompt(model_name, user_input[0]["input_location"]) if user_input[0]["input_location"] else []
+        reasonings_map = {}
+        for r in reasonings_list:
+            reasonings_map.setdefault(r["chat_id"], []).append(r)
+
+        responses_map = {}
+        for r in responses_list:
+            responses_map.setdefault(r["chat_id"], []).append(r)
+
+        user_input_map = {}
+        for r in user_input_list:
+            user_input_map.setdefault(r["chat_id"], []).append(r)
+
+        for msg_id in short_term_memory:
+            reasonings = reasonings_map.get(msg_id, [])
+            responses = responses_map.get(msg_id, [])
+            user_inputs = user_input_map.get(msg_id, [])
+
+            if user_inputs:
+                user_input = user_inputs[0]
+                result += add_human_message_to_prompt(user_input["input_content"]) if user_input["input_content"] else []
+                result += add_image_to_prompt(model_name, user_input["input_location"]) if user_input["input_location"] else []
+
             if reasonings:
                 result.append(AIMessage(content_blocks=[
                     {
