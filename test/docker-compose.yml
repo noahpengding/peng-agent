@@ -1,6 +1,6 @@
 services:
   qdrant:
-    image: qdrant/qdrant:latest
+    image: qdrant/qdrant:v1.12.0
     container_name: qdrant
     restart: always
     ports:
@@ -22,7 +22,7 @@ services:
       - /data/peng-agent/mysql:/var/lib/mysql
 
   peng-agent-redis:
-    image: redis:latest
+    image: redis:8.2.3
     container_name: peng-agent-redis
     restart: always
     ports:

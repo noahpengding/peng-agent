@@ -1,6 +1,6 @@
 
 # Use the official Bun image as the base
-FROM oven/bun:latest AS builder
+FROM oven/bun:1.3.8 AS builder
 
 # Set the working directory
 WORKDIR /app
@@ -18,7 +18,7 @@ COPY . .
 RUN bun run build
 
 # Use a lightweight server for the final image
-FROM nginx:alpine
+FROM nginx:1.27.3-alpine
 
 # Install bash and envsubst
 RUN apk add --no-cache bash gettext

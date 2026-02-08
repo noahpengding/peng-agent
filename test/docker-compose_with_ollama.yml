@@ -1,6 +1,6 @@
 services:
   ollama:
-    image: ollama/ollama:latest
+    image: ollama/ollama:0.5.7
     container_name: ollama
     hostname: ollama
     restart: always
@@ -46,7 +46,7 @@ services:
     profiles: ["prod", "ollama"]
 
   qdrant:
-    image: qdrant/qdrant:latest
+    image: qdrant/qdrant:v1.12.0
     container_name: qdrant
     restart: always
     networks:
