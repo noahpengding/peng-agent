@@ -1,6 +1,13 @@
 schema-version: v1
 rulesets:
-  - docker-best-practices
+  - docker-best-practices:
+    rules:
+      only-use-allowed-registry:
+        arguments:
+          allowed-registries:
+            - dhi.io
+            - ghcr.io
+            - docker.io
   - javascript-best-practices
   - javascript-browser-security
   - javascript-code-style
