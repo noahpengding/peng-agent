@@ -1,6 +1,6 @@
 [project]
 name = "Peng-Agent"
-version = "2.3.5"
+version = "2.3.6"
 description = "A LLM ongoing chat agent for learning"
 authors = [
     { name = "Noah Ding", email = "noah@dingyipeng.com" },
@@ -44,7 +44,6 @@ dependencies = [
     "openinference-instrumentation-langchain>=0.1.49",
     "sqlalchemy>=2.0.39",
     "pymysql>=1.1.1",
-    "crawl4ai>=0.8.0",
     "tavily-python>=0.7.11",
     "paramiko>=4.0.0",
     "langchain-mcp-adapters>=0.1.9",

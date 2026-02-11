@@ -1,23 +1,21 @@
-FROM python:3.12.3-slim-bookworm
+FROM dhi.io/python:3.12-debian13-sfw-dev AS builder
 
 WORKDIR /app
 
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    build-essential \
-    libpq-dev \
-    && rm -rf /var/lib/apt/lists/*
-
-RUN pip install --no-cache-dir uv ddtrace
-
 COPY pyproject.toml uv.lock ./
 
+RUN pip install --no-cache-dir uv
+RUN uv venv --python python3.12 --no-cache /app/.venv
 RUN uv sync --locked
 
-RUN uv run crawl4ai-setup
+FROM dhi.io/python:3.12
 
-COPY . .
+WORKDIR /app
 
-ENV PATH="/app/.venv/bin:$PATH"
+ENV PATH="/app/.venv/bin:${PATH}"
+
+COPY --from=builder /app /app
+
 ARG DD_GIT_REPOSITORY_URL
 ARG DD_GIT_COMMIT_SHA
 ENV DD_GIT_REPOSITORY_URL=${DD_GIT_REPOSITORY_URL}
