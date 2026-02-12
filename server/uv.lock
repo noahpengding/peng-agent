@@ -2114,13 +2114,7 @@ wheels = [
 
 [[package]]
 name = "peng-agent"
-<<<<<<< HEAD
 version = "2.3.6"
-||||||| 67e6f39
-version = "2.3.4"
-=======
-version = "2.3.5"
->>>>>>> palette/input-area-accessibility-7626420019548458703
 source = { editable = "." }
 dependencies = [
     { name = "aiohttp" },

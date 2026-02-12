@@ -1,4 +1,4 @@
-import { Navigate, RouterProvider } from 'react-router-dom'
+import { RouterProvider } from 'react-router-dom'
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import App from './App';
@@ -6,14 +6,12 @@ import './index.css'; // Import the CSS file with Tailwind directives
 import { datadogRum } from '@datadog/browser-rum';
 import { reactPlugin } from '@datadog/browser-rum-react';
 import { createBrowserRouter } from '@datadog/browser-rum-react/react-router-v6'
-import { useSelector } from 'react-redux';
-import { RootState } from './store';
 import ChatbotUI from './components/ChatInterface';
 import MemoryPage from './components/MemorySelection';
 import RAGInterface from './components/RAGInterface';
 import ModelInterface from './components/ModelInterface';
-import Login from './components/Login';
 import PrivateRoute from './components/PrivateRoute';
+import { AuthFallback, LoginRoute } from './components/AuthRoutes';
 
 
 datadogRum.init({
@@ -31,18 +29,6 @@ datadogRum.init({
   trackUserInteractions: true,
   plugins: [reactPlugin({ router: true })],
 });
-
-const LoginRoute: React.FC = () => {
-  const isAuthenticated = useSelector((state: RootState) => state.auth.isAuthenticated);
-
-  return isAuthenticated ? <Navigate to="/" replace /> : <Login />;
-};
-
-const AuthFallback: React.FC = () => {
-  const isAuthenticated = useSelector((state: RootState) => state.auth.isAuthenticated);
-
-  return <Navigate to={isAuthenticated ? '/' : '/login'} replace />;
-};
 
 const router = createBrowserRouter([
   {
