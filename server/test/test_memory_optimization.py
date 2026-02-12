@@ -1,6 +1,5 @@
 import unittest
 from services.prompt_generator import add_short_term_memory_to_prompt
-from langchain_core.messages import AIMessage, HumanMessage
 
 # Mock MysqlConnect
 class MockMysqlConnect:
@@ -61,7 +60,7 @@ class TestMemoryOptimization(unittest.TestCase):
         res_optimized = add_short_term_memory_to_prompt(self.short_term_memory, conn_optimized, "model")
 
         # Verify content
-        self.assertTrue(len(res_optimized) > 0)
+        self.assertGreater(len(res_optimized), 0)
 
         # Verify calls count (should be 3)
         self.assertEqual(conn_optimized.call_count, 3)
