@@ -1,6 +1,5 @@
 schema-version: v1
 rulesets:
-  - docker-best-practices
   - javascript-best-practices
   - javascript-browser-security
   - javascript-code-style
@@ -24,4 +23,3 @@ rulesets:
   - typescript-express
   - typescript-inclusive
   - typescript-node-security
-  - github-actions

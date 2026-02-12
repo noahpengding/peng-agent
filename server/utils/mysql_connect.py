@@ -82,27 +82,44 @@ class MysqlConnect:
         """
         filters = []
         for key, value in conditions.items():
-            if key.endswith("="):
-                field_name = key[:-1]
-                filters.append(getattr(model, field_name) == value)
-            elif key.endswith("<>"):
+            operator = "="
+            field_name = key
+
+            if key.endswith("<>"):
                 field_name = key[:-2]
-                filters.append(getattr(model, field_name) != value)
+                operator = "<>"
             elif key.endswith(">="):
                 field_name = key[:-2]
-                filters.append(getattr(model, field_name) >= value)
+                operator = ">="
             elif key.endswith("<="):
                 field_name = key[:-2]
-                filters.append(getattr(model, field_name) <= value)
+                operator = "<="
+            elif key.endswith("="):
+                field_name = key[:-1]
+                operator = "="
             elif key.endswith(">"):
                 field_name = key[:-1]
-                filters.append(getattr(model, field_name) > value)
+                operator = ">"
             elif key.endswith("<"):
                 field_name = key[:-1]
-                filters.append(getattr(model, field_name) < value)
-            else:
-                # Default to equals
-                filters.append(getattr(model, key) == value)
+                operator = "<"
+
+            column = getattr(model, field_name)
+
+            if isinstance(value, (list, tuple)):
+                filters.append(column.in_(value))
+            elif operator == "=":
+                filters.append(column == value)
+            elif operator == "<>":
+                filters.append(column != value)
+            elif operator == ">=":
+                filters.append(column >= value)
+            elif operator == "<=":
+                filters.append(column <= value)
+            elif operator == ">":
+                filters.append(column > value)
+            elif operator == "<":
+                filters.append(column < value)
         return filters
 
     def create_record(self, table: str, data: dict):

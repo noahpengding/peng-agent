@@ -5,6 +5,8 @@ import { UploadedImage } from './ChatInterface.types';
 interface InputAreaProps {
   input: string;
   setInput: (value: string) => void;
+  s3PathsInput: string;
+  setS3PathsInput: (value: string) => void;
   uploadedImages: UploadedImage[];
   setUploadedImages: (images: UploadedImage[]) => void;
   isLoading: boolean;
@@ -17,6 +19,8 @@ interface InputAreaProps {
 export const InputArea: React.FC<InputAreaProps> = ({
   input,
   setInput,
+  s3PathsInput,
+  setS3PathsInput,
   uploadedImages,
   setUploadedImages,
   isLoading,
@@ -28,6 +32,7 @@ export const InputArea: React.FC<InputAreaProps> = ({
   const fileInputRef = useRef<HTMLInputElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const [isUploading, setIsUploading] = useState(false);
+  const maxImages = 10;
 
   // Helper: adjust textarea height based on content up to max
   const adjustTextareaSize = useCallback(() => {
@@ -83,7 +88,6 @@ export const InputArea: React.FC<InputAreaProps> = ({
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (files) {
-      const maxImages = 5;
       const remainingSlots = maxImages - uploadedImages.length;
       const filesToProcess = Math.min(files.length, remainingSlots);
 
@@ -133,13 +137,30 @@ export const InputArea: React.FC<InputAreaProps> = ({
   return (
     <div className="input-container">
       <form onSubmit={onSubmit} className="input-form">
+        <div className="s3-input-row">
+          <input
+            type="text"
+            className="s3-input"
+            value={s3PathsInput}
+            onChange={(e) => setS3PathsInput(e.target.value)}
+            placeholder="Add S3 paths (comma-separated)"
+            aria-label="S3 paths"
+            disabled={isLoading || isUploading}
+          />
+        </div>
         {/* Image previews */}
         {uploadedImages.length > 0 && (
           <div className="image-preview-list">
             {uploadedImages.map((img, index) => (
               <div key={index} className="image-preview-container">
                 <img src={img.preview} alt="Preview" className="image-preview" />
-                <button type="button" onClick={() => handleClearImage(index)} className="clear-image-button" title="Remove image">
+                <button
+                  type="button"
+                  onClick={() => handleClearImage(index)}
+                  className="clear-image-button"
+                  title="Remove image"
+                  aria-label="Remove image"
+                >
                   ×
                 </button>
               </div>
@@ -159,6 +180,7 @@ export const InputArea: React.FC<InputAreaProps> = ({
             onKeyDown={handleKeyDown}
             onPaste={handlePaste}
             placeholder="Type your message... (Ctrl+Enter to send)"
+            aria-label="Message input"
             className="input-textarea"
             disabled={isLoading || isUploading}
             rows={1}
@@ -180,11 +202,17 @@ export const InputArea: React.FC<InputAreaProps> = ({
               onClick={() => fileInputRef.current?.click()}
               className="upload-button"
               title="Upload image"
+              aria-label="Upload image"
               disabled={isLoading || isUploading}
             >
               {isUploading ? '⏳' : '📎'}
             </button>
-            <button type="submit" className="send-button" disabled={isLoading || isUploading || (!input.trim() && uploadedImages.length === 0)}>
+            <button
+              type="submit"
+              className="send-button"
+              aria-label="Send message"
+              disabled={isLoading || isUploading || (!input.trim() && uploadedImages.length === 0 && s3PathsInput.trim().length === 0)}
+            >
               ➤
             </button>
           </div>

@@ -51,6 +51,7 @@ const ChatbotUI = () => {
   const [isToolPopupOpen, setIsToolPopupOpen] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [collections, setCollections] = useState<string[]>([]);
+  const [s3PathsInput, setS3PathsInput] = useState('');
   const menuRef = useRef<HTMLDivElement | null>(null);
 
   // Initial Data Fetching
@@ -181,9 +182,21 @@ const ChatbotUI = () => {
   // Submit
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!input.trim() && uploadedImages.length === 0) return;
+    if (!input.trim() && uploadedImages.length === 0 && s3PathsInput.trim().length === 0) return;
 
-    const imagePaths = uploadedImages.map((img) => img.path);
+    const s3Entries = s3PathsInput
+      .split(',')
+      .map((value) => value.trim())
+      .filter((value) => value.length > 0);
+
+    const formatPattern = /^[a-zA-Z0-9._-]+:\/\/.+$/;
+    const invalidEntries = s3Entries.filter((value) => !formatPattern.test(value));
+    if (invalidEntries.length > 0) {
+      dispatch(setError('Invalid path format. Use {bucket_name}://{bucket_path}.'));
+      return;
+    }
+
+    const imagePaths = [...uploadedImages.map((img) => img.path), ...s3Entries];
 
     const userMessage: Message = {
       role: 'user',
@@ -218,6 +231,10 @@ const ChatbotUI = () => {
     } else {
       dispatch(sendMessage(request));
     }
+
+    if (s3PathsInput.trim().length > 0) {
+      setS3PathsInput('');
+    }
   };
 
   const handleSetInput = (val: string) => dispatch(setInput(val));
@@ -235,12 +252,7 @@ const ChatbotUI = () => {
     return (
       <div className="form-group">
         <label className="form-label">Base Model</label>
-        <select
-          className="form-select"
-          value={baseModel}
-          onChange={(e) => dispatch(setBaseModel(e.target.value))}
-          disabled={baseModelsLoading}
-        >
+        <select className="form-select" value={baseModel} onChange={(e) => dispatch(setBaseModel(e.target.value))} disabled={baseModelsLoading}>
           {availableBaseModels.map((model) => (
             <option key={model.id || model.model_name} value={model.model_name}>
               {model.model_name}
@@ -257,12 +269,7 @@ const ChatbotUI = () => {
     return (
       <div className="form-group">
         <label className="form-label">Knowledge Base</label>
-        <select
-          className="form-select"
-          value={knowledgeBase}
-          onChange={(e) => dispatch(setKnowledgeBase(e.target.value))}
-          disabled={isDisabled}
-        >
+        <select className="form-select" value={knowledgeBase} onChange={(e) => dispatch(setKnowledgeBase(e.target.value))} disabled={isDisabled}>
           {collections.length === 0 ? (
             <option value="">No collections available</option>
           ) : (
@@ -282,13 +289,7 @@ const ChatbotUI = () => {
     <div className={`chat-container ${isSidebarHidden ? 'sidebar-hidden' : ''}`}>
       {/* Top-right menu */}
       <div className="top-right-menu" ref={menuRef}>
-        <button
-          type="button"
-          className="menu-button"
-          aria-label="Open menu"
-          title="Menu"
-          onClick={() => setIsMenuOpen((v) => !v)}
-        >
+        <button type="button" className="menu-button" aria-label="Open menu" title="Menu" onClick={() => setIsMenuOpen((v) => !v)}>
           …
         </button>
         {isMenuOpen && (
@@ -303,13 +304,13 @@ const ChatbotUI = () => {
               RAG
             </a>
             <a
-              href="https://llm.tenawalcott.com/projects/UHJvamVjdDoz/spans"
+              href="https://us5.datadoghq.com/llm/applications?query=&fromUser=true&start=1770794053588&end=1770880453588&paused=false"
               className="menu-item external-link"
               target="_blank"
               rel="noreferrer"
               onClick={() => setIsMenuOpen(false)}
             >
-              Phoenix Observability
+              Datadog LLM Observability
             </a>
             <a
               href="https://github.com/Noahdingpeng/peng-agent"
@@ -398,12 +399,7 @@ const ChatbotUI = () => {
                   {selectedToolNames.map((toolName, index) => (
                     <div key={index} className="selected-tool-item">
                       <span className="selected-tool-name">{toolName}</span>
-                      <button
-                        type="button"
-                        className="tool-remove-button"
-                        onClick={() => handleToolSelection(toolName, false)}
-                        title="Remove tool"
-                      >
+                      <button type="button" className="tool-remove-button" onClick={() => handleToolSelection(toolName, false)} title="Remove tool">
                         ×
                       </button>
                     </div>
@@ -419,9 +415,7 @@ const ChatbotUI = () => {
               <a href="/memory" className="memory-link">
                 Memory Selection
               </a>
-              {shortTermMemory.length > 0 && (
-                <div className="selected-memories-count">{shortTermMemory.length} short-term memories used</div>
-              )}
+              {shortTermMemory.length > 0 && <div className="selected-memories-count">{shortTermMemory.length} short-term memories used</div>}
             </div>
           </div>
         )}
@@ -441,6 +435,8 @@ const ChatbotUI = () => {
           <InputArea
             input={input}
             setInput={handleSetInput}
+            s3PathsInput={s3PathsInput}
+            setS3PathsInput={setS3PathsInput}
             uploadedImages={uploadedImages}
             setUploadedImages={handleSetUploadedImages}
             isLoading={isLoading}

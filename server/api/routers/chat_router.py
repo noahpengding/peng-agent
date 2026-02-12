@@ -43,26 +43,3 @@ async def chat_completions(
         request.user_name, request.message, request.knowledge_base, request.image, request.config
     )
     return {"response": result}
-
-
-@router.options("/chat_batch")
-async def options_chat_batch():
-    return Response(headers={"Allow": "POST, OPTIONS"})
-
-
-@router.post("/chat_batch")
-async def chat_batch(request: ChatRequest, auth: dict = Depends(authenticate_request)):
-    output_log(request, "DEBUG")
-    # Normalize message to a list of strings
-    if isinstance(request.message, str):
-        messages_list = [request.message]
-    else:
-        messages_list = request.message or []
-    
-    if not messages_list or all(msg.strip() == "" for msg in messages_list):
-        raise HTTPException(status_code=400, detail="Empty messages")
-    from handlers.chat_handlers import create_batch_response
-
-    return create_batch_response(
-        request.user_name, messages_list, request.knowledge_base, request.image, request.config
-    )

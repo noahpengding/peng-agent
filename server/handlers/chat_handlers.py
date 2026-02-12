@@ -2,9 +2,7 @@ from models.chat_config import ChatConfig
 from services.peng_agent import PengAgent, AgentState
 from utils.log import output_log
 from utils.mysql_connect import MysqlConnect
-from services.response_formatter import response_formatter_main
 import services.prompt_generator as prompt_generator
-from handlers.model_utils import get_model_instance
 from fastapi.responses import StreamingResponse, JSONResponse
 from langchain_core.messages import (
     AIMessage,
@@ -279,33 +277,3 @@ async def create_completion_response(
         media_type="application/json",
     )
 
-
-def create_batch_response(
-    user_name: str, messages: list[str], knowledge_base: str, image: List[str], chat_config: ChatConfig
-) -> JSONResponse:
-    if not isinstance(messages, list) or not messages:
-        return JSONResponse(
-            content={"error": "Invalid messages format."},
-            status_code=400,
-        )
-    base_model_ins = get_model_instance(
-        chat_config.base_model,
-    )
-    if base_model_ins is None:
-        return JSONResponse(
-            content={"error": "Model instance not found."},
-            status_code=500,
-        )
-    prompts = []
-    for message in messages:
-        prompt, _ = _generate_prompt_params(user_name, message, knowledge_base, image, chat_config)
-        prompts.append(AgentState(messages=prompt))
-    full_response = base_model_ins.batch(prompts)
-    reponses = [
-        response_formatter_main(chat_config.operator, response.content)
-        for response in full_response
-    ]
-    return JSONResponse(
-        content=reponses,
-        media_type="application/json",
-    )

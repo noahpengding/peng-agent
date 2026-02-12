@@ -14,16 +14,13 @@ const initialState: ModelState = {
   error: null,
 };
 
-export const fetchBaseModels = createAsyncThunk(
-  'models/fetchBaseModels',
-  async (_, { rejectWithValue }) => {
-    try {
-      return await ModelService.getAvailableBaseModels();
-    } catch (error) {
-      return rejectWithValue((error as Error).message);
-    }
+export const fetchBaseModels = createAsyncThunk('models/fetchBaseModels', async (_, { rejectWithValue }) => {
+  try {
+    return await ModelService.getAvailableBaseModels();
+  } catch (error) {
+    return rejectWithValue((error as Error).message);
   }
-);
+});
 
 const modelSlice = createSlice({
   name: 'models',

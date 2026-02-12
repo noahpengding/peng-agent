@@ -29,8 +29,7 @@ export const MessageList: React.FC<MessageListProps> = ({ messages, isLoading })
     const lastMessageIndex = messages.length - 1;
     if (lastMessageIndex >= 0) {
       const lastMessage = messages[lastMessageIndex];
-      const isLongMessage =
-        lastMessage.type === 'tool_calls' || lastMessage.type === 'tool_output' || lastMessage.type === 'reasoning_summary';
+      const isLongMessage = lastMessage.type === 'tool_calls' || lastMessage.type === 'tool_output' || lastMessage.type === 'reasoning_summary';
 
       const isFolded = foldedMessages[lastMessageIndex] ?? lastMessage.folded ?? false;
 
@@ -129,12 +128,7 @@ export const MessageList: React.FC<MessageListProps> = ({ messages, isLoading })
                         const langToken = cls.split(' ').find((c) => c.startsWith('language-'));
                         const lang = !inline && langToken ? langToken.replace('language-', '') : undefined;
                         return !inline && lang ? (
-                          <SyntaxHighlighter
-                            style={vscDarkPlus as Record<string, React.CSSProperties>}
-                            language={lang}
-                            PreTag="div"
-                            {...rest}
-                          >
+                          <SyntaxHighlighter style={vscDarkPlus as Record<string, React.CSSProperties>} language={lang} PreTag="div" {...rest}>
                             {String(children).replace(/\n$/, '')}
                           </SyntaxHighlighter>
                         ) : (

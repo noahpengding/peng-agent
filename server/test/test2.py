@@ -8,27 +8,7 @@ dotenv_path = os.path.join(
 )
 load_dotenv(dotenv_path)
 
-SCRIPT_DIR = os.path.dirname(os.path.realpath(__file__))
-sys.path.append(os.path.dirname(SCRIPT_DIR + "../"))
+from services.tools.web_page_tools import web_crawler
 
-from handlers.model_utils import get_model_instance
-from langchain_core.messages import (
-    SystemMessage,
-    HumanMessage,
-)
-
-
-model = get_model_instance("openai/gpt-5-mini")
-
-messages = [
-    SystemMessage(content="You are a helpful assistant."),
-    HumanMessage(content="Thinking and explain step by step how to solve the differencial equaltion x*dy/dx - y(ln(xy) - 1) = 0"),
-]
-
-for chunk in model.stream(messages):
-    if chunk.content_blocks:
-        content = chunk.content_blocks[0]
-        if content["type"] == "text":
-            print(content["text"], end="", flush=True)
-        if content["type"] == "reasoning":
-            print(f"\n[Reasoning]: {content['resoning']}\n", flush=True)
+results = web_crawler("https://www.invesco.com/qqq-etf/en/about.html")
+print(results)

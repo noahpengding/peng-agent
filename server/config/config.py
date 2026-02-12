@@ -37,6 +37,7 @@ class Config(BaseModel):
     azure_document_key: str
     tavily_api_key: str
     web_search_max_results: int
+    crawler4ai_url: str
     input_max_length: int
     output_max_length: int
     smtp_server: str
@@ -44,10 +45,6 @@ class Config(BaseModel):
     smtp_use_ssl: bool
     smtp_username: str
     smtp_password: str
-    redis_host: str
-    redis_port: int
-    redis_db: int
-    redis_password: str | None = None
 
 
 try:
@@ -145,6 +142,9 @@ try:
         "web_search_max_results": int(os.environ.get("WEB_SEARCH_MAX_RESULTS"))
         if os.environ.get("WEB_SEARCH_MAX_RESULTS")
         else 5,
+        "crawler4ai_url": os.environ.get("CRAWLER4AI_URL")
+        if os.environ.get("CRAWLER4AI_URL")
+        else "http://localhost:8001",
         "smtp_server": os.environ.get("SMTP_SERVER")
         if os.environ.get("SMTP_SERVER")
         else "smtp.example.com",
@@ -160,16 +160,6 @@ try:
         "smtp_password": os.environ.get("SMTP_PASSWORD")
         if os.environ.get("SMTP_PASSWORD")
         else "password",
-        "redis_host": os.environ.get("REDIS_HOST")
-        if os.environ.get("REDIS_HOST")
-        else "localhost",
-        "redis_port": int(os.environ.get("REDIS_PORT"))
-        if os.environ.get("REDIS_PORT")
-        else 6379,
-        "redis_db": int(os.environ.get("REDIS_DB"))
-        if os.environ.get("REDIS_DB")
-        else 0,
-        "redis_password": os.environ.get("REDIS_PASSWORD"),
     }
     for key, value in env_vars.items():
         if value is not None:

@@ -22,7 +22,7 @@ def _tavily_search(query: str, topic="general") -> str:
         query=query,
         topic=topic,
         search_depth="advanced",
-        max_results=5,
+        max_results=config.web_search_max_results,
     )
     return [
         f"{result['title']} --- {result['url']}: {result['content']}"

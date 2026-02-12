@@ -1,6 +1,6 @@
 [project]
 name = "Peng-Agent"
-version = "2.3.5"
+version = "2.3.6"
 description = "A LLM ongoing chat agent for learning"
 authors = [
     { name = "Noah Ding", email = "noah@dingyipeng.com" },
@@ -27,7 +27,7 @@ dependencies = [
     "openpyxl>=3.1.5",
     "pandas>=2.2.3",
     "pdf2image>=1.17.0",
-    "pillow>=11.1.0",
+    "pillow>=12.1.1",
     "pydantic>=2.10.6",
     "pyjwt>=2.10.1",
     "pymupdf>=1.25.5",
@@ -44,7 +44,6 @@ dependencies = [
     "openinference-instrumentation-langchain>=0.1.49",
     "sqlalchemy>=2.0.39",
     "pymysql>=1.1.1",
-    "crawl4ai>=0.8.0",
     "tavily-python>=0.7.11",
     "paramiko>=4.0.0",
     "langchain-mcp-adapters>=0.1.9",
@@ -63,6 +62,8 @@ dependencies = [
     "pynacl>=1.6.2",
     "ddtrace>=4.3.1",
     "langchain-text-splitters>=1.0.0",
+    "cryptography>=46.0.5",
+    "langsmith>=0.6.3",
 ]
 requires-python = ">=3.12"
 
