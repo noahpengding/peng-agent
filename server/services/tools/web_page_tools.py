@@ -1,59 +1,43 @@
 from langchain_core.tools import StructuredTool
-import asyncio
+from config.config import config
+import time
 
 
-async def adaptive_web_crawler(url: str, query: str) -> str:
-    from crawl4ai import AsyncWebCrawler, AdaptiveCrawler, AdaptiveConfig
+def _web_crawler(url: str) -> str:
+    import requests
 
-    adaptive_config = AdaptiveConfig(
-        confidence_threshold=0.8, max_pages=20, top_k_links=10, min_gain_threshold=0.05
+    browser_config = {
+        "browser_type": "chromium",
+        "headless": True,
+        "user_agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36",
+    }
+    crawler_config = {
+        "only_text": True,
+        "simulate_user": True,
+    }
+    r = requests.post(
+        f"{config.crawler4ai_url}/crawl/job",
+        json={
+            "urls": [url],
+            "browser_config": browser_config,
+            "crawler_config": crawler_config,
+        },
+        timeout=60,
     )
-
-    async with AsyncWebCrawler() as crawler:
-        adaptive = AdaptiveCrawler(crawler, adaptive_config)
-        await adaptive.digest(
-            start_url=url,
-            query=query,
-        )
-
-        relevant_pages = adaptive.get_relevant_content(top_k=10)
-    return "\n\n".join(
-        [
-            f"Source: {page['url']}\nContent: {page['content']}"
-            for page in relevant_pages
-        ]
-    )
-
-
-async def deep_web_crawler(url: str) -> str:
-    from crawl4ai import AsyncWebCrawler, CrawlerRunConfig
-    from crawl4ai.deep_crawling import BFSDeepCrawlStrategy
-    from crawl4ai.content_scraping_strategy import LXMLWebScrapingStrategy
-
-    config = CrawlerRunConfig(
-        deep_crawl_strategy=BFSDeepCrawlStrategy(
-            max_depth=3, include_external=True, max_pages=20, score_threshold=0.2
-        ),
-        scraping_strategy=LXMLWebScrapingStrategy(),
-        verbose=False,
-    )
-
-    async with AsyncWebCrawler() as crawler:
-        results = await crawler.arun(url, config=config)
-    response = ""
-    for result in results:
-        if len(str(result.html)) > 1000:
-            from handlers.model_utils import get_model_instance
-
-            llm = get_model_instance("openai/gpt-4.1-mini")
-            summary = await llm.ainvoke(
-                f"Extract useful information from the following web page content do not summary or modify them:\n{result.html}"
-            )
-            response += f"Source: {result.url}\nContent: {summary.content}\n\n"
-        else:
-            response += f"Source: {result.url}\nContent: {result.html}\n\n"
-    return response
-
+    job_response = r.json()
+    task_id = job_response["task_id"]
+    start_time = time.time()
+    while True:
+        if time.time() - start_time > 300:
+            return f"Task {task_id}: Request timed out."
+        result = requests.get(f"{config.crawler4ai_url}/crawl/job/{task_id}", timeout=60)
+        status = result.json()
+        if status["status"] and status["status"] == "failed":
+            return f"Task {task_id}: Crawling failed with error {status.get("error")}."
+        if status["status"] and status["status"] == "completed":
+            return status["result"]["results"]
+        
+        time.sleep(5)
 
 def requests_toolkit():
     from langchain_community.agent_toolkits.openapi.toolkit import RequestsToolkit
@@ -70,31 +54,10 @@ def requests_toolkit():
     return tools
 
 
-adaptive_web_crawler_tool = StructuredTool.from_function(
-    func=lambda url, query: asyncio.run(adaptive_web_crawler(url, query)),
-    name="adaptive_web_crawler_tool",
-    description="A web page crawler that can crawl web pages and extract relevant information based on a query. Input should be a URL for the starting web page and a query string for the information to extract.",
-    args_schema={
-        "type": "object",
-        "properties": {
-            "url": {
-                "type": "string",
-                "description": "The Starting URL of the web page to crawl.",
-            },
-            "query": {
-                "type": "string",
-                "description": "The query string for the information to extract from the web pages.",
-            },
-        },
-        "required": ["url", "query"],
-    },
-    return_direct=False,
-)
-
-deep_web_crawler_tool = StructuredTool.from_function(
-    func=lambda url: asyncio.run(deep_web_crawler(url)),
-    name="deep_web_crawler_tool",
-    description="A web page crawler that can deeply crawl web pages and extract all the information under the page and its subpages. Input should be a URL for the starting web page.",
+web_crawler_tool = StructuredTool.from_function(
+    func=_web_crawler,
+    name="web_crawler_tool",
+    description="A web page crawler that can crawl web pages and extract relevant information. Input should be a URL for the starting web page.",
     args_schema={
         "type": "object",
         "properties": {
@@ -107,6 +70,5 @@ deep_web_crawler_tool = StructuredTool.from_function(
     },
     return_direct=False,
 )
-
 
 requests_tools = requests_toolkit()
