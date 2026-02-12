@@ -2,7 +2,7 @@ FROM dhi.io/python:3.12-debian13-sfw-dev AS builder
 
 WORKDIR /app
 
-COPY pyproject.toml uv.lock ./
+COPY . .
 
 RUN pip install --no-cache-dir uv
 RUN uv venv --python python3.12 --no-cache /app/.venv
