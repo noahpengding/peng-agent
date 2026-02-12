@@ -200,7 +200,7 @@ jobs:
             DD_GIT_COMMIT_SHA=${{ env.GITHUB_COMMIT_SHA }}
 
   # Production builds for main branch
-  server-x64:
+  server:
     if: github.ref == 'refs/heads/main'
     needs: [ruff-check, web-lint, codeql-analysis]
     runs-on: ubuntu-latest
@@ -226,7 +226,7 @@ jobs:
         with:
           context: ./server
           file: ./server/Dockerfile
-          platforms: linux/amd64
+          platforms: linux/amd64, linux/arm64
           push: true
           tags: |
             ${{ env.SERVER_IMAGE }}:${{ env.VERSION }}
@@ -235,7 +235,7 @@ jobs:
             DD_GIT_REPOSITORY_URL=${{ env.GITHUB_REPOSITORY }}
             DD_GIT_COMMIT_SHA=${{ env.GITHUB_COMMIT_SHA }}
 
-  web-x64:
+  web:
     if: github.ref == 'refs/heads/main'
     needs: [ruff-check, web-lint, codeql-analysis]
     runs-on: ubuntu-latest
@@ -261,7 +261,7 @@ jobs:
         with:
           context: ./web
           file: ./web/Dockerfile
-          platforms: linux/amd64
+          platforms: linux/amd64, linux/arm64
           push: true
           tags: |
             ${{ env.WEB_IMAGE }}:${{ env.VERSION }}

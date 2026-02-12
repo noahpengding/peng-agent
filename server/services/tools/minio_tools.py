@@ -2,6 +2,7 @@ from langchain_core.tools import StructuredTool
 from utils.minio_connection import MinioStorage
 from config.config import config
 import os
+import tempfile
 
 
 def minio_file_upload_tool(file_content: str, file_name: str, content_type: str) -> str:
@@ -25,14 +26,20 @@ def minio_file_upload_tool(file_content: str, file_name: str, content_type: str)
 
 def minio_file_download_tool(file_name: str) -> str:
     minio_storage = MinioStorage()
-    minio_storage.file_download_to_string(
-        file_name=file_name, download_path=f"/tmp/{file_name.split('/')[-1]}"
-    )
-    file_content = ""
-    with open(f"/tmp/{file_name.split('/')[-1]}", "r", encoding="utf-8") as f:
-        file_content = f.read()
-    os.remove(f"/tmp/{file_name.split('/')[-1]}")
-    return file_content
+    temp_path = ""
+    try:
+        with tempfile.NamedTemporaryFile(delete=False) as temp_file:
+            temp_path = temp_file.name
+
+        minio_storage.file_download_to_string(
+            file_name=file_name, download_path=temp_path
+        )
+
+        with open(temp_path, "r", encoding="utf-8") as f:
+            return f.read()
+    finally:
+        if temp_path and os.path.exists(temp_path):
+            os.remove(temp_path)
 
 
 minio_tool = [
