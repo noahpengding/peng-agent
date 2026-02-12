@@ -51,6 +51,7 @@ const ChatbotUI = () => {
   const [isToolPopupOpen, setIsToolPopupOpen] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [collections, setCollections] = useState<string[]>([]);
+  const [s3PathsInput, setS3PathsInput] = useState('');
   const menuRef = useRef<HTMLDivElement | null>(null);
 
   // Initial Data Fetching
@@ -181,9 +182,21 @@ const ChatbotUI = () => {
   // Submit
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!input.trim() && uploadedImages.length === 0) return;
+    if (!input.trim() && uploadedImages.length === 0 && s3PathsInput.trim().length === 0) return;
 
-    const imagePaths = uploadedImages.map((img) => img.path);
+    const s3Entries = s3PathsInput
+      .split(',')
+      .map((value) => value.trim())
+      .filter((value) => value.length > 0);
+
+    const formatPattern = /^[a-zA-Z0-9._-]+:\/\/.+$/;
+    const invalidEntries = s3Entries.filter((value) => !formatPattern.test(value));
+    if (invalidEntries.length > 0) {
+      dispatch(setError('Invalid path format. Use {bucket_name}://{bucket_path}.'));
+      return;
+    }
+
+    const imagePaths = [...uploadedImages.map((img) => img.path), ...s3Entries];
 
     const userMessage: Message = {
       role: 'user',
@@ -217,6 +230,10 @@ const ChatbotUI = () => {
       });
     } else {
       dispatch(sendMessage(request));
+    }
+
+    if (s3PathsInput.trim().length > 0) {
+      setS3PathsInput('');
     }
   };
 
@@ -287,13 +304,13 @@ const ChatbotUI = () => {
               RAG
             </a>
             <a
-              href="https://llm.tenawalcott.com/projects/UHJvamVjdDoz/spans"
+              href="https://us5.datadoghq.com/llm/applications?query=&fromUser=true&start=1770794053588&end=1770880453588&paused=false"
               className="menu-item external-link"
               target="_blank"
               rel="noreferrer"
               onClick={() => setIsMenuOpen(false)}
             >
-              Phoenix Observability
+              Datadog LLM Observability
             </a>
             <a
               href="https://github.com/Noahdingpeng/peng-agent"
@@ -418,6 +435,8 @@ const ChatbotUI = () => {
           <InputArea
             input={input}
             setInput={handleSetInput}
+            s3PathsInput={s3PathsInput}
+            setS3PathsInput={setS3PathsInput}
             uploadedImages={uploadedImages}
             setUploadedImages={handleSetUploadedImages}
             isLoading={isLoading}

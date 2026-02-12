@@ -153,5 +153,12 @@ class RagBuilder:
         for image in base64_images:
             results.append(self._process_single_image(image))
         output_log(f"Text chunks: {results}", "debug")
-        combined_text = "\n\n".join(results)
+        combined_text = ""
+        for result in results:
+            if isinstance(result, list):
+                result = result[0]
+            if result["type"] and result["type"] == "text":
+                combined_text += result["text"] + "\n"
+            else:
+                combined_text += str(result) + "\n"
         return self._pure_text_text_process(combined_text)
