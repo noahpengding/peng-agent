@@ -2,21 +2,19 @@ FROM dhi.io/bun:1-debian13-dev AS builder
 
 WORKDIR /app
 
-COPY package.json bun.lock tsconfig.* vite.config.* tailwind.config.js postcss.config.js eslint.* ./
+COPY . .
 
 RUN bun install --frozen-lockfile
 
-COPY . .
-
 RUN bun run build
 
-FROM dhi.io/nginx:1-debian13
+FROM dhi.io/nginx:1-debian13-dev
 
-COPY nginx.conf /etc/nginx/conf.d/
 
 WORKDIR /usr/share/nginx/html
 
 COPY --from=builder /app/dist ./
+COPY --from=builder /app/nginx.conf /etc/nginx/conf.d/
 COPY --from=builder /app/docker-entrypoint.sh /docker-entrypoint.sh
 
 ARG DD_GIT_REPOSITORY_URL
@@ -29,4 +27,4 @@ ENV VITE_APP_VERSION=${VERSION}
 
 EXPOSE 80
 
-CMD [ "/docker-entrypoint.sh" ]
+CMD ["sh", "/docker-entrypoint.sh"]
