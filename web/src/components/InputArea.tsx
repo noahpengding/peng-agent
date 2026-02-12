@@ -139,7 +139,13 @@ export const InputArea: React.FC<InputAreaProps> = ({
             {uploadedImages.map((img, index) => (
               <div key={index} className="image-preview-container">
                 <img src={img.preview} alt="Preview" className="image-preview" />
-                <button type="button" onClick={() => handleClearImage(index)} className="clear-image-button" title="Remove image">
+                <button
+                  type="button"
+                  onClick={() => handleClearImage(index)}
+                  className="clear-image-button"
+                  title="Remove image"
+                  aria-label="Remove image"
+                >
                   ×
                 </button>
               </div>
@@ -159,6 +165,7 @@ export const InputArea: React.FC<InputAreaProps> = ({
             onKeyDown={handleKeyDown}
             onPaste={handlePaste}
             placeholder="Type your message... (Ctrl+Enter to send)"
+            aria-label="Message input"
             className="input-textarea"
             disabled={isLoading || isUploading}
             rows={1}
@@ -180,11 +187,17 @@ export const InputArea: React.FC<InputAreaProps> = ({
               onClick={() => fileInputRef.current?.click()}
               className="upload-button"
               title="Upload image"
+              aria-label="Upload image"
               disabled={isLoading || isUploading}
             >
               {isUploading ? '⏳' : '📎'}
             </button>
-            <button type="submit" className="send-button" disabled={isLoading || isUploading || (!input.trim() && uploadedImages.length === 0)}>
+            <button
+              type="submit"
+              className="send-button"
+              aria-label="Send message"
+              disabled={isLoading || isUploading || (!input.trim() && uploadedImages.length === 0)}
+            >
               ➤
             </button>
           </div>
