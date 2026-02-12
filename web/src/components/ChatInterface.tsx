@@ -235,12 +235,7 @@ const ChatbotUI = () => {
     return (
       <div className="form-group">
         <label className="form-label">Base Model</label>
-        <select
-          className="form-select"
-          value={baseModel}
-          onChange={(e) => dispatch(setBaseModel(e.target.value))}
-          disabled={baseModelsLoading}
-        >
+        <select className="form-select" value={baseModel} onChange={(e) => dispatch(setBaseModel(e.target.value))} disabled={baseModelsLoading}>
           {availableBaseModels.map((model) => (
             <option key={model.id || model.model_name} value={model.model_name}>
               {model.model_name}
@@ -257,12 +252,7 @@ const ChatbotUI = () => {
     return (
       <div className="form-group">
         <label className="form-label">Knowledge Base</label>
-        <select
-          className="form-select"
-          value={knowledgeBase}
-          onChange={(e) => dispatch(setKnowledgeBase(e.target.value))}
-          disabled={isDisabled}
-        >
+        <select className="form-select" value={knowledgeBase} onChange={(e) => dispatch(setKnowledgeBase(e.target.value))} disabled={isDisabled}>
           {collections.length === 0 ? (
             <option value="">No collections available</option>
           ) : (
@@ -282,13 +272,7 @@ const ChatbotUI = () => {
     <div className={`chat-container ${isSidebarHidden ? 'sidebar-hidden' : ''}`}>
       {/* Top-right menu */}
       <div className="top-right-menu" ref={menuRef}>
-        <button
-          type="button"
-          className="menu-button"
-          aria-label="Open menu"
-          title="Menu"
-          onClick={() => setIsMenuOpen((v) => !v)}
-        >
+        <button type="button" className="menu-button" aria-label="Open menu" title="Menu" onClick={() => setIsMenuOpen((v) => !v)}>
           …
         </button>
         {isMenuOpen && (
@@ -398,12 +382,7 @@ const ChatbotUI = () => {
                   {selectedToolNames.map((toolName, index) => (
                     <div key={index} className="selected-tool-item">
                       <span className="selected-tool-name">{toolName}</span>
-                      <button
-                        type="button"
-                        className="tool-remove-button"
-                        onClick={() => handleToolSelection(toolName, false)}
-                        title="Remove tool"
-                      >
+                      <button type="button" className="tool-remove-button" onClick={() => handleToolSelection(toolName, false)} title="Remove tool">
                         ×
                       </button>
                     </div>
@@ -419,9 +398,7 @@ const ChatbotUI = () => {
               <a href="/memory" className="memory-link">
                 Memory Selection
               </a>
-              {shortTermMemory.length > 0 && (
-                <div className="selected-memories-count">{shortTermMemory.length} short-term memories used</div>
-              )}
+              {shortTermMemory.length > 0 && <div className="selected-memories-count">{shortTermMemory.length} short-term memories used</div>}
             </div>
           </div>
         )}

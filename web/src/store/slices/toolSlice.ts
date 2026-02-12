@@ -14,30 +14,24 @@ const initialState: ToolState = {
   error: null,
 };
 
-export const fetchTools = createAsyncThunk(
-  'tools/fetchTools',
-  async (_, { rejectWithValue }) => {
-    try {
-      return await ToolService.getAllTools();
-    } catch (error) {
-      return rejectWithValue((error as Error).message);
-    }
+export const fetchTools = createAsyncThunk('tools/fetchTools', async (_, { rejectWithValue }) => {
+  try {
+    return await ToolService.getAllTools();
+  } catch (error) {
+    return rejectWithValue((error as Error).message);
   }
-);
+});
 
-export const updateTools = createAsyncThunk(
-  'tools/updateTools',
-  async (_, { rejectWithValue, dispatch }) => {
-    try {
-      await ToolService.updateTools();
-      // After successful update, fetch tools again
-      dispatch(fetchTools());
-      return;
-    } catch (error) {
-      return rejectWithValue((error as Error).message);
-    }
+export const updateTools = createAsyncThunk('tools/updateTools', async (_, { rejectWithValue, dispatch }) => {
+  try {
+    await ToolService.updateTools();
+    // After successful update, fetch tools again
+    dispatch(fetchTools());
+    return;
+  } catch (error) {
+    return rejectWithValue((error as Error).message);
   }
-);
+});
 
 const toolSlice = createSlice({
   name: 'tools',

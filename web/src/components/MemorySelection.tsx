@@ -70,9 +70,7 @@ const MemoryPage: React.FC = () => {
       localStorage.setItem('selectedMemories', JSON.stringify(selectedMemories));
 
       // Save selected memory IDs (chat IDs) for backend
-      const selectedChatIds = selectedMemories
-        .map((memory) => Number(memory.id))
-        .filter((id) => Number.isInteger(id));
+      const selectedChatIds = selectedMemories.map((memory) => Number(memory.id)).filter((id) => Number.isInteger(id));
       localStorage.setItem('selectedMemoryIds', JSON.stringify(selectedChatIds));
     }
 

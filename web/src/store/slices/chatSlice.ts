@@ -58,42 +58,39 @@ const extractChatIdFromChunk = (chunk: string): number | null => {
 };
 
 // Async thunk for sending message
-export const sendMessage = createAsyncThunk(
-  'chat/sendMessage',
-  async (args: SendMessageArgs, { dispatch, rejectWithValue }) => {
-    // Generate a messageId for this turn
-    const messageId = Math.random().toString(36).substring(2) + Date.now().toString(36);
+export const sendMessage = createAsyncThunk('chat/sendMessage', async (args: SendMessageArgs, { dispatch, rejectWithValue }) => {
+  // Generate a messageId for this turn
+  const messageId = Math.random().toString(36).substring(2) + Date.now().toString(36);
 
-    try {
-      let chatIdFromChunk: number | null = null;
+  try {
+    let chatIdFromChunk: number | null = null;
 
-      await ChatService.sendMessage(
-        args,
-        (chunk: string, type: string, done: boolean) => {
-          if (done) {
-            const chatId = extractChatIdFromChunk(chunk);
-            if (chatId !== null) {
-              chatIdFromChunk = chatId;
-              return;
-            }
+    await ChatService.sendMessage(
+      args,
+      (chunk: string, type: string, done: boolean) => {
+        if (done) {
+          const chatId = extractChatIdFromChunk(chunk);
+          if (chatId !== null) {
+            chatIdFromChunk = chatId;
+            return;
           }
-          dispatch(handleChunk({ chunk, type, done, messageId }));
-        },
-        () => {
-          dispatch(finishMessage({ messageId }));
-          if (chatIdFromChunk !== null) {
-            dispatch(updateMemoryWithChatId(chatIdFromChunk));
-          }
-        },
-        (error: Error) => {
-          throw error;
         }
-      );
-    } catch (error) {
-      return rejectWithValue((error as Error).message);
-    }
+        dispatch(handleChunk({ chunk, type, done, messageId }));
+      },
+      () => {
+        dispatch(finishMessage({ messageId }));
+        if (chatIdFromChunk !== null) {
+          dispatch(updateMemoryWithChatId(chatIdFromChunk));
+        }
+      },
+      (error: Error) => {
+        throw error;
+      }
+    );
+  } catch (error) {
+    return rejectWithValue((error as Error).message);
   }
-);
+});
 
 const chatSlice = createSlice({
   name: 'chat',
@@ -127,10 +124,10 @@ const chatSlice = createSlice({
       state.messages = action.payload;
     },
     resetState: (state) => {
-       state.messages = [];
-       state.input = '';
-       state.isLoading = false;
-       state.error = null;
+      state.messages = [];
+      state.input = '';
+      state.isLoading = false;
+      state.error = null;
     },
     setError: (state, action: PayloadAction<string | null>) => {
       state.error = action.payload;
@@ -221,7 +218,7 @@ const chatSlice = createSlice({
       })
       .addCase(fetchBaseModels.fulfilled, (state, action) => {
         if (action.payload && action.payload.length > 0) {
-           state.baseModel = action.payload[0].model_name || 'gpt-4';
+          state.baseModel = action.payload[0].model_name || 'gpt-4';
         }
       });
   },

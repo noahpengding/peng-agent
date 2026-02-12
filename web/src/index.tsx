@@ -1,18 +1,17 @@
-import { RouterProvider } from 'react-router-dom'
+import { RouterProvider } from 'react-router-dom';
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import App from './App';
 import './index.css'; // Import the CSS file with Tailwind directives
 import { datadogRum } from '@datadog/browser-rum';
 import { reactPlugin } from '@datadog/browser-rum-react';
-import { createBrowserRouter } from '@datadog/browser-rum-react/react-router-v6'
+import { createBrowserRouter } from '@datadog/browser-rum-react/react-router-v6';
 import ChatbotUI from './components/ChatInterface';
 import MemoryPage from './components/MemorySelection';
 import RAGInterface from './components/RAGInterface';
 import ModelInterface from './components/ModelInterface';
 import PrivateRoute from './components/PrivateRoute';
 import { AuthFallback, LoginRoute } from './components/AuthRoutes';
-
 
 datadogRum.init({
   applicationId: import.meta.env.VITE_DATADOG_APPLICATION_ID,
@@ -32,7 +31,11 @@ datadogRum.init({
 
 const router = createBrowserRouter([
   {
-    element: <React.StrictMode><App /></React.StrictMode>,
+    element: (
+      <React.StrictMode>
+        <App />
+      </React.StrictMode>
+    ),
     children: [
       {
         path: '/login',
@@ -69,9 +72,7 @@ const router = createBrowserRouter([
       },
     ],
   },
-])
+]);
 
 const root = ReactDOM.createRoot(document.getElementById('root') as HTMLElement);
-root.render(
-  <RouterProvider router={router} />
-);
+root.render(<RouterProvider router={router} />);
