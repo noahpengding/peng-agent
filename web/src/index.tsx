@@ -19,7 +19,7 @@ datadogRum.init({
   site: import.meta.env.VITE_DATADOG_SITE,
   service: import.meta.env.VITE_DATADOG_SERVICE,
   env: import.meta.env.VITE_DATADOG_ENV,
-  version: import.meta.env.VITE_VERSION,
+  version: import.meta.env.VITE_APP_VERSION,
   sessionSampleRate: 100,
   sessionReplaySampleRate: 20,
   defaultPrivacyLevel: 'mask-user-input',

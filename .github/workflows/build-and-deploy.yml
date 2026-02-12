@@ -198,6 +198,7 @@ jobs:
           build-args: |
             DD_GIT_REPOSITORY_URL=${{ env.GITHUB_REPOSITORY }}
             DD_GIT_COMMIT_SHA=${{ env.GITHUB_COMMIT_SHA }}
+            VERSION=${{ env.VERSION }}-nightly
 
   # Production builds for main branch
   server:
@@ -269,3 +270,4 @@ jobs:
           build-args: |
             DD_GIT_REPOSITORY_URL=${{ env.GITHUB_REPOSITORY }}
             DD_GIT_COMMIT_SHA=${{ env.GITHUB_COMMIT_SHA }}
+            VERSION=${{ env.VERSION }}
