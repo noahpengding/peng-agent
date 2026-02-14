@@ -8,11 +8,10 @@ import { vscDarkPlus } from 'react-syntax-highlighter/dist/esm/styles/prism';
 import 'katex/dist/katex.min.css';
 import { Message } from './ChatInterface.types';
 
-interface CodeBlockProps {
+interface CodeBlockProps extends React.HTMLAttributes<HTMLElement> {
   inline?: boolean;
   className?: string;
   children?: React.ReactNode;
-  [key: string]: unknown;
 }
 
 // CodeBlock component with copy functionality
@@ -53,7 +52,7 @@ const CodeBlock = ({ inline, className, children, ...rest }: CodeBlockProps) => 
         {isCopied ? '✓' : '📋'}
       </button>
       <SyntaxHighlighter
-        style={vscDarkPlus as { [key: string]: React.CSSProperties }}
+        style={vscDarkPlus as any}
         language={lang}
         PreTag="div"
         customStyle={{ margin: 0, borderRadius: '0.375rem' }}
