@@ -52,6 +52,7 @@ const CodeBlock = ({ inline, className, children, ...rest }: CodeBlockProps) => 
         {isCopied ? '✓' : '📋'}
       </button>
       <SyntaxHighlighter
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         style={vscDarkPlus as any}
         language={lang}
         PreTag="div"
