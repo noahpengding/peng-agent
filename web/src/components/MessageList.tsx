@@ -8,6 +8,63 @@ import { vscDarkPlus } from 'react-syntax-highlighter/dist/esm/styles/prism';
 import 'katex/dist/katex.min.css';
 import { Message } from './ChatInterface.types';
 
+interface CodeBlockProps extends React.HTMLAttributes<HTMLElement> {
+  inline?: boolean;
+  className?: string;
+  children?: React.ReactNode;
+}
+
+// CodeBlock component with copy functionality
+const CodeBlock = ({ inline, className, children, ...rest }: CodeBlockProps) => {
+  const [isCopied, setIsCopied] = useState(false);
+  const cls = className || '';
+  const langToken = cls.split(' ').find((c) => c.startsWith('language-'));
+  const lang = !inline && langToken ? langToken.replace('language-', '') : undefined;
+
+  const handleCopy = async () => {
+    if (!children) return;
+    try {
+      await navigator.clipboard.writeText(String(children).replace(/\n$/, ''));
+      setIsCopied(true);
+      setTimeout(() => setIsCopied(false), 2000);
+    } catch {
+      // Silently fail if clipboard access is denied
+    }
+  };
+
+  if (inline || !lang) {
+    return (
+      <code className={className} {...rest}>
+        {children}
+      </code>
+    );
+  }
+
+  return (
+    <div className="relative group my-4">
+      <button
+        type="button"
+        className="absolute top-2 right-2 p-1.5 rounded bg-gray-700 text-gray-300 opacity-0 group-hover:opacity-100 transition-opacity focus:opacity-100 hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-gray-500"
+        onClick={handleCopy}
+        aria-label={isCopied ? 'Copied to clipboard' : 'Copy code'}
+        title={isCopied ? 'Copied!' : 'Copy code'}
+      >
+        {isCopied ? '✓' : '📋'}
+      </button>
+      <SyntaxHighlighter
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        style={vscDarkPlus as any}
+        language={lang}
+        PreTag="div"
+        customStyle={{ margin: 0, borderRadius: '0.375rem' }}
+        {...rest}
+      >
+        {String(children).replace(/\n$/, '')}
+      </SyntaxHighlighter>
+    </div>
+  );
+};
+
 interface MessageListProps {
   messages: Message[];
   isLoading: boolean;
@@ -122,21 +179,7 @@ export const MessageList: React.FC<MessageListProps> = ({ messages, isLoading })
                     components={{
                       p: ({ ...props }) => <p className="tight-paragraph" {...props} />,
                       li: ({ ...props }) => <li className="tight-list-item" {...props} />,
-                      code: (props: { inline?: boolean; className?: string; children?: React.ReactNode }) => {
-                        const { inline, className, children, ...rest } = props;
-                        const cls = className || '';
-                        const langToken = cls.split(' ').find((c) => c.startsWith('language-'));
-                        const lang = !inline && langToken ? langToken.replace('language-', '') : undefined;
-                        return !inline && lang ? (
-                          <SyntaxHighlighter style={vscDarkPlus as Record<string, React.CSSProperties>} language={lang} PreTag="div" {...rest}>
-                            {String(children).replace(/\n$/, '')}
-                          </SyntaxHighlighter>
-                        ) : (
-                          <code className={className} {...rest}>
-                            {children}
-                          </code>
-                        );
-                      },
+                      code: CodeBlock,
                     }}
                   >
                     {message.content}
