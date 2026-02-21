@@ -64,6 +64,8 @@ export const MessageList: React.FC<MessageListProps> = ({ messages, isLoading })
                 : 'assistant-message';
 
         const isFoldable = message.type === 'tool_calls' || message.type === 'tool_output' || message.type === 'reasoning_summary';
+        const toggleId = `toggle-${index}`;
+        const contentId = `content-${index}`;
 
         return (
           <div
@@ -82,6 +84,9 @@ export const MessageList: React.FC<MessageListProps> = ({ messages, isLoading })
             {isFoldable && (
               <button
                 type="button"
+                id={toggleId}
+                aria-expanded={!isFolded}
+                aria-controls={contentId}
                 className="tool-summary"
                 onClick={(event) => {
                   event.stopPropagation();
@@ -105,7 +110,11 @@ export const MessageList: React.FC<MessageListProps> = ({ messages, isLoading })
 
             {/* Show content unless folded */}
             {!isFolded && (
-              <>
+              <div
+                id={isFoldable ? contentId : undefined}
+                role={isFoldable ? 'region' : undefined}
+                aria-labelledby={isFoldable ? toggleId : undefined}
+              >
                 {message.images && message.images.length > 0 && (
                   <div className="message-images-container">
                     {message.images.map((imgSrc, imgIndex) => (
@@ -142,7 +151,7 @@ export const MessageList: React.FC<MessageListProps> = ({ messages, isLoading })
                     {message.content}
                   </ReactMarkdown>
                 </div>
-              </>
+              </div>
             )}
           </div>
         );

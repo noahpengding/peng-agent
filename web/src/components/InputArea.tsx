@@ -181,11 +181,16 @@ export const InputArea: React.FC<InputAreaProps> = ({
             onPaste={handlePaste}
             placeholder="Type your message... (Ctrl+Enter to send)"
             aria-label="Message input"
+            aria-describedby="char-counter"
             className="input-textarea"
             disabled={isLoading || isUploading}
             rows={1}
           />
-          <div className="char-counter">
+          <div
+            id="char-counter"
+            className="char-counter"
+            style={{ color: input.length > maxInputChars * 0.9 ? '#ef4444' : undefined }}
+          >
             {input.length}/{maxInputChars}
           </div>
           <div className="input-actions">
