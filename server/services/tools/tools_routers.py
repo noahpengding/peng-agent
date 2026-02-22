@@ -7,9 +7,9 @@ async def tools_routers(tools_name: List[str]):
     output_log(f"Initializing tools: {tools_name}", "DEBUG")
     for tool_name in tools_name:
         if tool_name == "tavily_search_tool":
-            from services.tools.search_tools import tavily_search_tool
+            from services.tools.search_tools import tavily_tools
 
-            tools += [tavily_search_tool]
+            tools += tavily_tools
         elif tool_name == "wikipedia_search_tool":
             from services.tools.search_tools import wikipedia_search_tool
 
@@ -64,5 +64,12 @@ async def tools_routers(tools_name: List[str]):
             tools += await create_mcp_tools(
                 tool_name, tool_info["url"], tool_info["headers"]
             )
+        
+        elif tool_name == "web_search":
+            from services.tools.search_tools import tavily_tools
+            from services.tools.search_tools import wikipedia_search_tool
+            from services.tools.web_page_tools import web_crawler_tool
+
+            tools += tavily_tools + [wikipedia_search_tool] + [web_crawler_tool]
 
     return tools

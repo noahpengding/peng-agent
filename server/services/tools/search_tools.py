@@ -23,17 +23,39 @@ def _tavily_search(query: str, topic="general") -> str:
         topic=topic,
         search_depth="advanced",
         max_results=config.web_search_max_results,
+        include_images=True,
+        include_image_descriptions=True,
+    )
+    return [
+        f"{result['title']} --- {result['url']}: {result['content']}"
+        for result in response["results"]] + [
+        f"url: {result['url']}, description:{result['description']}" 
+        for result in response["images"]
+    ]
+
+def _tavily_crawler(url: str, instructions: str) -> str:
+    from tavily import TavilyClient
+
+    client = TavilyClient(
+        api_key=config.tavily_api_key,
+    )
+    response = client.crawl(
+        url=url,
+        instructions=instructions,
+        max_depth=3,
+        max_breadth=20,
+        limit=30,
+        allow_external=False,
     )
     return [
         f"{result['title']} --- {result['url']}: {result['content']}"
         for result in response["results"]
     ]
 
-
 tavily_search_tool = StructuredTool.from_function(
     func=_tavily_search,
     name="tavily_search_tool",
-    description="A search engine that searches the web for relevant information. Input should be a query string for search, a topic choosen from [general, news, finance]",
+    description="A search engine using Tavily (SaaS remote provider) that searches the web for relevant information. Input should be a query string for search. Use this tool when you want to search the web for information and did not have a specific url to start with",
     args_schema={
         "type": "object",
         "properties": {
@@ -46,6 +68,29 @@ tavily_search_tool = StructuredTool.from_function(
     },
     return_direct=False,
 )
+
+tavily_crawler_tool = StructuredTool.from_function(
+    func=_tavily_crawler,
+    name="tavily_crawler_tool",
+    description="A web crawler using Tavily (SaaS remote provider) that crawls a given url and extract relevant information based on the given instructions. Input should be a url and instructions for crawling. Use this tool when you have a specific url to start with",
+    args_schema={
+        "type": "object",
+        "properties": {
+            "url": {
+                "type": "string",
+                "description": "The url to crawl.",
+            },
+            "instructions": {
+                "type": "string",
+                "description": "The instructions for crawling the url.",
+            },
+        },
+        "required": ["url", "instructions"],
+    },
+    return_direct=False,
+)
+
+tavily_tools = [tavily_search_tool, tavily_crawler_tool]
 
 wikipedia_search_tool = StructuredTool.from_function(
     func=_wikipedia_search,
