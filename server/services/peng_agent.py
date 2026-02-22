@@ -12,6 +12,8 @@ from langchain_core.messages import (
 from langgraph.graph import StateGraph, END
 from langgraph.graph.message import add_messages
 from langgraph.config import get_stream_writer
+from config.config import config
+from utils.log import output_log
 
 
 class AgentState(TypedDict):
@@ -69,6 +71,26 @@ class PengAgent:
         return await self.graph.ainvoke(
             state, {"recursion_limit": (self.total_tool_calls + 1) * 2}
         )
+
+    def truncate_tool_message(self, observation: str) -> str:
+        if self.operator in ["gemini", "grok"]:
+            max_length = 1000000 * 0.5 / self.total_tool_calls
+        else:
+            max_length = 200000 * 0.5 / self.total_tool_calls
+        output_log(f"Truncating tool message if exceeds {int(max_length)} characters. Current length: {len(observation)} characters.", "DEBUG")
+        if len(observation) > max_length:
+            from handlers.chat_handlers import chat_completions_handler
+            from models.chat_config import ChatConfig
+            prompt = f"Tool observation is too long and needs to be truncated. The original observation is: {observation}. Please summarize it to be within {int(max_length)} characters while retaining the key information."
+            chat_config = ChatConfig(
+                operator=config.default_operator,
+                base_model=config.default_base_model,
+            )
+            truncated_observation = chat_completions_handler(
+                self.user_name, prompt, None, None, chat_config
+            )
+            return truncated_observation
+        return observation
 
 
     async def astream(self, state: AgentState) -> Any:
@@ -182,6 +204,7 @@ class PengAgent:
             observation = await tool.ainvoke(args)
         except Exception as e:
             observation = f"Error calling tool '{name}': {e}"
+        observation = self.truncate_tool_message(observation)
         message = ToolMessage(
             content=observation,
             name=name,

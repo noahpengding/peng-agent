@@ -1,43 +1,41 @@
 from langchain_core.tools import StructuredTool
 from config.config import config
-import time
+from crawl4ai import AdaptiveCrawler, AdaptiveConfig, CrawlerRunConfig, CrawlResult, Crawl4aiDockerClient
+import asyncio
 
 
-def _web_crawler(url: str) -> str:
-    import requests
+class DockerCrawlerAdapter:
+    def __init__(self, docker_client):
+        self._client = docker_client
 
-    browser_config = {
-        "browser_type": "chromium",
-        "headless": True,
-        "user_agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36",
-    }
-    crawler_config = {
-        "only_text": True,
-        "simulate_user": True,
-    }
-    r = requests.post(
-        f"{config.crawler4ai_url}/crawl/job",
-        json={
-            "urls": [url],
-            "browser_config": browser_config,
-            "crawler_config": crawler_config,
-        },
-        timeout=60,
-    )
-    job_response = r.json()
-    task_id = job_response["task_id"]
-    start_time = time.time()
-    while True:
-        if time.time() - start_time > 300:
-            return f"Task {task_id}: Request timed out."
-        result = requests.get(f"{config.crawler4ai_url}/crawl/job/{task_id}", timeout=60)
-        status = result.json()
-        if status["status"] and status["status"] == "failed":
-            return f"Task {task_id}: Crawling failed with error {status.get("error")}."
-        if status["status"] and status["status"] == "completed":
-            return status["result"]["results"]
+    async def arun(self, url: str, config: CrawlerRunConfig = None, **kwargs) -> CrawlResult:
+        result_list = await self._client.crawl(
+            urls=[url],
+            crawler_config=config,
+            **kwargs
+        )
         
-        time.sleep(5)
+        if result_list:
+            return result_list
+        return None
+
+
+async def _adaptive_web_crawler(url: str, query: str) -> str:
+    try:
+        async with Crawl4aiDockerClient(base_url=config.crawler4ai_url) as docker_client:
+            adapter = DockerCrawlerAdapter(docker_client)
+            adapative_config = AdaptiveConfig(
+                confidence_threshold=0.8, max_pages=20, top_k_links=10, min_gain_threshold=0.05
+            )
+            crawler = AdaptiveCrawler(adapter, adapative_config)
+            await crawler.digest(
+                start_url=url,
+                query=query,
+            )
+            relative_pages = crawler.get_relevant_content(top_k=10)
+            return [f"{page['url']}: {page['content']}" for page in relative_pages]
+    except Exception as e:
+        return f"Error occurred during crawling: {str(e)}"
 
 def requests_toolkit():
     from langchain_community.agent_toolkits.openapi.toolkit import RequestsToolkit
@@ -55,9 +53,9 @@ def requests_toolkit():
 
 
 web_crawler_tool = StructuredTool.from_function(
-    func=_web_crawler,
+    func=lambda url, instructions: asyncio.run(_adaptive_web_crawler(url, instructions)),
     name="web_crawler_tool",
-    description="A web page crawler that can crawl web pages and extract relevant information. Input should be a URL for the starting web page.",
+    description="A web page crawler using Crawl4ai (Local Python Library) that can crawl web pages and extract relevant information based on a query. Input should be a URL for the starting web page and a query string for the information to extract.",
     args_schema={
         "type": "object",
         "properties": {
@@ -65,8 +63,12 @@ web_crawler_tool = StructuredTool.from_function(
                 "type": "string",
                 "description": "The Starting URL of the web page to crawl.",
             },
+            "instructions": {
+                "type": "string",
+                "description": "The query string for the information to extract from the crawled web pages.",
+            },
         },
-        "required": ["url"],
+        "required": ["url", "instructions"],
     },
     return_direct=False,
 )
