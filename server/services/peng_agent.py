@@ -72,11 +72,11 @@ class PengAgent:
             state, {"recursion_limit": (self.total_tool_calls + 1) * 2}
         )
 
-    def truncate_tool_message(self, observation: str) -> str:
+    async def truncate_tool_message(self, observation: str) -> str:
         if self.operator in ["gemini", "grok"]:
-            max_length = 1000000 * 0.5 / self.total_tool_calls
+            max_length = 1000000 * 0.7 / self.total_tool_calls
         else:
-            max_length = 200000 * 0.5 / self.total_tool_calls
+            max_length = 200000 * 0.7 / self.total_tool_calls
         output_log(f"Truncating tool message if exceeds {int(max_length)} characters. Current length: {len(observation)} characters.", "DEBUG")
         if len(observation) > max_length:
             from handlers.chat_handlers import chat_completions_handler
@@ -86,7 +86,7 @@ class PengAgent:
                 operator=config.default_operator,
                 base_model=config.default_base_model,
             )
-            truncated_observation = chat_completions_handler(
+            truncated_observation = await chat_completions_handler(
                 self.user_name, prompt, None, None, chat_config
             )
             return truncated_observation
@@ -204,7 +204,7 @@ class PengAgent:
             observation = await tool.ainvoke(args)
         except Exception as e:
             observation = f"Error calling tool '{name}': {e}"
-        observation = self.truncate_tool_message(observation)
+        observation = await self.truncate_tool_message(observation)
         message = ToolMessage(
             content=observation,
             name=name,

@@ -22,7 +22,7 @@ def _generate_prompt_params(
             "type": "chat",
             "base_model": chat_config.base_model,
             "knowledge_base": knowledge_base,
-            "human_input": message,
+            "human_input": message[:4096],
         }
     )
 
@@ -40,7 +40,7 @@ def _generate_prompt_params(
         table="user_input",
         data={
             "chat_id": chat_id,
-            "input_content": message,
+            "input_content": message[:4096],
             "input_type": "chat",
             "input_location": "|".join(image) if image else "",
         }
