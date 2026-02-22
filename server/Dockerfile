@@ -11,7 +11,6 @@ COPY . .
 
 RUN pip install --no-cache-dir uv
 RUN uv venv --python python3.12 --no-cache /app/.venv
-RUN source /app/.venv/bin/activate
 RUN uv sync --locked --no-cache --no-dev
 
 FROM dhi.io/python:3.12
@@ -28,4 +27,4 @@ WORKDIR /app
 
 COPY --from=builder /app /app
 
-ENTRYPOINT ["ddtrace-run", "python", "/app/main.py"]
+CMD ["ddtrace-run", "python", "/app/main.py"]

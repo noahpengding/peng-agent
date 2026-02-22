@@ -24,16 +24,16 @@ async def _adaptive_web_crawler(url: str, query: str) -> str:
     try:
         async with Crawl4aiDockerClient(base_url=config.crawler4ai_url) as docker_client:
             adapter = DockerCrawlerAdapter(docker_client)
-            adapative_config = AdaptiveConfig(
+            adaptive_config = AdaptiveConfig(
                 confidence_threshold=0.8, max_pages=20, top_k_links=10, min_gain_threshold=0.05
             )
-            crawler = AdaptiveCrawler(adapter, adapative_config)
+            crawler = AdaptiveCrawler(adapter, adaptive_config)
             await crawler.digest(
                 start_url=url,
                 query=query,
             )
-            relative_pages = crawler.get_relevant_content(top_k=10)
-            return [f"{page['url']}: {page['content']}" for page in relative_pages]
+            relevant_pages = crawler.get_relevant_content(top_k=10)
+            return "\n".join([f"{page.url}: {page.text}" for page in relevant_pages])
     except Exception as e:
         return f"Error occurred during crawling: {str(e)}"
 
@@ -53,7 +53,7 @@ def requests_toolkit():
 
 
 web_crawler_tool = StructuredTool.from_function(
-    func=lambda url, instructions: asyncio.run(_adaptive_web_crawler(url, instructions)),
+    func=_adaptive_web_crawler,
     name="web_crawler_tool",
     description="A web page crawler using Crawl4ai (Local Python Library) that can crawl web pages and extract relevant information based on a query. Input should be a URL for the starting web page and a query string for the information to extract.",
     args_schema={
