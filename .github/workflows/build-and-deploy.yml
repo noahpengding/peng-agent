@@ -7,7 +7,7 @@ env:
   REGISTRY: ghcr.io
   SERVER_IMAGE: ghcr.io/${{ github.repository }}/server
   WEB_IMAGE: ghcr.io/${{ github.repository }}/front
-  VERSION: v2.3.6
+  VERSION: v2.3.7
   GITHUB_REPOSITORY: ${{ github.repository }}
   GITHUB_COMMIT_SHA: ${{ github.sha }}
 
