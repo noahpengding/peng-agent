@@ -13,13 +13,20 @@ import ModelInterface from './components/ModelInterface';
 import PrivateRoute from './components/PrivateRoute';
 import { AuthFallback, LoginRoute } from './components/AuthRoutes';
 
+const datadogApplicationId = window.RUNTIME_CONFIG?.DATADOG_APPLICATION_ID || import.meta.env.VITE_DATADOG_APPLICATION_ID;
+const datadogClientToken = window.RUNTIME_CONFIG?.DATADOG_CLIENT_TOKEN || import.meta.env.VITE_DATADOG_CLIENT_TOKEN;
+const datadogSite = window.RUNTIME_CONFIG?.DATADOG_SITE || import.meta.env.VITE_DATADOG_SITE;
+const datadogService = window.RUNTIME_CONFIG?.DATADOG_SERVICE || import.meta.env.VITE_DATADOG_SERVICE;
+const datadogEnv = window.RUNTIME_CONFIG?.DATADOG_ENV || import.meta.env.VITE_DATADOG_ENV;
+const datadogVersion = window.RUNTIME_CONFIG?.APP_VERSION || import.meta.env.VITE_APP_VERSION;
+
 datadogRum.init({
-  applicationId: import.meta.env.VITE_DATADOG_APPLICATION_ID,
-  clientToken: import.meta.env.VITE_DATADOG_CLIENT_TOKEN,
-  site: import.meta.env.VITE_DATADOG_SITE,
-  service: import.meta.env.VITE_DATADOG_SERVICE,
-  env: import.meta.env.VITE_DATADOG_ENV,
-  version: import.meta.env.VITE_APP_VERSION,
+  applicationId: datadogApplicationId,
+  clientToken: datadogClientToken,
+  site: datadogSite,
+  service: datadogService,
+  env: datadogEnv,
+  version: datadogVersion,
   sessionSampleRate: 100,
   sessionReplaySampleRate: 20,
   defaultPrivacyLevel: 'mask-user-input',
