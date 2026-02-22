@@ -1,6 +1,6 @@
 from langchain_core.prompts import ChatPromptTemplate
 from handlers.model_handlers import check_multimodal
-from services.azure_document import AzureDocument
+from archive.azure_document import AzureDocument
 from utils.log import output_log
 from config.config import config
 

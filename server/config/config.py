@@ -10,7 +10,6 @@ class Config(BaseModel):
     log_level: str
     host: str
     port: int
-    recursion_limit: int
     s3_url: str
     s3_bucket: str
     s3_access_key: str
@@ -33,8 +32,6 @@ class Config(BaseModel):
     mysql_database: str
     jwt_secret_key: str
     admin_password: str
-    azure_document_endpoint: str
-    azure_document_key: str
     tavily_api_key: str
     web_search_max_results: int
     crawler4ai_url: str
@@ -55,9 +52,6 @@ try:
         "log_level": os.environ.get("LOG_LEVEL") or "INFO",
         "host": os.environ.get("HOST") or "0.0.0.0",
         "port": int(os.environ.get("PORT")) if os.environ.get("PORT") else 8000,
-        "recursion_limit": int(os.environ.get("RECURSION_LIMIT"))
-        if os.environ.get("RECURSION_LIMIT")
-        else 100,
         "s3_url": os.environ.get("S3_URL")
         if os.environ.get("S3_URL")
         else "http://localhost:9000",
@@ -130,12 +124,6 @@ try:
         "admin_password": os.environ.get("ADMIN_PASSWORD")
         if os.environ.get("ADMIN_PASSWORD")
         else "admin",
-        "azure_document_endpoint": os.environ.get("AZURE_DOCUMENT_ENDPOINT")
-        if os.environ.get("AZURE_DOCUMENT_ENDPOINT")
-        else "https://test.cognitiveservices.azure.com/",
-        "azure_document_key": os.environ.get("AZURE_DOCUMENT_KEY")
-        if os.environ.get("AZURE_DOCUMENT_KEY")
-        else "asdadasdasd",
         "tavily_api_key": os.environ.get("TAVILY_API_KEY")
         if os.environ.get("TAVILY_API_KEY")
         else "tavily_api_key",

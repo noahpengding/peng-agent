@@ -4,29 +4,37 @@ services:
     container_name: qdrant
     restart: always
     ports:
-      - "6333:6333"
-    networks:
-      - agent
+      - 6333:6333
+      - 6334:6334
     volumes:
       - /data/peng-agent/qdrant:/qdrant/storage
+    security_opt:
+      - no-new-privileges=true
 
   peng-agent-mysql:
     image: mysql:lts
     container_name: peng-agent-mysql
     hostname: peng-agent
     restart: always
-    env_file:
-      - ./.env
     ports:
       - "3306:3306"
+    env_file:
+      - ./.env
     volumes:
-      - /etc/localtime:/etc/localtime:ro
       - /data/peng-agent/mysql:/var/lib/mysql
-    networks:
-      - agent
+    security_opt:
+      - no-new-privileges=true
+
+  crawl4ai:
+    image: unclecode/crawl4ai:latest
+    container_name: crawl4ai
+    restart: always
+    ports:
+      - "11235:11235"
+    shm_size: 1g
 
   peng-agent-server:
-    image: ghcr.io/noahpengding/peng-agent/server:v2.2.5-nightly
+    image: peng-agent:server
     container_name: peng-agent-server
     hostname: peng-chat
     restart: always
@@ -40,11 +48,11 @@ services:
       - agent
 
   peng-agent-front:
-    image: ghcr.io/noahpengding/peng-agent/front:v2.2.5-nightly
+    image: peng-agent:web
     container_name: peng-agent-front
     restart: always
-    environment:
-      - VITE_BACKEND_URL=http://peng-chat:1532/
+    env_file:
+      - ./front.env
     ports:
       - "8080:80"
     depends_on:
