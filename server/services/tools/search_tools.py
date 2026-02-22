@@ -30,7 +30,7 @@ def _tavily_search(query: str, topic="general") -> str:
         f"{result['title']} --- {result['url']}: {result['content']}"
         for result in response["results"]] + [
         f"url: {result['url']}, description:{result['description']}" 
-        for result in response["images"] if response["images"] is not None
+        for result in response["images"]
     ]
 
 def _tavily_crawler(url: str, instructions: str) -> str:

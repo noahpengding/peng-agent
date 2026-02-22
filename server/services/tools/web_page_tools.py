@@ -19,7 +19,7 @@ class DockerCrawlerAdapter:
         return None
 
 
-async def _adaptive_web_crawler(url: str, query: str) -> str:
+async def _adaptive_web_crawler(url: str, instructions: str) -> str:
     try:
         async with Crawl4aiDockerClient(base_url=config.crawler4ai_url) as docker_client:
             adapter = DockerCrawlerAdapter(docker_client)
@@ -29,7 +29,7 @@ async def _adaptive_web_crawler(url: str, query: str) -> str:
             crawler = AdaptiveCrawler(adapter, adaptive_config)
             await crawler.digest(
                 start_url=url,
-                query=query,
+                query=instructions,
             )
             relevant_pages = crawler.get_relevant_content(top_k=10)
             return "\n".join([f"{page.url}: {page.text}" for page in relevant_pages])
