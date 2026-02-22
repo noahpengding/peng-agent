@@ -1,7 +1,6 @@
 from langchain_core.tools import StructuredTool
 from config.config import config
 from crawl4ai import AdaptiveCrawler, AdaptiveConfig, CrawlerRunConfig, CrawlResult, Crawl4aiDockerClient
-import asyncio
 
 
 class DockerCrawlerAdapter:
