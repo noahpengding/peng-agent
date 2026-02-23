@@ -8,7 +8,6 @@ import './MemorySelection.css';
 const MemoryPage: React.FC = () => {
   // State variables
   const [memories, setMemories] = useState<Memory[]>([]);
-  const [filteredMemories, setFilteredMemories] = useState<Memory[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedMemoryIds, setSelectedMemoryIds] = useState<string[]>([]);
   const [error, setError] = useState<string | null>(null);
@@ -24,7 +23,6 @@ const MemoryPage: React.FC = () => {
       try {
         const fetchedMemories = await fetchMemories(username);
         setMemories(fetchedMemories);
-        setFilteredMemories(fetchedMemories);
       } catch (error) {
         setError(`Failed to fetch memories: ${error}`);
       }
@@ -37,18 +35,16 @@ const MemoryPage: React.FC = () => {
   }, [user, fetchMemories]); // Now we can safely include fetchMemories
 
   // Filter memories based on search term
-  useEffect(() => {
+  const filteredMemories = React.useMemo(() => {
     if (searchTerm.trim() === '') {
-      setFilteredMemories(memories);
-      return;
+      return memories;
     }
-
     const lowerCaseSearchTerm = searchTerm.toLowerCase();
-    const filtered = memories.filter(
-      (memory) => memory.human_input.toLowerCase().includes(lowerCaseSearchTerm) || memory.ai_response.toLowerCase().includes(lowerCaseSearchTerm)
+    return memories.filter(
+      (memory) =>
+        memory.human_input.toLowerCase().includes(lowerCaseSearchTerm) ||
+        memory.ai_response.toLowerCase().includes(lowerCaseSearchTerm)
     );
-
-    setFilteredMemories(filtered);
   }, [searchTerm, memories]);
 
   // Handle checkbox change
