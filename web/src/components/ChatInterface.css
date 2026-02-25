@@ -163,6 +163,8 @@
   border-right: 1px solid #374151;
   overflow-y: auto;
   color: white;
+  display: flex;
+  flex-direction: column;
 }
 
 .sidebar-title {
@@ -229,6 +231,20 @@
 
 .memory-link:hover {
   background-color: #4b5563;
+}
+
+.user-profile-button-container {
+  margin-top: auto;
+  padding-top: 1rem;
+  border-top: 1px solid #374151;
+}
+
+.user-profile-button {
+  text-align: center;
+  width: 100%;
+  cursor: pointer;
+  border: none;
+  color: white;
 }
 
 /* Chat area styles */

@@ -13,6 +13,7 @@ from .routers import (
     rag_router,
     tools_router,
     upload_router,
+    user_router,
 )
 
 __version__ = importlib.metadata.version("Peng-Agent")
@@ -55,3 +56,4 @@ app.include_router(operator_router.router, tags=["Operator"])
 app.include_router(rag_router.router, tags=["RAG"])
 app.include_router(tools_router.router, tags=["Tools"])
 app.include_router(upload_router.router, tags=["Upload"])
+app.include_router(user_router.router, tags=["User"])
