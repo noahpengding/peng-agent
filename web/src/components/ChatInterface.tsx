@@ -421,11 +421,10 @@ const ChatbotUI = () => {
             </div>
 
             {/* User Profile Button */}
-            <div className="form-group" style={{ marginTop: 'auto', paddingTop: '1rem', borderTop: '1px solid #374151' }}>
+            <div className="form-group user-profile-button-container">
               <button
-                className="memory-link"
+                className="memory-link user-profile-button"
                 onClick={() => setIsProfilePopupOpen(true)}
-                style={{ textAlign: 'center', width: '100%', cursor: 'pointer', border: 'none', color: 'white' }}
               >
                 User Profile
               </button>

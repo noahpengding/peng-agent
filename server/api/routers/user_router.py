@@ -18,3 +18,8 @@ async def get_profile(auth: dict = Depends(authenticate_request)):
 async def update_profile(user_data: UserUpdate, auth: dict = Depends(authenticate_request)):
     from handlers.user_handlers import update_user_profile
     return update_user_profile(auth["username"], user_data)
+
+@router.post("/user/regenerate_token")
+async def regenerate_token(auth: dict = Depends(authenticate_request)):
+    from handlers.user_handlers import regenerate_user_token
+    return regenerate_user_token(auth["username"])

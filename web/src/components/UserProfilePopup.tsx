@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { apiCall } from '../utils/apiUtils';
 import { ModelInfo } from './ChatInterface.types';
+import './UserProfilePopup.css';
 
 interface UserProfile {
   username: string;
@@ -26,6 +27,7 @@ const UserProfilePopup: React.FC<UserProfilePopupProps> = ({ isOpen, onClose, av
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [newMemory, setNewMemory] = useState('');
+  const [regeneratingToken, setRegeneratingToken] = useState(false);
 
   useEffect(() => {
     if (isOpen) {
@@ -91,6 +93,28 @@ const UserProfilePopup: React.FC<UserProfilePopupProps> = ({ isOpen, onClose, av
     }
   };
 
+  const handleCopyToken = () => {
+    if (profile?.api_token) {
+      navigator.clipboard.writeText(profile.api_token);
+    }
+  };
+
+  const handleRegenerateToken = async () => {
+    if (!profile) return;
+    if (!window.confirm('Are you sure you want to regenerate your API token? The old token will stop working immediately.')) {
+        return;
+    }
+    setRegeneratingToken(true);
+    try {
+        const response = await apiCall('POST', '/user/regenerate_token');
+        setProfile({ ...profile, api_token: response.api_token });
+    } catch {
+        setError('Failed to regenerate token');
+    } finally {
+        setRegeneratingToken(false);
+    }
+  };
+
   if (!isOpen) return null;
 
   return (
@@ -115,7 +139,12 @@ const UserProfilePopup: React.FC<UserProfilePopupProps> = ({ isOpen, onClose, av
             <div className="profile-form">
               <div className="form-group">
                 <label className="form-label">Username</label>
-                <input type="text" value={profile.username} disabled className="form-input form-select" style={{cursor: 'not-allowed', opacity: 0.7}} />
+                <input
+                  type="text"
+                  value={profile.username}
+                  disabled
+                  className="form-input form-select disabled-input"
+                />
               </div>
 
               <div className="form-group">
@@ -141,12 +170,20 @@ const UserProfilePopup: React.FC<UserProfilePopupProps> = ({ isOpen, onClose, av
 
               <div className="form-group">
                 <label className="form-label">API Token</label>
-                <input
-                  type="text"
-                  value={profile.api_token}
-                  onChange={(e) => setProfile({ ...profile, api_token: e.target.value })}
-                  className="form-input form-select"
-                />
+                <div className="api-token-container">
+                  <input
+                    type="text"
+                    value={profile.api_token}
+                    readOnly
+                    className="form-input form-select api-token-input"
+                  />
+                  <button type="button" onClick={handleCopyToken} className="token-action-button" title="Copy Token">
+                    Copy
+                  </button>
+                  <button type="button" onClick={handleRegenerateToken} disabled={regeneratingToken} className="token-action-button" title="Regenerate Token">
+                    {regeneratingToken ? '...' : 'Regenerate'}
+                  </button>
+                </div>
               </div>
 
               <div className="form-group">
@@ -198,37 +235,34 @@ const UserProfilePopup: React.FC<UserProfilePopupProps> = ({ isOpen, onClose, av
                   onChange={(e) => setProfile({ ...profile, system_prompt: e.target.value })}
                   className="form-textarea form-select"
                   rows={3}
-                  style={{height: 'auto'}}
                 />
               </div>
 
               <div className="form-group">
                 <label className="form-label">Long Term Memory</label>
-                <div className="memory-list" style={{display: 'flex', flexDirection: 'column', gap: '0.5rem', marginBottom: '0.5rem'}}>
+                <div className="memory-list">
                   {profile.long_term_memory.map((mem, idx) => (
-                    <div key={idx} className="memory-item" style={{display: 'flex', gap: '0.5rem', alignItems: 'center'}}>
+                    <div key={idx} className="memory-item">
                       <input
                          type="text"
                          value={mem}
                          readOnly
-                         className="form-input form-select"
-                         style={{flex: 1}}
+                         className="form-input form-select memory-item-input"
                       />
                       <button type="button" onClick={() => handleDeleteMemory(idx)} className="tool-remove-button">×</button>
                     </div>
                   ))}
                 </div>
-                <div className="add-memory" style={{display: 'flex', gap: '0.5rem'}}>
+                <div className="add-memory-container">
                   <input
                     type="text"
                     value={newMemory}
                     onChange={(e) => setNewMemory(e.target.value)}
                     placeholder="Add new memory..."
                     onKeyDown={(e) => e.key === 'Enter' && handleAddMemory()}
-                    className="form-input form-select"
-                    style={{flex: 1}}
+                    className="form-input form-select add-memory-input"
                   />
-                  <button type="button" onClick={handleAddMemory} className="update-button" style={{padding: '0.5rem'}}>Add</button>
+                  <button type="button" onClick={handleAddMemory} className="update-button add-memory-button">Add</button>
                 </div>
               </div>
 
