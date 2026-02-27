@@ -92,6 +92,19 @@ class MinioStorage:
             return False
         return True
 
+    def file_download_to_memory(self, file_name, bucket_name=config.s3_bucket):
+        try:
+            if len(file_name.split("://")) > 1:
+                bucket_name = file_name.split("://")[0]
+                file_name = file_name.split("://")[1]
+            file_name = file_name.replace("\\", "/")
+            file_name = file_name.replace("//", "/")
+            response = self.client.get_object(Bucket=bucket_name, Key=file_name)
+            return response['Body'].read()
+        except Exception as e:
+            output_log(f"Error downloading file from S3 to memory: {e}", "error")
+            return None
+
     def file_list_name(self, prefix="", bucket_name=config.s3_bucket):
         try:
             if len(prefix.split("://")) > 1:
