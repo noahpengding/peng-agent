@@ -185,9 +185,9 @@ const ModelInterface: React.FC = () => {
       <div className="main-content">
         {/* Sidebar with filters */}
         <div className="sidebar">
-          <div className="home-button" onClick={() => navigate('/')} role="button">
+          <button className="home-button" onClick={() => navigate('/')}>
             Back to Home
-          </div>
+          </button>
 
           <div className="sidebar-title">Filters</div>
 
