@@ -88,10 +88,10 @@ def create_access_token(data: dict, expiration_days: int) -> str:
     if expiration_days:
         # Other JWT token has expiration
         expire = datetime.now(timezone.utc) + timedelta(days=expiration_days)
-        to_encode.update({"exp": expire})
+        to_encode.update({"exp": expire, "iat": datetime.now(timezone.utc)})
     else:
         # API token has infinite expiration
-        to_encode.update({"exp": datetime.max})
+        to_encode.update({"exp": datetime.max, "iat": datetime.now(timezone.utc)})
     encoded_jwt = jwt.encode(to_encode, config.jwt_secret_key, algorithm="HS256")
     return encoded_jwt
 

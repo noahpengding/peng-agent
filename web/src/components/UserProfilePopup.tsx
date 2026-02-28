@@ -60,7 +60,7 @@ const UserProfilePopup: React.FC<UserProfilePopupProps> = ({ isOpen, onClose, av
         default_embedding_model: profile.default_embedding_model,
         system_prompt: profile.system_prompt,
         long_term_memory: profile.long_term_memory,
-        password: password || undefined,
+        password: password.trim() ? password.trim() : undefined,
       };
 
       await apiCall('PUT', '/user/profile', payload);
@@ -101,13 +101,11 @@ const UserProfilePopup: React.FC<UserProfilePopupProps> = ({ isOpen, onClose, av
 
   const handleRegenerateToken = async () => {
     if (!profile) return;
-    if (!window.confirm('Are you sure you want to regenerate your API token? The old token will stop working immediately.')) {
-        return;
-    }
     setRegeneratingToken(true);
     try {
         const response = await apiCall('POST', '/user/regenerate_token');
         setProfile({ ...profile, api_token: response.api_token });
+        window.location.reload();
     } catch {
         setError('Failed to regenerate token');
     } finally {

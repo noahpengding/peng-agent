@@ -7,4 +7,3 @@ class ChatConfig(BaseModel):
     base_model: str = Field(default="gpt-3.5-turbo")
     tools_name: List[str] = Field(default=[])
     short_term_memory: List[int] = Field(default=[])
-    long_term_memory: List[str] = Field(default=[])

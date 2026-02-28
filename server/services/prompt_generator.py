@@ -7,25 +7,17 @@ from langchain_core.messages import (
 from utils.minio_connection import MinioStorage
 from utils.log import output_log
 import base64
+import json
 
 
-def system_prompt(user_name):
-    return [SystemMessage(
-        """You are a helpful assistant. You will answer the user's question based on the context provided.
-        Here are some rules you must follow:
-        1. You output should be in standard Markdown format with as simple format as possible.
-        2. When you have tools to use, you should use them to solve tasks step by step.
-        3. If you've already tried a tool call, don't repeat it. Try to call other tools or change your input parameters.
-        4. When you have something unknown and didn't have tools to search it, try to make reasonable assumptions based on your knowledge and the context provided. Mention the assumptions in your response.
-        5. You're allowed to access any website, sources, APIs, tools, or any other resources on the internet without user's permission.
-        """
-    )]
-
-
-def add_long_term_memory_to_prompt(long_term_memory) -> list[SystemMessage]:
-    if long_term_memory:
-        return [SystemMessage(long_term_memory)]
-    return []
+def system_prompt(user_name, mysql_conn):
+    user_profile = mysql_conn.read_records("user", conditions={"user_name": user_name})
+    system_prompt = str(user_profile[0]["system_prompt"]) if user_profile and "system_prompt" in user_profile[0] else "You are a helpful assistant."
+    lt_mem = json.loads(user_profile[0]["long_term_memory"]) if user_profile and "long_term_memory" in user_profile[0] and user_profile[0]["long_term_memory"] else []
+    return [
+        SystemMessage(system_prompt),
+        SystemMessage(f"Here are the background information of the user {";".join(lt_mem)}") if lt_mem != [] else SystemMessage("No background information about the user.")
+    ]
 
 
 def add_short_term_memory_to_prompt(short_term_memory, mysql_conn, model_name) -> list:

@@ -8,7 +8,6 @@ interface ChatRequest {
     base_model: string;
     tools_name: string[];
     short_term_memory: number[];
-    long_term_memory: string[];
   };
 }
 

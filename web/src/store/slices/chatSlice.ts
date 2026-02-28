@@ -13,7 +13,6 @@ interface SendMessageArgs {
     base_model: string;
     tools_name: string[];
     short_term_memory: number[];
-    long_term_memory: string[];
   };
 }
 
@@ -30,7 +29,6 @@ interface ChatState {
   knowledgeBase: string;
   selectedToolNames: string[];
   shortTermMemory: number[];
-  longTermMemory: string[];
 }
 
 const initialState: ChatState = {
@@ -45,7 +43,6 @@ const initialState: ChatState = {
   knowledgeBase: 'default',
   selectedToolNames: [],
   shortTermMemory: [],
-  longTermMemory: [],
 };
 
 const extractChatIdFromChunk = (chunk: string): number | null => {

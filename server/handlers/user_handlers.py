@@ -69,13 +69,10 @@ def update_user_profile(username: str, user_data: UserUpdate) -> Dict:
 
         if user_data.long_term_memory is not None:
             # Validate long_term_memory entries
-            MAX_MEMORY_LENGTH = 1000
-            for memory in user_data.long_term_memory:
+            MAX_MEMORY_LENGTH = 100
+            for i, memory in enumerate(user_data.long_term_memory):
                 if len(memory) > MAX_MEMORY_LENGTH:
-                    raise HTTPException(
-                        status_code=400,
-                        detail=f"Long term memory entry exceeds maximum length of {MAX_MEMORY_LENGTH} characters"
-                    )
+                    user_data.long_term_memory[i] = memory[:MAX_MEMORY_LENGTH]
             update_fields["long_term_memory"] = json.dumps(user_data.long_term_memory)
 
         if not update_fields:

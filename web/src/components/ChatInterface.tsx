@@ -40,7 +40,6 @@ const ChatbotUI = () => {
     knowledgeBase,
     selectedToolNames,
     shortTermMemory,
-    longTermMemory,
   } = useSelector((state: RootState) => state.chat);
 
   const { availableBaseModels, loading: baseModelsLoading } = useSelector((state: RootState) => state.models);
@@ -214,7 +213,6 @@ const ChatbotUI = () => {
       base_model: baseModel,
       tools_name: selectedToolNames,
       short_term_memory: shortTermMemory,
-      long_term_memory: longTermMemory,
     };
 
     const request = {
