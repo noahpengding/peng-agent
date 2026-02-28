@@ -100,7 +100,11 @@ class MinioStorage:
             file_name = file_name.replace("\\", "/")
             file_name = file_name.replace("//", "/")
             response = self.client.get_object(Bucket=bucket_name, Key=file_name)
-            return response['Body'].read()
+            body = response['Body']
+            try:
+                return body.read()
+            finally:
+                body.close()
         except Exception as e:
             output_log(f"Error downloading file from S3 to memory: {e}", "error")
             return None
