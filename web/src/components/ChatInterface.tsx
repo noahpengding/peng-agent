@@ -20,6 +20,7 @@ import './ChatInterface.css';
 import { Message, UploadedImage } from './ChatInterface.types';
 import { InputArea } from './InputArea';
 import { MessageList } from './MessageList';
+import UserProfilePopup from './UserProfilePopup';
 import { Memory } from '../hooks/MemoryAPI';
 import { useRAGApi } from '../hooks/RAGAPI';
 
@@ -49,6 +50,7 @@ const ChatbotUI = () => {
 
   // Local UI State
   const [isToolPopupOpen, setIsToolPopupOpen] = useState(false);
+  const [isProfilePopupOpen, setIsProfilePopupOpen] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [collections, setCollections] = useState<string[]>([]);
   const [s3PathsInput, setS3PathsInput] = useState('');
@@ -417,6 +419,16 @@ const ChatbotUI = () => {
               </a>
               {shortTermMemory.length > 0 && <div className="selected-memories-count">{shortTermMemory.length} short-term memories used</div>}
             </div>
+
+            {/* User Profile Button */}
+            <div className="form-group user-profile-button-container">
+              <button
+                className="memory-link user-profile-button"
+                onClick={() => setIsProfilePopupOpen(true)}
+              >
+                User Profile
+              </button>
+            </div>
           </div>
         )}
 
@@ -491,6 +503,12 @@ const ChatbotUI = () => {
           </div>
         </div>
       )}
+
+      <UserProfilePopup
+        isOpen={isProfilePopupOpen}
+        onClose={() => setIsProfilePopupOpen(false)}
+        availableModels={availableBaseModels}
+      />
     </div>
   );
 };

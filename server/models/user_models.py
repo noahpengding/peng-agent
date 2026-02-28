@@ -1,3 +1,4 @@
+from typing import List, Optional
 from pydantic import BaseModel, Field
 
 
@@ -18,3 +19,24 @@ class UserCreate(BaseModel):
 class TokenResponse(BaseModel):
     access_token: str
     token_type: str
+
+
+class UserProfile(BaseModel):
+    username: str
+    email: str
+    api_token: str
+    default_base_model: str
+    default_output_model: str
+    default_embedding_model: str
+    system_prompt: Optional[str] = None
+    long_term_memory: List[str] = Field(default_factory=list)
+
+
+class UserUpdate(BaseModel):
+    password: Optional[str] = None
+    email: Optional[str] = None
+    default_base_model: Optional[str] = None
+    default_output_model: Optional[str] = None
+    default_embedding_model: Optional[str] = None
+    system_prompt: Optional[str] = None
+    long_term_memory: Optional[List[str]] = None

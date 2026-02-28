@@ -237,6 +237,7 @@ class User(Base):
     default_output_model = Column(Text)
     default_embedding_model = Column(Text)
     system_prompt = Column(Text, nullable=True)
+    long_term_memory = Column(Text, nullable=True)
     created_at = Column(TIMESTAMP, default=datetime.now)
     modified_at = Column(TIMESTAMP, default=datetime.now, onupdate=datetime.now)
 
@@ -251,6 +252,7 @@ class User(Base):
             "default_output_model": self.default_output_model,
             "default_embedding_model": self.default_embedding_model,
             "system_prompt": self.system_prompt,
+            "long_term_memory": self.long_term_memory,
             "created_at": self.created_at,
             "modified_at": self.modified_at,
         }
