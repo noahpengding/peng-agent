@@ -2,6 +2,8 @@ from utils.mysql_connect import MysqlConnect
 from utils.minio_connection import MinioStorage
 from utils.log import output_log
 from config.config import config
+from io import BytesIO
+import pandas as pd
 
 
 def get_all_tools():
@@ -20,10 +22,11 @@ def get_tool_by_name(tool_name: str):
 
 def update_tools():
     minio = MinioStorage()
-    minio.file_download(f"{config.s3_base_path}/tools.xlsx", "tools.xlsx")
-    import pandas as pd
-
-    tools = pd.read_excel("tools.xlsx")
+    tool_data = minio.file_download_to_memory(f"{config.s3_base_path}/tools.xlsx")
+    if tool_data is None:
+        output_log("No tool data found in S3 to update tools.", "warning")
+        return
+    tools = pd.read_excel(BytesIO(tool_data))
     tools = tools.fillna("")
     mysql = MysqlConnect()
     mysql.delete_record("tools", None)

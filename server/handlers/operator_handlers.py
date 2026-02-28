@@ -2,6 +2,8 @@ from utils.mysql_connect import MysqlConnect
 from utils.minio_connection import MinioStorage
 from models.operator_config import OperatorConfig
 from config.config import config
+from io import BytesIO
+import pandas as pd
 
 
 def get_operator(operator_name: str) -> OperatorConfig:
@@ -13,10 +15,10 @@ def get_operator(operator_name: str) -> OperatorConfig:
 
 def update_operator() -> None:
     minio = MinioStorage()
-    minio.file_download(f"{config.s3_base_path}/operator.xlsx", "operator.xlsx")
-    import pandas as pd
-
-    operators = pd.read_excel("operator.xlsx")
+    operator_data = minio.file_download_to_memory(f"{config.s3_base_path}/operator.xlsx")
+    if operator_data is None:
+        return
+    operators = pd.read_excel(BytesIO(operator_data))
     operators = operators.fillna("")
     operators = [OperatorConfig(**row.to_dict()) for _, row in operators.iterrows()]
     mysql = MysqlConnect()

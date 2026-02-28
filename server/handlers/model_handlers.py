@@ -4,13 +4,16 @@ from utils.log import output_log
 from utils.minio_connection import MinioStorage
 from handlers.operator_handlers import get_all_operators, update_operator
 from config.config import config
+from io import BytesIO
 import pandas as pd
 
 
 def _get_local_models() -> list[ModelConfig]:
     m = MinioStorage()
-    m.file_download(f"{config.s3_base_path}/models.xlsx", "models.xlsx")
-    models = pd.read_excel("models.xlsx")
+    model_data = m.file_download_to_memory(f"{config.s3_base_path}/models.xlsx")
+    if model_data is None:
+        return []
+    models = pd.read_excel(BytesIO(model_data))
     models.dropna(subset=["model_name"], inplace=True)
     result = []
     for index, row in models.iterrows():

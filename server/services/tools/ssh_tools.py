@@ -4,17 +4,13 @@ import os
 from langchain_core.tools import StructuredTool
 from utils.minio_connection import MinioStorage
 from config.config import config
-from io import StringIO
+from io import StringIO, BytesIO
 
 
 def _establish_ssh_connection(hostname: str):
     minio = MinioStorage()
-    minio.file_download(
-        f"{config.s3_base_path}/ssh_connection.json", "ssh_connection.json"
-    )
-    with open("ssh_connection.json", "r") as f:
-        ssh_config = json.load(f)
-    os.remove("ssh_connection.json")
+    ssh_data = minio.file_download_to_memory(f"{config.s3_base_path}/ssh_connection.json")
+    ssh_config = json.loads(BytesIO(ssh_data).read().decode("utf-8"))
     for entry in ssh_config:
         if entry["hostname"] == hostname:
             minio.file_download(entry["private_key_path"], "temp_private_key")

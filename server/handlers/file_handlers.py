@@ -7,21 +7,6 @@ import datetime
 import re
 
 
-def file_downloader(message_file_path: str):
-    m = MinioStorage()
-    bucket_name = config.s3_bucket
-    if len(message_file_path.split("://")) > 1:
-        bucket_name = message_file_path.split("://")[0]
-        message_file_path = message_file_path.split("://")[1]
-    download_path = f"tmp/{message_file_path}"
-    if not m.file_download(message_file_path, download_path, bucket_name):
-        return [
-            f"Error downloading file {message_file_path} from bucket {bucket_name}",
-            False,
-        ]
-    return [download_path, True]
-
-
 def file_uploader(file_content: str, content_type: str, upload_file_path: str):
     m = MinioStorage()
     bucket_name = config.s3_bucket
