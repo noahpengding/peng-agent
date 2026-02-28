@@ -25,13 +25,6 @@ services:
     security_opt:
       - no-new-privileges=true
 
-  crawl4ai:
-    image: unclecode/crawl4ai:latest
-    container_name: crawl4ai
-    restart: always
-    ports:
-      - "11235:11235"
-    shm_size: 1g
 
   peng-agent-server:
     image: peng-agent:server

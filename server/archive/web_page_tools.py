@@ -37,19 +37,6 @@ async def _adaptive_web_crawler(url: str, instructions: str) -> str:
     except Exception as e:
         return f"Error occurred during crawling: {str(e)}"
 
-def requests_toolkit():
-    from langchain_community.agent_toolkits.openapi.toolkit import RequestsToolkit
-    from langchain_community.utilities.requests import TextRequestsWrapper
-
-    HEADERS = {
-        "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/133.0.0.0 Safari/537.36"
-    }
-    toolkit = RequestsToolkit(
-        requests_wrapper=TextRequestsWrapper(headers=HEADERS),
-        allow_dangerous_requests=True,
-    )
-    tools = toolkit.get_tools()
-    return tools
 
 
 web_crawler_tool = StructuredTool.from_function(
@@ -72,5 +59,3 @@ web_crawler_tool = StructuredTool.from_function(
     },
     return_direct=False,
 )
-
-requests_tools = requests_toolkit()

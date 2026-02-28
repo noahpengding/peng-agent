@@ -16,14 +16,9 @@ async def tools_routers(tools_name: List[str]):
             tools += [wikipedia_search_tool]
 
         elif tool_name == "requests_tools":
-            from services.tools.web_page_tools import requests_tools
+            from services.tools.search_tools import requests_tools
 
             tools += requests_tools
-
-        elif tool_name == "web_crawler_tool":
-            from services.tools.web_page_tools import web_crawler_tool
-
-            tools += [web_crawler_tool]
 
         elif tool_name == "email_send_tool":
             from services.tools.smtp_tools import email_send_tool
@@ -68,7 +63,7 @@ async def tools_routers(tools_name: List[str]):
         elif tool_name == "web_search":
             from services.tools.search_tools import tavily_tools
             from services.tools.search_tools import wikipedia_search_tool
-            from services.tools.web_page_tools import web_crawler_tool
+            from archive.web_page_tools import web_crawler_tool
 
             tools += tavily_tools + [wikipedia_search_tool] + [web_crawler_tool]
 
