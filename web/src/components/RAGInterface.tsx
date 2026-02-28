@@ -90,7 +90,7 @@ const RAGInterface: React.FC = () => {
         {/* Sidebar for controls */}
         <div className="sidebar">
           {/* Home button */}
-          <button className="home-button" onClick={() => navigate('/')}>
+          <button type="button" className="home-button" onClick={() => navigate('/')}>
             Return to Home
           </button>
 
