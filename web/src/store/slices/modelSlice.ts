@@ -1,6 +1,7 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 import { ModelInfo } from '../../components/ChatInterface.types';
 import { ModelService } from '../../services/modelService';
+import { UserService } from '../../services/userService';
 
 interface ModelState {
   availableBaseModels: ModelInfo[];
@@ -14,9 +15,18 @@ const initialState: ModelState = {
   error: null,
 };
 
-export const fetchBaseModels = createAsyncThunk('models/fetchBaseModels', async (_, { rejectWithValue }) => {
+export interface FetchBaseModelsResult {
+  models: ModelInfo[];
+  defaultBaseModel: string | null;
+}
+
+export const fetchBaseModels = createAsyncThunk<FetchBaseModelsResult>('models/fetchBaseModels', async (_, { rejectWithValue }) => {
   try {
-    return await ModelService.getAvailableBaseModels();
+    const [models, profile] = await Promise.allSettled([ModelService.getAvailableBaseModels(), UserService.getProfile()]);
+    return {
+      models: models.status === 'fulfilled' ? models.value : [],
+      defaultBaseModel: profile.status === 'fulfilled' ? (profile.value.default_base_model ?? null) : null,
+    };
   } catch (error) {
     return rejectWithValue((error as Error).message);
   }
@@ -34,7 +44,7 @@ const modelSlice = createSlice({
       })
       .addCase(fetchBaseModels.fulfilled, (state, action) => {
         state.loading = false;
-        state.availableBaseModels = action.payload;
+        state.availableBaseModels = action.payload.models;
       })
       .addCase(fetchBaseModels.rejected, (state, action) => {
         state.loading = false;

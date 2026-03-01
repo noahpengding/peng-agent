@@ -28,8 +28,7 @@ export const MessageList: React.FC<MessageListProps> = ({ messages, isLoading, o
     const lastMessageIndex = messages.length - 1;
     if (lastMessageIndex >= 0) {
       const lastMessage = messages[lastMessageIndex];
-      const isLongMessage =
-        lastMessage.type === 'tool_calls' || lastMessage.type === 'tool_output' || lastMessage.type === 'reasoning_summary';
+      const isLongMessage = lastMessage.type === 'tool_calls' || lastMessage.type === 'tool_output' || lastMessage.type === 'reasoning_summary';
 
       const isFolded = foldedMessages[lastMessageIndex] ?? lastMessage.folded ?? false;
 

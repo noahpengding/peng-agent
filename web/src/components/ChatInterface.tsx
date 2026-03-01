@@ -24,32 +24,22 @@ import { MessageList } from './MessageList';
 import UserProfilePopup from './UserProfilePopup';
 import { Memory } from '../hooks/MemoryAPI';
 import { useRAGApi } from '../hooks/RAGAPI';
-import { useUserApi } from '../hooks/UserAPI';
 
 // Main App Component
 const ChatbotUI = () => {
   const dispatch = useDispatch<AppDispatch>();
 
   // Redux State
-  const {
-    messages,
-    input,
-    isLoading,
-    error,
-    isSidebarHidden,
-    uploadedImages,
-    baseModel,
-    knowledgeBase,
-    selectedToolNames,
-    shortTermMemory,
-  } = useSelector((state: RootState) => state.chat);
+  const { messages, input, isLoading, error, isSidebarHidden, uploadedImages, baseModel, knowledgeBase, selectedToolNames, shortTermMemory } =
+    useSelector((state: RootState) => state.chat);
 
   const { availableBaseModels, loading: baseModelsLoading } = useSelector((state: RootState) => state.models);
   const { availableTools, loading: toolsLoading, error: toolsError } = useSelector((state: RootState) => state.tools);
   const { user } = useSelector((state: RootState) => state.auth);
   const { getCollections, isLoading: collectionsLoading, error: collectionsError } = useRAGApi();
-  const { getProfile } = useUserApi();
-  
+
+  // Stable ref for getCollections — captured once so the mount effect has no changing deps
+  const getCollectionsRef = useRef(getCollections);
 
   // Local UI State
   const [isToolPopupOpen, setIsToolPopupOpen] = useState(false);
@@ -64,43 +54,29 @@ const ChatbotUI = () => {
     dispatch(fetchBaseModels());
   }, [dispatch]);
 
+  // Run once on mount — fetch collections
   useEffect(() => {
     let isMounted = true;
+    const initialKnowledgeBase = knowledgeBase;
 
-    const loadBaseModel = async () => {
-      try {
-        const data = await getProfile();
-        if (!isMounted) return;
-        if (data.default_base_model) {
-          dispatch(setBaseModel(data.default_base_model));
-        }
-      } catch {
-        if (!isMounted) return;
-      }
-    }
-
-    const loadCollections = async () => {
-      try {
-        const data = await getCollections();
+    getCollectionsRef
+      .current()
+      .then((data) => {
         if (!isMounted) return;
         const normalized = Array.isArray(data) ? data : [];
         setCollections(normalized);
-        if (normalized.length > 0 && !normalized.includes(knowledgeBase)) {
+        if (normalized.length > 0 && !normalized.includes(initialKnowledgeBase)) {
           dispatch(setKnowledgeBase(normalized[0]));
         }
-      } catch {
-        if (!isMounted) return;
-        setCollections([]);
-      }
-    };
-
-    loadBaseModel();
-    loadCollections();
+      })
+      .catch(() => {
+        if (isMounted) setCollections([]);
+      });
 
     return () => {
       isMounted = false;
     };
-  }, [dispatch, getCollections, knowledgeBase, getProfile]);
+  }, [dispatch]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const displayError = error || toolsError || collectionsError;
 
@@ -448,10 +424,7 @@ const ChatbotUI = () => {
 
             {/* User Profile Button */}
             <div className="form-group user-profile-button-container">
-              <button
-                className="memory-link user-profile-button"
-                onClick={() => setIsProfilePopupOpen(true)}
-              >
+              <button className="memory-link user-profile-button" onClick={() => setIsProfilePopupOpen(true)}>
                 User Profile
               </button>
             </div>
@@ -530,11 +503,7 @@ const ChatbotUI = () => {
         </div>
       )}
 
-      <UserProfilePopup
-        isOpen={isProfilePopupOpen}
-        onClose={() => setIsProfilePopupOpen(false)}
-        availableModels={availableBaseModels}
-      />
+      <UserProfilePopup isOpen={isProfilePopupOpen} onClose={() => setIsProfilePopupOpen(false)} availableModels={availableBaseModels} />
     </div>
   );
 };

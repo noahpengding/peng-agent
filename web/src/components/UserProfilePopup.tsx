@@ -18,19 +18,20 @@ const UserProfilePopup: React.FC<UserProfilePopupProps> = ({ isOpen, onClose, av
   const [error, setError] = useState<string | null>(null);
   const [newMemory, setNewMemory] = useState('');
   const [regeneratingToken, setRegeneratingToken] = useState(false);
+  const getProfileRef = React.useRef(getProfile);
 
   const fetchProfile = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
-      const data = await getProfile();
+      const data = await getProfileRef.current();
       setProfile(data);
     } catch {
       setError('Failed to load profile');
     } finally {
       setLoading(false);
     }
-  }, [getProfile]);
+  }, []); // stable — no changing deps
 
   useEffect(() => {
     if (isOpen) {
@@ -93,13 +94,13 @@ const UserProfilePopup: React.FC<UserProfilePopupProps> = ({ isOpen, onClose, av
     if (!profile) return;
     setRegeneratingToken(true);
     try {
-        const response = await regenerateToken();
-        setProfile({ ...profile, api_token: response.api_token });
-        window.location.reload();
+      const response = await regenerateToken();
+      setProfile({ ...profile, api_token: response.api_token });
+      window.location.reload();
     } catch {
-        setError('Failed to regenerate token');
+      setError('Failed to regenerate token');
     } finally {
-        setRegeneratingToken(false);
+      setRegeneratingToken(false);
     }
   };
 
@@ -112,9 +113,11 @@ const UserProfilePopup: React.FC<UserProfilePopupProps> = ({ isOpen, onClose, av
           <h3>User Profile</h3>
           <div className="popup-actions">
             <button className="update-button" onClick={handleSave} disabled={saving}>
-                {saving ? 'Saving...' : 'Save'}
+              {saving ? 'Saving...' : 'Save'}
             </button>
-            <button className="close-button" onClick={onClose}>×</button>
+            <button className="close-button" onClick={onClose}>
+              ×
+            </button>
           </div>
         </div>
 
@@ -127,12 +130,7 @@ const UserProfilePopup: React.FC<UserProfilePopupProps> = ({ isOpen, onClose, av
             <div className="profile-form">
               <div className="form-group">
                 <label className="form-label">Username</label>
-                <input
-                  type="text"
-                  value={profile.username}
-                  disabled
-                  className="form-input form-select disabled-input"
-                />
+                <input type="text" value={profile.username} disabled className="form-input form-select disabled-input" />
               </div>
 
               <div className="form-group">
@@ -159,16 +157,17 @@ const UserProfilePopup: React.FC<UserProfilePopupProps> = ({ isOpen, onClose, av
               <div className="form-group">
                 <label className="form-label">API Token</label>
                 <div className="api-token-container">
-                  <input
-                    type="text"
-                    value={profile.api_token}
-                    readOnly
-                    className="form-input form-select api-token-input"
-                  />
+                  <input type="text" value={profile.api_token} readOnly className="form-input form-select api-token-input" />
                   <button type="button" onClick={handleCopyToken} className="token-action-button" title="Copy Token">
                     Copy
                   </button>
-                  <button type="button" onClick={handleRegenerateToken} disabled={regeneratingToken} className="token-action-button" title="Regenerate Token">
+                  <button
+                    type="button"
+                    onClick={handleRegenerateToken}
+                    disabled={regeneratingToken}
+                    className="token-action-button"
+                    title="Regenerate Token"
+                  >
                     {regeneratingToken ? '...' : 'Regenerate'}
                   </button>
                 </div>
@@ -182,8 +181,10 @@ const UserProfilePopup: React.FC<UserProfilePopupProps> = ({ isOpen, onClose, av
                   className="form-select"
                 >
                   <option value="">Select a model</option>
-                  {availableModels.map(model => (
-                    <option key={model.model_name} value={model.model_name}>{model.model_name}</option>
+                  {availableModels.map((model) => (
+                    <option key={model.model_name} value={model.model_name}>
+                      {model.model_name}
+                    </option>
                   ))}
                 </select>
               </div>
@@ -196,8 +197,10 @@ const UserProfilePopup: React.FC<UserProfilePopupProps> = ({ isOpen, onClose, av
                   className="form-select"
                 >
                   <option value="">Select a model</option>
-                  {availableModels.map(model => (
-                    <option key={model.model_name} value={model.model_name}>{model.model_name}</option>
+                  {availableModels.map((model) => (
+                    <option key={model.model_name} value={model.model_name}>
+                      {model.model_name}
+                    </option>
                   ))}
                 </select>
               </div>
@@ -210,8 +213,10 @@ const UserProfilePopup: React.FC<UserProfilePopupProps> = ({ isOpen, onClose, av
                   className="form-select"
                 >
                   <option value="">Select a model</option>
-                  {availableModels.map(model => (
-                    <option key={model.model_name} value={model.model_name}>{model.model_name}</option>
+                  {availableModels.map((model) => (
+                    <option key={model.model_name} value={model.model_name}>
+                      {model.model_name}
+                    </option>
                   ))}
                 </select>
               </div>
@@ -231,13 +236,10 @@ const UserProfilePopup: React.FC<UserProfilePopupProps> = ({ isOpen, onClose, av
                 <div className="memory-list">
                   {profile.long_term_memory.map((mem, idx) => (
                     <div key={idx} className="memory-item">
-                      <input
-                         type="text"
-                         value={mem}
-                         readOnly
-                         className="form-input form-select memory-item-input"
-                      />
-                      <button type="button" onClick={() => handleDeleteMemory(idx)} className="tool-remove-button">×</button>
+                      <input type="text" value={mem} readOnly className="form-input form-select memory-item-input" />
+                      <button type="button" onClick={() => handleDeleteMemory(idx)} className="tool-remove-button">
+                        ×
+                      </button>
                     </div>
                   ))}
                 </div>
@@ -250,10 +252,11 @@ const UserProfilePopup: React.FC<UserProfilePopupProps> = ({ isOpen, onClose, av
                     onKeyDown={(e) => e.key === 'Enter' && handleAddMemory()}
                     className="form-input form-select add-memory-input"
                   />
-                  <button type="button" onClick={handleAddMemory} className="update-button add-memory-button">Add</button>
+                  <button type="button" onClick={handleAddMemory} className="update-button add-memory-button">
+                    Add
+                  </button>
                 </div>
               </div>
-
             </div>
           ) : null}
         </div>

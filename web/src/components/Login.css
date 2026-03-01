@@ -1,11 +1,19 @@
 /* ── Keyframes ─────────────────────────────────────────── */
 @keyframes fadeInUp {
-  from { opacity: 0; transform: translateY(18px); }
-  to   { opacity: 1; transform: translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateY(18px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 @keyframes spin {
-  to { transform: rotate(360deg); }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 /* ── Page wrapper ──────────────────────────────────────── */
@@ -111,7 +119,10 @@
   font-size: 14px;
   color: #f1f5f9;
   outline: none;
-  transition: border-color 0.2s, box-shadow 0.2s, background 0.2s;
+  transition:
+    border-color 0.2s,
+    box-shadow 0.2s,
+    background 0.2s;
   box-sizing: border-box;
 }
 
@@ -194,7 +205,10 @@
   cursor: pointer;
   background: linear-gradient(135deg, #7c3aed, #6d28d9);
   box-shadow: 0 4px 18px rgba(124, 58, 237, 0.45);
-  transition: box-shadow 0.2s, transform 0.2s, background 0.2s;
+  transition:
+    box-shadow 0.2s,
+    transform 0.2s,
+    background 0.2s;
 }
 
 .login-submit:hover:not(:disabled) {

@@ -13,7 +13,16 @@ export const UserService = {
 
   async updateProfile(payload: UpdateUserProfilePayload): Promise<void> {
     try {
-      await apiCall('PUT', '/user/profile', payload);
+      const payloadToSend = {
+        email: payload.email,
+        default_base_model: payload.default_base_model,
+        default_output_model: payload.default_output_model,
+        default_embedding_model: payload.default_embedding_model,
+        system_prompt: payload.system_prompt,
+        long_term_memory: payload.long_term_memory,
+        password: payload.password,
+      };
+      await apiCall('PUT', '/user/profile', payloadToSend);
     } catch (error) {
       throw error;
     }

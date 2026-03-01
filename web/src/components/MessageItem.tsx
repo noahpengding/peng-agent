@@ -1,4 +1,4 @@
-import React, {useState} from 'react';
+import React, { useState } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import remarkMath from 'remark-math';
@@ -26,17 +26,17 @@ const CodeBlock = ({ inline, className, children, ...rest }: CodeBlockProps) => 
     try {
       await navigator.clipboard.writeText(String(children).replace(/\n$/, ''));
       setIsCopied(true);
-      setTimeout(() => setIsCopied(false), 2000); 
+      setTimeout(() => setIsCopied(false), 2000);
     } catch {
       // Silently fail if clipboard access is denied
     }
-  }; 
+  };
 
   if (inline || !lang) {
     return (
       <code className={className} {...rest}>
         {children}
-      </code> 
+      </code>
     );
   }
 
@@ -53,12 +53,12 @@ const CodeBlock = ({ inline, className, children, ...rest }: CodeBlockProps) => 
       </button>
       <SyntaxHighlighter
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        style={vscDarkPlus as any} 
+        style={vscDarkPlus as any}
         language={lang}
         PreTag="div"
         customStyle={{ margin: 0, borderRadius: '0.375rem' }}
         {...rest}
-      > 
+      >
         {String(children).replace(/\n$/, '')}
       </SyntaxHighlighter>
     </div>

@@ -41,9 +41,7 @@ const MemoryPage: React.FC = () => {
     }
     const lowerCaseSearchTerm = searchTerm.toLowerCase();
     return memories.filter(
-      (memory) =>
-        memory.human_input.toLowerCase().includes(lowerCaseSearchTerm) ||
-        memory.ai_response.toLowerCase().includes(lowerCaseSearchTerm)
+      (memory) => memory.human_input.toLowerCase().includes(lowerCaseSearchTerm) || memory.ai_response.toLowerCase().includes(lowerCaseSearchTerm)
     );
   }, [searchTerm, memories]);
 

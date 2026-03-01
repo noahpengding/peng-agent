@@ -99,17 +99,14 @@ export const sendMessage = createAsyncThunk('chat/sendMessage', async (args: Sen
   }
 });
 
-export const submitMessageFeedback = createAsyncThunk(
-  'chat/submitMessageFeedback',
-  async (args: SubmitFeedbackArgs, { rejectWithValue }) => {
-    try {
-      await ChatService.updateFeedback(args.chatId, args.userName, args.feedback);
-      return args;
-    } catch (error) {
-      return rejectWithValue((error as Error).message);
-    }
+export const submitMessageFeedback = createAsyncThunk('chat/submitMessageFeedback', async (args: SubmitFeedbackArgs, { rejectWithValue }) => {
+  try {
+    await ChatService.updateFeedback(args.chatId, args.userName, args.feedback);
+    return args;
+  } catch (error) {
+    return rejectWithValue((error as Error).message);
   }
-);
+});
 
 const chatSlice = createSlice({
   name: 'chat',
@@ -278,8 +275,11 @@ const chatSlice = createSlice({
         state.error = action.payload as string;
       })
       .addCase(fetchBaseModels.fulfilled, (state, action) => {
-        if (action.payload && action.payload.length > 0) {
-          state.baseModel = action.payload[0].model_name || 'gpt-4';
+        const { models, defaultBaseModel } = action.payload;
+        if (defaultBaseModel) {
+          state.baseModel = defaultBaseModel;
+        } else if (models.length > 0) {
+          state.baseModel = models[0].model_name || 'gpt-4';
         }
       });
   },
