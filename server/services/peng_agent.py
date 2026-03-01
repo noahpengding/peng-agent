@@ -86,10 +86,14 @@ class PengAgent:
                 operator=config.default_operator,
                 base_model=config.default_base_model,
             )
-            truncated_observation = await chat_completions_handler(
-                self.user_name, prompt, None, None, chat_config
-            )
-            return truncated_observation
+            try:
+                truncated_observation = await chat_completions_handler(
+                    self.user_name, prompt, None, None, chat_config
+                )
+                truncated_observation = truncated_observation[-1].content[0]["text"].strip()
+                return truncated_observation
+            except Exception as e:
+                return observation[:int(max_length)]
         return observation
 
 

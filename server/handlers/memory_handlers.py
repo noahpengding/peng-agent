@@ -1,6 +1,9 @@
 from sqlalchemy import text
 from utils.log import output_log
 from utils.mysql_connect import MysqlConnect
+from datetime import datetime, timedelta
+from config.config import config
+import json
 
 
 def get_memory(username: str = ""):
@@ -53,3 +56,39 @@ def get_memory(username: str = ""):
         except Exception as e:
             output_log(f"Error executing memory query: {e}", "error")
             return []
+        
+async def update_lt_memory(username: str):
+    output_log("POST /memory/update_lt_memory", "DEBUG")
+    mysql = MysqlConnect()
+    one_day_chat = mysql.read_records("chat", {"user_name": username, "created_at>=": datetime.now() - timedelta(days=1)})
+    if not one_day_chat:
+        return []
+    one_day_memory = [f"Human: {chat['human_input']}\n\n" for chat in one_day_chat]
+    output_log(f"One day chat for {username}: {one_day_memory}", "debug")
+    prompt = f'''Extract important information from the following conversations for long-term memory. You will receive multiple conversation input. You should output the important information in a list format seperated by ";".
+        Sample1: 
+        Input: Human: Using python with uv to develop a web server, what should I do?
+        Output: User prefer python; User want to use uv for python package management;
+        Sample2: 
+        Input: answer this question in actuarial science?
+        Output: 
+        (No record for sample 2 since it's not important information in the conversation)
+        ONLY RECORDED OBVIOUS and IMPORTANT INFORMATION. DO NOT RECORD EVERY DETAIL. IF THE CONVERSATION IS NOT IMPORTANT, JUST SKIP IT.
+        Today's conversation:
+        {one_day_memory}'''
+    from handlers.chat_handlers import chat_completions_handler
+    from models.chat_config import ChatConfig
+    chat_config = ChatConfig(
+        operator=config.default_operator,
+        base_model=config.default_base_model,
+    )
+    lt_memory = await chat_completions_handler(
+        username, prompt, None, None, chat_config
+    )
+    lt_memory = lt_memory[-1].content[0]["text"].strip()
+    lt_memory = lt_memory.replace("\n", "").replace("\r", "")
+    lt_memory = lt_memory.split(";")
+    if lt_memory != [] and lt_memory != [""]:
+        lt_memory = json.dumps(lt_memory)
+        with mysql.get_session():
+            mysql.update_record("user", {"long_term_memory": lt_memory}, {"user_name": username})
