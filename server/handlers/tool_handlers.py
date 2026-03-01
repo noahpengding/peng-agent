@@ -5,8 +5,7 @@ from services.redis_service import (
     create_table_record,
     get_table_record,
     get_table_records,
-    update_table_record,
-    delete_table_record
+    update_table_record
 )
 from io import BytesIO
 import pandas as pd
