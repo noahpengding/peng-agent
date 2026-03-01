@@ -1,7 +1,7 @@
 from langchain_core.tools import StructuredTool
 from utils.minio_connection import MinioStorage
 import tempfile
-from math import *
+from math import exp, log
 import pandas as pd
 
 def actsc_life_table(from_x: int, to_x: int, interest=0.05, A=0.00022, B=0.0000027, c=1.124):
@@ -22,7 +22,7 @@ def actsc_life_table(from_x: int, to_x: int, interest=0.05, A=0.00022, B=0.00000
         l_x.append(max(l_x[-1] * p, 0))
     d_x = [prev - curr for prev, curr in zip(l_x, l_x[1:])] + [l_x[-1]]
     a_due_x = [
-        sum(l / l_x[x - 20] * (1 + interest) ** (-t) for t, l in enumerate(l_x[x - 20:91]))
+        sum(i / l_x[x - 20] * (1 + interest) ** (-t) for t, i in enumerate(l_x[x - 20:91]))
         for x in ages
     ]
     A_x = [
