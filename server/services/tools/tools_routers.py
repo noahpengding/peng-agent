@@ -29,6 +29,11 @@ async def tools_routers(tools_name: List[str]):
 
             tools += minio_tool
 
+        elif tool_name == "actuarial_tools":
+            from services.tools.actsc_tools import actuarial_tools
+
+            tools += actuarial_tools
+
         elif tool_name.endswith("_sql"):
             from services.tools.sql_tool import create_sql_tool
 
