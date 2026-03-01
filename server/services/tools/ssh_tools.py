@@ -10,6 +10,8 @@ from io import StringIO, BytesIO
 def _establish_ssh_connection(hostname: str):
     minio = MinioStorage()
     ssh_data = minio.file_download_to_memory(f"{config.s3_base_path}/ssh_connection.json")
+    if ssh_data is None:
+        return None
     ssh_config = json.loads(BytesIO(ssh_data).read().decode("utf-8"))
     for entry in ssh_config:
         if entry["hostname"] == hostname:

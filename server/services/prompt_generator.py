@@ -14,9 +14,10 @@ def system_prompt(user_name, mysql_conn):
     user_profile = mysql_conn.read_records("user", conditions={"user_name": user_name})
     system_prompt = str(user_profile[0]["system_prompt"]) if user_profile and "system_prompt" in user_profile[0] else "You are a helpful assistant."
     lt_mem = json.loads(user_profile[0]["long_term_memory"]) if user_profile and "long_term_memory" in user_profile[0] and user_profile[0]["long_term_memory"] else []
+    lt_mem_str = ";".join(lt_mem) if lt_mem != [] else "No background information about the user."
     return [
         SystemMessage(system_prompt),
-        SystemMessage(f"Here are the background information of the user {";".join(lt_mem)}") if lt_mem != [] else SystemMessage("No background information about the user.")
+        SystemMessage(f"Here are the background information of the user {lt_mem_str}")
     ]
 
 

@@ -26,7 +26,7 @@ def requests_toolkit():
     return tools
 
 
-def _tavily_search(query: str, topic="general") -> str:
+def _tavily_search(query: str, topic="general") -> list[str]:
     from tavily import TavilyClient
 
     client = TavilyClient(
@@ -47,7 +47,7 @@ def _tavily_search(query: str, topic="general") -> str:
         for result in response["images"]
     ]
 
-def _tavily_extract(url: str) -> str:
+def _tavily_extract(url: str) -> list[str]:
     from tavily import TavilyClient
 
     client = TavilyClient(
@@ -62,7 +62,7 @@ def _tavily_extract(url: str) -> str:
         for result in response["results"]
     ]
 
-def _tavily_crawler(url: str, instructions: str) -> str:
+def _tavily_crawler(url: str, instructions: str) -> list[str]:
     from tavily import TavilyClient
 
     client = TavilyClient(

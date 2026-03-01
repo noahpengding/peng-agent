@@ -92,3 +92,5 @@ async def update_lt_memory(username: str):
         lt_memory = json.dumps(lt_memory)
         with mysql.get_session():
             mysql.update_record("user", {"long_term_memory": lt_memory}, {"user_name": username})
+    mysql.close()
+    return None

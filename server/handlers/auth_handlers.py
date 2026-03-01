@@ -63,6 +63,7 @@ def create_user(user_data: UserCreate) -> Optional[Dict]:
                 "default_output_model": user_data.default_based_model,
                 "default_embedding_model": user_data.default_embedding_model,
             },
+            redis_id="user_name",
         )
         return {
             "user_name": created_record["user_name"],

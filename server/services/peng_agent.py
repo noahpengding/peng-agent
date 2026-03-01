@@ -208,7 +208,9 @@ class PengAgent:
             observation = await tool.ainvoke(args)
         except Exception as e:
             observation = f"Error calling tool '{name}': {e}"
-        observation = await self.truncate_tool_message(observation)
+        if isinstance(observation, list):
+            observation = "\n".join(observation)
+        observation = await self.truncate_tool_message(observation.strip())
         message = ToolMessage(
             content=observation,
             name=name,
