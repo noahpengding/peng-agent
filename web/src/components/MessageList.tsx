@@ -5,9 +5,10 @@ import { MessageItem } from './MessageItem';
 interface MessageListProps {
   messages: Message[];
   isLoading: boolean;
+  onSubmitFeedback: (messageId: string, chatId: number, feedback: 'upvote' | 'downvote' | 'no_response') => void;
 }
 
-export const MessageList: React.FC<MessageListProps> = ({ messages, isLoading }) => {
+export const MessageList: React.FC<MessageListProps> = ({ messages, isLoading, onSubmitFeedback }) => {
   const [foldedMessages, setFoldedMessages] = useState<Record<string, boolean>>({});
   const messageRefs = useRef<Record<number, HTMLDivElement | null>>({});
 
@@ -62,6 +63,7 @@ export const MessageList: React.FC<MessageListProps> = ({ messages, isLoading })
             isFolded={isFolded}
             onToggleFold={toggleFolded}
             setRef={setRef}
+            onSubmitFeedback={onSubmitFeedback}
           />
         );
       })}

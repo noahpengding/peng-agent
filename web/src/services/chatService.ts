@@ -1,3 +1,5 @@
+import { apiCall } from '../utils/apiUtils';
+
 interface ChatRequest {
   user_name: string;
   message: string;
@@ -10,6 +12,8 @@ interface ChatRequest {
     short_term_memory: number[];
   };
 }
+
+type FeedbackValue = 'upvote' | 'downvote' | 'no_response';
 
 export const ChatService = {
   async sendMessage(
@@ -96,5 +100,13 @@ export const ChatService = {
         onError(new Error(String(error)));
       }
     }
+  },
+
+  async updateFeedback(chatId: number, userName: string, feedback: FeedbackValue): Promise<void> {
+    await apiCall('POST', '/chat_feedback', {
+      chat_id: chatId,
+      user_name: userName,
+      feedback,
+    });
   },
 };

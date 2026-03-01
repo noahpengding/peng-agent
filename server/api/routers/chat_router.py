@@ -1,6 +1,6 @@
 from fastapi import APIRouter, HTTPException, Depends
 from fastapi.responses import Response
-from models.agent_request import ChatRequest
+from models.agent_request import ChatRequest, ChatFeedbackRequest
 from handlers.auth_handlers import authenticate_request
 from utils.log import output_log
 
@@ -43,3 +43,36 @@ async def chat_completions(
         request.user_name, request.message, request.knowledge_base, request.image, request.config
     )
     return {"response": result}
+
+
+@router.options("/chat_feedback")
+async def options_chat_feedback():
+    return Response(headers={"Allow": "POST, OPTIONS"})
+
+
+@router.post("/chat_feedback")
+async def chat_feedback(
+    request: ChatFeedbackRequest, auth: dict = Depends(authenticate_request)
+):
+    output_log(request, "DEBUG")
+
+    auth_username = auth.get("username", "")
+    request_username = request.user_name or auth_username
+
+    if not request_username:
+        raise HTTPException(status_code=400, detail="Missing user_name")
+
+    if auth_username and request_username != auth_username:
+        raise HTTPException(status_code=403, detail="Unauthorized user for feedback update")
+
+    from handlers.chat_handlers import update_chat_feedback
+
+    updated = update_chat_feedback(request.chat_id, request_username, request.feedback)
+    if not updated:
+        raise HTTPException(status_code=404, detail="Chat not found")
+
+    return {
+        "message": "Feedback updated successfully",
+        "chat_id": request.chat_id,
+        "feedback": request.feedback,
+    }

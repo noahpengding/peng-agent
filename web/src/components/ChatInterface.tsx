@@ -15,6 +15,7 @@ import {
   setMessages,
   sendMessage,
   setError,
+  submitMessageFeedback,
 } from '../store/slices/chatSlice';
 import './ChatInterface.css';
 import { Message, UploadedImage } from './ChatInterface.types';
@@ -247,6 +248,17 @@ const ChatbotUI = () => {
     }
   };
 
+  const handleSubmitFeedback = (messageId: string, chatId: number, feedback: 'upvote' | 'downvote' | 'no_response') => {
+    dispatch(
+      submitMessageFeedback({
+        messageId,
+        chatId,
+        userName: username,
+        feedback,
+      })
+    );
+  };
+
   // Base Model Selection
   const renderBaseModelSelection = () => {
     return (
@@ -439,7 +451,7 @@ const ChatbotUI = () => {
           </div>
 
           <div className="messages-container">
-            <MessageList messages={messages} isLoading={isLoading} />
+            <MessageList messages={messages} isLoading={isLoading} onSubmitFeedback={handleSubmitFeedback} />
           </div>
 
           <InputArea

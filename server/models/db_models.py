@@ -91,6 +91,7 @@ class Chat(Base):
         nullable=False
     )
     knowledge_base = Column(Text)
+    feedback = Column(String(16), nullable=False, default="no_response")
     created_at = Column(TIMESTAMP, default=datetime.now)
 
     def to_dict(self):
@@ -101,6 +102,7 @@ class Chat(Base):
             "base_model": self.base_model,
             "knowledge_base": self.knowledge_base,
             "human_input": self.human_input,
+            "feedback": self.feedback,
             "created_at": self.created_at,
         }
     

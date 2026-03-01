@@ -16,6 +16,15 @@ interface SendMessageArgs {
   };
 }
 
+type FeedbackValue = 'upvote' | 'downvote' | 'no_response';
+
+interface SubmitFeedbackArgs {
+  messageId: string;
+  chatId: number;
+  userName: string;
+  feedback: FeedbackValue;
+}
+
 interface ChatState {
   messages: Message[];
   input: string;
@@ -77,6 +86,7 @@ export const sendMessage = createAsyncThunk('chat/sendMessage', async (args: Sen
       () => {
         dispatch(finishMessage({ messageId }));
         if (chatIdFromChunk !== null) {
+          dispatch(attachChatIdToMessage({ messageId, chatId: chatIdFromChunk }));
           dispatch(updateMemoryWithChatId(chatIdFromChunk));
         }
       },
@@ -88,6 +98,18 @@ export const sendMessage = createAsyncThunk('chat/sendMessage', async (args: Sen
     return rejectWithValue((error as Error).message);
   }
 });
+
+export const submitMessageFeedback = createAsyncThunk(
+  'chat/submitMessageFeedback',
+  async (args: SubmitFeedbackArgs, { rejectWithValue }) => {
+    try {
+      await ChatService.updateFeedback(args.chatId, args.userName, args.feedback);
+      return args;
+    } catch (error) {
+      return rejectWithValue((error as Error).message);
+    }
+  }
+);
 
 const chatSlice = createSlice({
   name: 'chat',
@@ -192,6 +214,20 @@ const chatSlice = createSlice({
     updateMemoryWithChatId: (state, action: PayloadAction<number>) => {
       state.shortTermMemory.push(action.payload);
     },
+    attachChatIdToMessage: (state, action: PayloadAction<{ messageId: string; chatId: number }>) => {
+      const { messageId, chatId } = action.payload;
+      state.messages = state.messages.map((message) => {
+        if (message.messageId === messageId && message.type === 'output_text') {
+          return {
+            ...message,
+            chatId,
+            feedback: message.feedback || 'no_response',
+            feedbackUpdating: false,
+          };
+        }
+        return message;
+      });
+    },
   },
   extraReducers: (builder) => {
     builder
@@ -212,6 +248,34 @@ const chatSlice = createSlice({
           content: 'Sorry, I encountered an error.',
           type: 'output_text',
         });
+      })
+      .addCase(submitMessageFeedback.pending, (state, action) => {
+        const { messageId } = action.meta.arg;
+        state.messages = state.messages.map((message) => {
+          if (message.messageId === messageId && message.type === 'output_text') {
+            return { ...message, feedbackUpdating: true };
+          }
+          return message;
+        });
+      })
+      .addCase(submitMessageFeedback.fulfilled, (state, action) => {
+        const { messageId, feedback } = action.payload;
+        state.messages = state.messages.map((message) => {
+          if (message.messageId === messageId && message.type === 'output_text') {
+            return { ...message, feedback, feedbackUpdating: false };
+          }
+          return message;
+        });
+      })
+      .addCase(submitMessageFeedback.rejected, (state, action) => {
+        const { messageId } = action.meta.arg;
+        state.messages = state.messages.map((message) => {
+          if (message.messageId === messageId && message.type === 'output_text') {
+            return { ...message, feedbackUpdating: false };
+          }
+          return message;
+        });
+        state.error = action.payload as string;
       })
       .addCase(fetchBaseModels.fulfilled, (state, action) => {
         if (action.payload && action.payload.length > 0) {
@@ -236,5 +300,6 @@ export const {
   handleChunk,
   finishMessage,
   updateMemoryWithChatId,
+  attachChatIdToMessage,
 } = chatSlice.actions;
 export default chatSlice.reducer;

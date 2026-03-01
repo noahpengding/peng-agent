@@ -452,6 +452,70 @@
   color: white;
 }
 
+.message-feedback-actions {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+}
+
+.feedback-button {
+  background: transparent;
+  border: 1px solid #4b5563;
+  color: #9ca3af;
+  border-radius: 0.375rem;
+  padding: 0.2rem 0.45rem;
+  cursor: pointer;
+  transition:
+    background-color 0.15s ease,
+    border-color 0.15s ease,
+    color 0.15s ease,
+    transform 0.12s ease,
+    box-shadow 0.2s ease;
+}
+
+.feedback-button:hover:not(:disabled) {
+  border-color: #6b7280;
+  color: #e5e7eb;
+  background-color: rgba(255, 255, 255, 0.06);
+}
+
+.feedback-button.selected {
+  border-color: #9ca3af;
+  color: #ffffff;
+  background-color: rgba(255, 255, 255, 0.12);
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.08);
+}
+
+.feedback-button:active:not(:disabled) {
+  transform: scale(0.92);
+}
+
+.feedback-button.is-submitting {
+  animation: feedbackPulse 0.35s ease;
+}
+
+.feedback-button.locked {
+  cursor: default;
+  opacity: 1;
+}
+
+.feedback-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+@keyframes feedbackPulse {
+  0% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.08);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
 .thinking-indicator {
   padding: 0.75rem;
   border-radius: 0.5rem;

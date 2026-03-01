@@ -276,3 +276,21 @@ async def create_completion_response(
         media_type="application/json",
     )
 
+
+def update_chat_feedback(chat_id: int, user_name: str, feedback: str) -> bool:
+    output_log(
+        f"Updating chat feedback for chat_id: {chat_id}, user: {user_name}, feedback: {feedback}",
+        "debug",
+    )
+
+    mysql = MysqlConnect()
+    try:
+        updated_count = mysql.update_record(
+            "chat",
+            {"feedback": feedback},
+            {"id": chat_id, "user_name": user_name},
+        )
+        return updated_count > 0
+    finally:
+        mysql.close()
+
