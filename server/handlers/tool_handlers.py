@@ -5,6 +5,7 @@ from services.redis_service import (
     create_table_record,
     get_table_record,
     get_table_records,
+    update_table_record,
     delete_table_record
 )
 from io import BytesIO
@@ -28,11 +29,19 @@ def update_tools():
         return
     tools = pd.read_excel(BytesIO(tool_data))
     tools = tools.fillna("")
-    delete_table_record("tools", "*")
     for index, row in tools.iterrows():
         tool_data = {
             "name": row["name"],
             "type": row["type"],
             "url": row["url"],
         }
-        create_table_record("tools", tool_data, redis_id="name")
+        existing = get_table_record("tools", tool_data["name"])
+        if existing:
+            update_table_record(
+                "tools",
+                tool_data,
+                {"name": tool_data["name"]},
+                redis_id="name",
+            )
+        else:
+            create_table_record("tools", tool_data, redis_id="name")
