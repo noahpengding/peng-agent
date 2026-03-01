@@ -1,16 +1,19 @@
-from utils.mysql_connect import MysqlConnect
 from utils.minio_connection import MinioStorage
 from models.operator_config import OperatorConfig
+from services.redis_service import (
+    create_table_record,
+    get_table_record,
+    get_table_records,
+    update_table_record,
+)
 from config.config import config
 from io import BytesIO
 import pandas as pd
 
 
 def get_operator(operator_name: str) -> OperatorConfig:
-    mysql = MysqlConnect()
-    operator = mysql.read_records("operator", {"operator": operator_name})
-    mysql.close()
-    return OperatorConfig(**operator[0]) if operator else None
+    operator = get_table_record("operator", operator_name)
+    return OperatorConfig(**operator) if operator else None
 
 
 def update_operator() -> None:
@@ -21,23 +24,19 @@ def update_operator() -> None:
     operators = pd.read_excel(BytesIO(operator_data))
     operators = operators.fillna("")
     operators = [OperatorConfig(**row.to_dict()) for _, row in operators.iterrows()]
-    mysql = MysqlConnect()
-
     for operator in operators:
-        existing = mysql.read_records(
-            "operator", {"operator": operator.operator}
-        )
+        existing = get_table_record("operator", operator.operator)
         if existing:
-            mysql.update_record(
-                "operator", operator.to_dict(), {"operator": operator.operator}
+            update_table_record(
+                "operator",
+                operator.to_dict(),
+                {"operator": operator.operator},
+                redis_id="operator",
             )
         else:
-            mysql.create_record("operator", operator.to_dict())
-    mysql.close()
+            create_table_record("operator", operator.to_dict(), redis_id="operator")
 
 
 def get_all_operators() -> list[OperatorConfig]:
-    mysql = MysqlConnect()
-    operators = mysql.read_records("operator")
-    mysql.close()
+    operators = get_table_records("operator")
     return [OperatorConfig(**operator) for operator in operators] if operators else []

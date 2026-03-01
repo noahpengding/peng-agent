@@ -7,7 +7,7 @@ from config.config import config
 from utils.log import output_log
 
 # Tables we support in Redis caching layer
-ALLOWED_TABLES = {"operator", "model", "user", "tools"}
+ALLOWED_TABLES = {"operator", "model", "user", "tools", "knowledge_base"}
 
 
 class RedisCache:
@@ -18,7 +18,7 @@ class RedisCache:
             host=config.redis_host,
             port=config.redis_port,
             db=config.redis_db,
-            password=config.redis_password,
+            password=config.redis_password if config.redis_password != "" else None,
             decode_responses=True,
         )
         output_log(
@@ -86,7 +86,9 @@ class RedisCache:
         for record_id in ids:
             pipe.get(self._record_key(table, record_id))
         payloads = pipe.execute()
-        return [json.loads(p) for p in payloads if p]
+        results = [json.loads(p) for p in payloads if p]
+        results.sort(key=lambda r: r.get("id", ""))
+        return results
 
     def delete_record(self, table: str, record_id: str) -> None:
         """Remove a single record from Redis."""

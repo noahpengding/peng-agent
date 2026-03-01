@@ -1,23 +1,23 @@
-from utils.mysql_connect import MysqlConnect
 from utils.minio_connection import MinioStorage
 from utils.log import output_log
 from config.config import config
+from services.redis_service import (
+    create_table_record,
+    get_table_record,
+    get_table_records,
+    update_table_record
+)
 from io import BytesIO
 import pandas as pd
 
 
 def get_all_tools():
-    mysql = MysqlConnect()
-    tools = mysql.read_records("tools")
-    mysql.close()
+    tools = get_table_records("tools")
     return tools if tools else []
 
 
 def get_tool_by_name(tool_name: str):
-    mysql = MysqlConnect()
-    tool = mysql.read_records("tools", {"name": tool_name})
-    mysql.close()
-    return tool[0] if tool else None
+    return get_table_record("tools", tool_name)
 
 
 def update_tools():
@@ -28,16 +28,19 @@ def update_tools():
         return
     tools = pd.read_excel(BytesIO(tool_data))
     tools = tools.fillna("")
-    mysql = MysqlConnect()
-    mysql.delete_record("tools", None)
     for index, row in tools.iterrows():
         tool_data = {
             "name": row["name"],
             "type": row["type"],
             "url": row["url"],
         }
-        try:
-            mysql.create_record("tools", tool_data)
-        except Exception as e:
-            output_log(f"Error updating tool {tool_data['name']}: {e}", "error")
-    mysql.close()
+        existing = get_table_record("tools", tool_data["name"])
+        if existing:
+            update_table_record(
+                "tools",
+                tool_data,
+                {"name": tool_data["name"]},
+                redis_id="name",
+            )
+        else:
+            create_table_record("tools", tool_data, redis_id="name")

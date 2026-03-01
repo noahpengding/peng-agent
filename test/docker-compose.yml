@@ -24,3 +24,12 @@ services:
       - /data/peng-agent/mysql:/var/lib/mysql
     security_opt:
       - no-new-privileges=true
+
+  peng-agent-redis:
+    image: redis:latest
+    container_name: peng-agent-redis
+    restart: always
+    ports:
+      - "6379:6379"
+    security_opt:
+      - no-new-privileges=true

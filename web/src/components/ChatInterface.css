@@ -227,6 +227,7 @@
   font-size: 0.875rem;
   font-weight: 500;
   color: white;
+  text-decoration: none;
 }
 
 .memory-link:hover {

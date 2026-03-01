@@ -9,6 +9,7 @@ TABLES_ID = {
     "model":"model_name", 
     "user":"user_name", 
     "tools":"name",
+    "knowledge_base":"path"
 }
 
 mysql_client = MysqlConnect()
