@@ -63,7 +63,7 @@ const ChatbotUI = () => {
       .current()
       .then((data) => {
         if (!isMounted) return;
-        const normalized = Array.isArray(data) ? data : [];
+        const normalized = ["default"].concat(Array.isArray(data) ? data : []);
         setCollections(normalized);
         if (normalized.length > 0 && !normalized.includes(initialKnowledgeBase)) {
           dispatch(setKnowledgeBase(normalized[0]));
