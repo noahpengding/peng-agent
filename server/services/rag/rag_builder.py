@@ -4,7 +4,7 @@ from services.rag.qdrant_api import Qdrant
 from handlers.model_utils import get_embedding_instance
 from config.config import config
 from utils.minio_connection import MinioStorage
-from utils.mysql_connect import MysqlConnect
+from services.redis_service import get_table_record, create_table_record, update_table_record
 from utils.log import output_log
 from datetime import datetime
 import os
@@ -33,33 +33,15 @@ class RagBuilder:
             port=config.qdrant_port,
             collection_name=self.collection_name,
         )
-        self.mysql = MysqlConnect()
         self.minio = MinioStorage()
 
     def _add_to_db(
         self, local_path, type_of_file, file_path, create_by="Python RAG Builder"
     ):
         title = local_path.split("/")[-1]
-        mysql = self.mysql
-        if (
-            len(
-                mysql.read_records(
-                    "knowledge_base",
-                    {
-                        "title": title,
-                        "knowledge_base": self.collection_name,
-                    },
-                )
-            )
-            != 0
-        ):
-            mysql.update_record(
-                "knowledge_base",
-                {"modified_at": datetime.now()},
-                {"title": title},
-            )
-        else:
-            mysql.create_record(
+        existing = get_table_record("knowledge_base", record_id=file_path)
+        if existing:
+            update_table_record(
                 "knowledge_base",
                 {
                     "user_name": self.user_name,
@@ -70,6 +52,23 @@ class RagBuilder:
                     "source": local_path,
                     "created_by": create_by,
                 },
+                {"path": file_path},
+                redis_id="path",
+            )
+        else:
+            create_table_record(
+                "knowledge_base",
+                {
+                    "user_name": self.user_name,
+                    "knowledge_base": self.collection_name,
+                    "title": title,
+                    "type": type_of_file,
+                    "path": file_path,
+                    "source": local_path,
+                    "created_by": create_by,
+                    "created_at": datetime.now().isoformat(),
+                },
+                redis_id="path",
             )
 
     def file_process(self, file_path, type_of_file) -> None:

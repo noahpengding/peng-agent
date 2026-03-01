@@ -1,16 +1,15 @@
-from utils.mysql_connect import MysqlConnect
+from services.redis_service import get_table_records
 from services.rag.rag_builder import RagBuilder
 from utils.log import output_log
 from utils.minio_connection import MinioStorage
 
 
 def get_rag():
-    mysql = MysqlConnect()
-    return mysql.read_records("knowledge_base")
+    return get_table_records("knowledge_base")
 
 def get_collections():
-    from services.rag.rag_usage import get_all_collections
-    return get_all_collections()
+    results = get_table_records("knowledge_base")
+    return set([result["knowledge_base"] for result in results])
 
 
 def index_file(user_name, file_path, type_of_file, collection_name):

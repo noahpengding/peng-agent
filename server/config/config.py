@@ -30,6 +30,10 @@ class Config(BaseModel):
     mysql_user: str
     mysql_password: str
     mysql_database: str
+    redis_host: str
+    redis_port: int
+    redis_db: int
+    redis_password: str
     jwt_secret_key: str
     admin_password: str
     tavily_api_key: str
@@ -118,6 +122,18 @@ try:
         "mysql_database": os.environ.get("MYSQL_DATABASE")
         if os.environ.get("MYSQL_DATABASE")
         else "test",
+        "redis_host": os.environ.get("REDIS_HOST")
+        if os.environ.get("REDIS_HOST")
+        else "localhost",
+        "redis_port": int(os.environ.get("REDIS_PORT"))
+        if os.environ.get("REDIS_PORT")
+        else 6379,
+        "redis_db": int(os.environ.get("REDIS_DB"))
+        if os.environ.get("REDIS_DB")
+        else 0,
+        "redis_password": os.environ.get("REDIS_PASSWORD")
+        if os.environ.get("REDIS_PASSWORD")
+        else "",
         "jwt_secret_key": os.environ.get("JWT_SECRET_KEY")
         if os.environ.get("JWT_SECRET_KEY")
         else "randome-secret-key",

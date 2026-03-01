@@ -27,8 +27,7 @@ def _generate_prompt_params(
     )
 
     prompt = []
-    prompt += prompt_generator.system_prompt(user_name)
-    prompt += prompt_generator.add_long_term_memory_to_prompt(chat_config.long_term_memory)
+    prompt += prompt_generator.system_prompt(user_name, mysql_conn)
     prompt += prompt_generator.add_short_term_memory_to_prompt(chat_config.short_term_memory, mysql_conn, chat_config.base_model)
     prompt += prompt_generator.add_image_to_prompt(chat_config.base_model, image)
     prompt += prompt_generator.add_knowledge_base_to_prompt(knowledge_base, message)
@@ -276,4 +275,22 @@ async def create_completion_response(
         content=result,
         media_type="application/json",
     )
+
+
+def update_chat_feedback(chat_id: int, user_name: str, feedback: str) -> bool:
+    output_log(
+        f"Updating chat feedback for chat_id: {chat_id}, user: {user_name}, feedback: {feedback}",
+        "debug",
+    )
+
+    mysql = MysqlConnect()
+    try:
+        updated_count = mysql.update_record(
+            "chat",
+            {"feedback": feedback},
+            {"id": chat_id, "user_name": user_name},
+        )
+        return updated_count > 0
+    finally:
+        mysql.close()
 

@@ -9,6 +9,7 @@ TABLES_ID = {
     "model":"model_name", 
     "user":"user_name", 
     "tools":"name",
+    "knowledge_base":"path"
 }
 
 mysql_client = MysqlConnect()
@@ -75,10 +76,11 @@ def update_table_record(table: str, record: Dict[str, Any], conditions: Dict[str
     _validate_table(table)
     updated_count = mysql_client.update_record(table, record, conditions)
     if updated_count > 0:
-        record_id = conditions.get("id") or record.get("id")
+        record_id = conditions.get(redis_id) or record.get(redis_id)
         if record_id:
-            updated_record = mysql_client.read_records(table, {"id": record_id})
+            updated_record = mysql_client.read_records(table, {redis_id: record_id})
             if updated_record:
+                redis_cache.delete_record(table, record_id)
                 redis_cache.save_record(table, updated_record[0], id=redis_id)
     return updated_count
 

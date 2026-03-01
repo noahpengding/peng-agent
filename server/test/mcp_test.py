@@ -32,7 +32,7 @@ async def main():
         params = prompt_generator.base_prompt_generate(
             message=message,
             short_term_memory=chat_config.short_term_memory,
-            long_term_memory=chat_config.long_term_memory,
+            long_term_memory=[],
         )
         params = prompt_generator.add_image_to_prompt(
             model_name=chat_config.base_model,
@@ -51,7 +51,6 @@ async def main():
                 base_model="gpt-5",
                 tools_name=[],
                 short_term_memory=[],
-                long_term_memory=[],
             )
 
             prompt, params = _generate_prompt_params(

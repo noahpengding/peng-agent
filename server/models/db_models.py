@@ -91,6 +91,7 @@ class Chat(Base):
         nullable=False
     )
     knowledge_base = Column(Text)
+    feedback = Column(String(16), nullable=False, default="no_response")
     created_at = Column(TIMESTAMP, default=datetime.now)
 
     def to_dict(self):
@@ -101,6 +102,7 @@ class Chat(Base):
             "base_model": self.base_model,
             "knowledge_base": self.knowledge_base,
             "human_input": self.human_input,
+            "feedback": self.feedback,
             "created_at": self.created_at,
         }
     
@@ -233,10 +235,11 @@ class User(Base):
     password = Column(String(64), nullable=False)
     email = Column(String(64))
     api_token = Column(String(256))
-    default_base_model = Column(Text)
-    default_output_model = Column(Text)
-    default_embedding_model = Column(Text)
+    default_base_model = Column(Text, default=config.default_base_model)
+    default_output_model = Column(Text, default=config.default_base_model)
+    default_embedding_model = Column(Text, default=config.embedding_model)
     system_prompt = Column(Text, nullable=True)
+    long_term_memory = Column(Text, nullable=True, default="[]")
     created_at = Column(TIMESTAMP, default=datetime.now)
     modified_at = Column(TIMESTAMP, default=datetime.now, onupdate=datetime.now)
 
@@ -251,6 +254,7 @@ class User(Base):
             "default_output_model": self.default_output_model,
             "default_embedding_model": self.default_embedding_model,
             "system_prompt": self.system_prompt,
+            "long_term_memory": self.long_term_memory,
             "created_at": self.created_at,
             "modified_at": self.modified_at,
         }

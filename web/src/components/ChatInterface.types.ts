@@ -8,6 +8,11 @@ export interface Message {
   folded?: boolean;
   // messageId to track related messages
   messageId?: string;
+  // chatId is assigned when a chat turn is fully completed on backend
+  chatId?: number;
+  // feedback for completed assistant output
+  feedback?: 'upvote' | 'downvote' | 'no_response';
+  feedbackUpdating?: boolean;
 }
 
 export interface ModelInfo {

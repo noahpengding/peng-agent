@@ -15,11 +15,13 @@ import {
   setMessages,
   sendMessage,
   setError,
+  submitMessageFeedback,
 } from '../store/slices/chatSlice';
 import './ChatInterface.css';
 import { Message, UploadedImage } from './ChatInterface.types';
 import { InputArea } from './InputArea';
 import { MessageList } from './MessageList';
+import UserProfilePopup from './UserProfilePopup';
 import { Memory } from '../hooks/MemoryAPI';
 import { useRAGApi } from '../hooks/RAGAPI';
 
@@ -28,27 +30,20 @@ const ChatbotUI = () => {
   const dispatch = useDispatch<AppDispatch>();
 
   // Redux State
-  const {
-    messages,
-    input,
-    isLoading,
-    error,
-    isSidebarHidden,
-    uploadedImages,
-    baseModel,
-    knowledgeBase,
-    selectedToolNames,
-    shortTermMemory,
-    longTermMemory,
-  } = useSelector((state: RootState) => state.chat);
+  const { messages, input, isLoading, error, isSidebarHidden, uploadedImages, baseModel, knowledgeBase, selectedToolNames, shortTermMemory } =
+    useSelector((state: RootState) => state.chat);
 
   const { availableBaseModels, loading: baseModelsLoading } = useSelector((state: RootState) => state.models);
   const { availableTools, loading: toolsLoading, error: toolsError } = useSelector((state: RootState) => state.tools);
   const { user } = useSelector((state: RootState) => state.auth);
   const { getCollections, isLoading: collectionsLoading, error: collectionsError } = useRAGApi();
 
+  // Stable ref for getCollections — captured once so the mount effect has no changing deps
+  const getCollectionsRef = useRef(getCollections);
+
   // Local UI State
   const [isToolPopupOpen, setIsToolPopupOpen] = useState(false);
+  const [isProfilePopupOpen, setIsProfilePopupOpen] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [collections, setCollections] = useState<string[]>([]);
   const [s3PathsInput, setS3PathsInput] = useState('');
@@ -59,30 +54,29 @@ const ChatbotUI = () => {
     dispatch(fetchBaseModels());
   }, [dispatch]);
 
+  // Run once on mount — fetch collections
   useEffect(() => {
     let isMounted = true;
+    const initialKnowledgeBase = knowledgeBase;
 
-    const loadCollections = async () => {
-      try {
-        const data = await getCollections();
+    getCollectionsRef
+      .current()
+      .then((data) => {
         if (!isMounted) return;
-        const normalized = Array.isArray(data) ? data : [];
+        const normalized = ["default"].concat(Array.isArray(data) ? data : []);
         setCollections(normalized);
-        if (normalized.length > 0 && !normalized.includes(knowledgeBase)) {
+        if (normalized.length > 0 && !normalized.includes(initialKnowledgeBase)) {
           dispatch(setKnowledgeBase(normalized[0]));
         }
-      } catch {
-        if (!isMounted) return;
-        setCollections([]);
-      }
-    };
-
-    loadCollections();
+      })
+      .catch(() => {
+        if (isMounted) setCollections([]);
+      });
 
     return () => {
       isMounted = false;
     };
-  }, [dispatch, getCollections, knowledgeBase]);
+  }, [dispatch]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const displayError = error || toolsError || collectionsError;
 
@@ -212,7 +206,6 @@ const ChatbotUI = () => {
       base_model: baseModel,
       tools_name: selectedToolNames,
       short_term_memory: shortTermMemory,
-      long_term_memory: longTermMemory,
     };
 
     const request = {
@@ -245,6 +238,17 @@ const ChatbotUI = () => {
     } else {
       dispatch(setUploadedImages(val));
     }
+  };
+
+  const handleSubmitFeedback = (messageId: string, chatId: number, feedback: 'upvote' | 'downvote' | 'no_response') => {
+    dispatch(
+      submitMessageFeedback({
+        messageId,
+        chatId,
+        userName: username,
+        feedback,
+      })
+    );
   };
 
   // Base Model Selection
@@ -417,6 +421,13 @@ const ChatbotUI = () => {
               </a>
               {shortTermMemory.length > 0 && <div className="selected-memories-count">{shortTermMemory.length} short-term memories used</div>}
             </div>
+
+            {/* User Profile Button */}
+            <div className="form-group user-profile-button-container">
+              <button type="button" className="memory-link user-profile-button" onClick={() => setIsProfilePopupOpen(true)}>
+                User Profile
+              </button>
+            </div>
           </div>
         )}
 
@@ -429,7 +440,7 @@ const ChatbotUI = () => {
           </div>
 
           <div className="messages-container">
-            <MessageList messages={messages} isLoading={isLoading} />
+            <MessageList messages={messages} isLoading={isLoading} onSubmitFeedback={handleSubmitFeedback} />
           </div>
 
           <InputArea
@@ -491,6 +502,8 @@ const ChatbotUI = () => {
           </div>
         </div>
       )}
+
+      <UserProfilePopup isOpen={isProfilePopupOpen} onClose={() => setIsProfilePopupOpen(false)} availableModels={availableBaseModels} />
     </div>
   );
 };

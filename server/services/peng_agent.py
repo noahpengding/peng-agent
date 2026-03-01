@@ -86,10 +86,14 @@ class PengAgent:
                 operator=config.default_operator,
                 base_model=config.default_base_model,
             )
-            truncated_observation = await chat_completions_handler(
-                self.user_name, prompt, None, None, chat_config
-            )
-            return truncated_observation
+            try:
+                truncated_observation = await chat_completions_handler(
+                    self.user_name, prompt, None, None, chat_config
+                )
+                truncated_observation = truncated_observation[-1].content[0]["text"].strip()
+                return truncated_observation
+            except Exception:
+                return observation[:int(max_length)]
         return observation
 
 
@@ -204,7 +208,9 @@ class PengAgent:
             observation = await tool.ainvoke(args)
         except Exception as e:
             observation = f"Error calling tool '{name}': {e}"
-        observation = await self.truncate_tool_message(observation)
+        if isinstance(observation, list):
+            observation = "\n".join(observation)
+        observation = await self.truncate_tool_message(observation.strip())
         message = ToolMessage(
             content=observation,
             name=name,

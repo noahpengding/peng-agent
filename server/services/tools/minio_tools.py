@@ -1,8 +1,6 @@
 from langchain_core.tools import StructuredTool
 from utils.minio_connection import MinioStorage
 from config.config import config
-import os
-import tempfile
 
 
 def minio_file_upload_tool(file_content: str, file_name: str, content_type: str) -> str:
@@ -26,20 +24,13 @@ def minio_file_upload_tool(file_content: str, file_name: str, content_type: str)
 
 def minio_file_download_tool(file_name: str) -> str:
     minio_storage = MinioStorage()
-    temp_path = ""
-    try:
-        with tempfile.NamedTemporaryFile(delete=False) as temp_file:
-            temp_path = temp_file.name
-
-        minio_storage.file_download_to_string(
-            file_name=file_name, download_path=temp_path
-        )
-
-        with open(temp_path, "r", encoding="utf-8") as f:
-            return f.read()
-    finally:
-        if temp_path and os.path.exists(temp_path):
-            os.remove(temp_path)
+    file_content = minio_storage.file_download_to_memory(file_name=file_name)
+    if file_content is not None:
+        try:
+            return file_content.decode("utf-8")
+        except UnicodeDecodeError:
+            return f"Error: File '{file_name}' content is not valid UTF-8 text."
+    return f"Failed to download file '{file_name}' from Minio."
 
 
 minio_tool = [

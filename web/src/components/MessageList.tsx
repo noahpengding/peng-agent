@@ -5,9 +5,10 @@ import { MessageItem } from './MessageItem';
 interface MessageListProps {
   messages: Message[];
   isLoading: boolean;
+  onSubmitFeedback: (messageId: string, chatId: number, feedback: 'upvote' | 'downvote' | 'no_response') => void;
 }
 
-export const MessageList: React.FC<MessageListProps> = ({ messages, isLoading }) => {
+export const MessageList: React.FC<MessageListProps> = ({ messages, isLoading, onSubmitFeedback }) => {
   const [foldedMessages, setFoldedMessages] = useState<Record<string, boolean>>({});
   const messageRefs = useRef<Record<number, HTMLDivElement | null>>({});
 
@@ -27,8 +28,7 @@ export const MessageList: React.FC<MessageListProps> = ({ messages, isLoading })
     const lastMessageIndex = messages.length - 1;
     if (lastMessageIndex >= 0) {
       const lastMessage = messages[lastMessageIndex];
-      const isLongMessage =
-        lastMessage.type === 'tool_calls' || lastMessage.type === 'tool_output' || lastMessage.type === 'reasoning_summary';
+      const isLongMessage = lastMessage.type === 'tool_calls' || lastMessage.type === 'tool_output' || lastMessage.type === 'reasoning_summary';
 
       const isFolded = foldedMessages[lastMessageIndex] ?? lastMessage.folded ?? false;
 
@@ -62,6 +62,7 @@ export const MessageList: React.FC<MessageListProps> = ({ messages, isLoading })
             isFolded={isFolded}
             onToggleFold={toggleFolded}
             setRef={setRef}
+            onSubmitFeedback={onSubmitFeedback}
           />
         );
       })}

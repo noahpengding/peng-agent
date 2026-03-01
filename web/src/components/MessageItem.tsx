@@ -1,4 +1,4 @@
-import React, {useState} from 'react';
+import React, { useState } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import remarkMath from 'remark-math';
@@ -26,17 +26,17 @@ const CodeBlock = ({ inline, className, children, ...rest }: CodeBlockProps) => 
     try {
       await navigator.clipboard.writeText(String(children).replace(/\n$/, ''));
       setIsCopied(true);
-      setTimeout(() => setIsCopied(false), 2000); 
+      setTimeout(() => setIsCopied(false), 2000);
     } catch {
       // Silently fail if clipboard access is denied
     }
-  }; 
+  };
 
   if (inline || !lang) {
     return (
       <code className={className} {...rest}>
         {children}
-      </code> 
+      </code>
     );
   }
 
@@ -53,12 +53,12 @@ const CodeBlock = ({ inline, className, children, ...rest }: CodeBlockProps) => 
       </button>
       <SyntaxHighlighter
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        style={vscDarkPlus as any} 
+        style={vscDarkPlus as any}
         language={lang}
         PreTag="div"
         customStyle={{ margin: 0, borderRadius: '0.375rem' }}
         {...rest}
-      > 
+      >
         {String(children).replace(/\n$/, '')}
       </SyntaxHighlighter>
     </div>
@@ -71,9 +71,10 @@ interface MessageItemProps {
   isFolded: boolean;
   onToggleFold: (index: number, currentState: boolean) => void;
   setRef: (el: HTMLDivElement | null, index: number) => void;
+  onSubmitFeedback: (messageId: string, chatId: number, feedback: 'upvote' | 'downvote' | 'no_response') => void;
 }
 
-export const MessageItem = React.memo(({ message, index, isFolded, onToggleFold, setRef }: MessageItemProps) => {
+export const MessageItem = React.memo(({ message, index, isFolded, onToggleFold, setRef, onSubmitFeedback }: MessageItemProps) => {
   const messageClass =
     message.role === 'user'
       ? 'user-message'
@@ -84,6 +85,15 @@ export const MessageItem = React.memo(({ message, index, isFolded, onToggleFold,
           : 'assistant-message';
 
   const isFoldable = message.type === 'tool_calls' || message.type === 'tool_output' || message.type === 'reasoning_summary';
+  const canShowFeedback = message.type === 'output_text' && !!message.chatId && !!message.messageId;
+  const isFeedbackLocked = message.feedback === 'upvote' || message.feedback === 'downvote';
+
+  const handleFeedbackClick = (feedback: 'upvote' | 'downvote') => {
+    if (!message.messageId || !message.chatId || message.feedbackUpdating || isFeedbackLocked) {
+      return;
+    }
+    onSubmitFeedback(message.messageId, message.chatId, feedback);
+  };
 
   return (
     <div
@@ -145,6 +155,44 @@ export const MessageItem = React.memo(({ message, index, isFolded, onToggleFold,
               {message.content}
             </ReactMarkdown>
           </div>
+          {canShowFeedback && (
+            <div className="message-feedback-actions">
+              {isFeedbackLocked ? (
+                <button
+                  type="button"
+                  className="feedback-button selected locked"
+                  disabled
+                  title={message.feedback === 'upvote' ? 'Upvoted' : 'Downvoted'}
+                  aria-label={message.feedback === 'upvote' ? 'Upvoted response' : 'Downvoted response'}
+                >
+                  {message.feedback === 'upvote' ? '👍' : '👎'}
+                </button>
+              ) : (
+                <>
+                  <button
+                    type="button"
+                    className={`feedback-button ${message.feedbackUpdating ? 'is-submitting' : ''}`}
+                    onClick={() => handleFeedbackClick('upvote')}
+                    disabled={message.feedbackUpdating}
+                    title="Upvote"
+                    aria-label="Upvote response"
+                  >
+                    👍
+                  </button>
+                  <button
+                    type="button"
+                    className={`feedback-button ${message.feedbackUpdating ? 'is-submitting' : ''}`}
+                    onClick={() => handleFeedbackClick('downvote')}
+                    disabled={message.feedbackUpdating}
+                    title="Downvote"
+                    aria-label="Downvote response"
+                  >
+                    👎
+                  </button>
+                </>
+              )}
+            </div>
+          )}
         </>
       )}
     </div>
