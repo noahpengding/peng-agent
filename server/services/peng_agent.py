@@ -92,7 +92,7 @@ class PengAgent:
                 )
                 truncated_observation = truncated_observation[-1].content[0]["text"].strip()
                 return truncated_observation
-            except Exception as e:
+            except Exception:
                 return observation[:int(max_length)]
         return observation
 

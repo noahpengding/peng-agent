@@ -24,6 +24,7 @@ import { MessageList } from './MessageList';
 import UserProfilePopup from './UserProfilePopup';
 import { Memory } from '../hooks/MemoryAPI';
 import { useRAGApi } from '../hooks/RAGAPI';
+import { useUserApi } from '../hooks/UserAPI';
 
 // Main App Component
 const ChatbotUI = () => {
@@ -47,6 +48,8 @@ const ChatbotUI = () => {
   const { availableTools, loading: toolsLoading, error: toolsError } = useSelector((state: RootState) => state.tools);
   const { user } = useSelector((state: RootState) => state.auth);
   const { getCollections, isLoading: collectionsLoading, error: collectionsError } = useRAGApi();
+  const { getProfile } = useUserApi();
+  
 
   // Local UI State
   const [isToolPopupOpen, setIsToolPopupOpen] = useState(false);
@@ -64,6 +67,18 @@ const ChatbotUI = () => {
   useEffect(() => {
     let isMounted = true;
 
+    const loadBaseModel = async () => {
+      try {
+        const data = await getProfile();
+        if (!isMounted) return;
+        if (data.default_base_model) {
+          dispatch(setBaseModel(data.default_base_model));
+        }
+      } catch {
+        if (!isMounted) return;
+      }
+    }
+
     const loadCollections = async () => {
       try {
         const data = await getCollections();
@@ -79,12 +94,13 @@ const ChatbotUI = () => {
       }
     };
 
+    loadBaseModel();
     loadCollections();
 
     return () => {
       isMounted = false;
     };
-  }, [dispatch, getCollections, knowledgeBase]);
+  }, [dispatch, getCollections, knowledgeBase, getProfile]);
 
   const displayError = error || toolsError || collectionsError;
 

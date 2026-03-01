@@ -1,18 +1,7 @@
-import React, { useState, useEffect } from 'react';
-import { apiCall } from '../utils/apiUtils';
+import React, { useState, useEffect, useCallback } from 'react';
 import { ModelInfo } from './ChatInterface.types';
+import { useUserApi, UserProfile } from '../hooks/UserAPI';
 import './UserProfilePopup.css';
-
-interface UserProfile {
-  username: string;
-  email: string;
-  api_token: string;
-  default_base_model: string;
-  default_output_model: string;
-  default_embedding_model: string;
-  system_prompt: string | null;
-  long_term_memory: string[];
-}
 
 interface UserProfilePopupProps {
   isOpen: boolean;
@@ -21,6 +10,7 @@ interface UserProfilePopupProps {
 }
 
 const UserProfilePopup: React.FC<UserProfilePopupProps> = ({ isOpen, onClose, availableModels }) => {
+  const { getProfile, updateProfile, regenerateToken } = useUserApi();
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
@@ -29,24 +19,24 @@ const UserProfilePopup: React.FC<UserProfilePopupProps> = ({ isOpen, onClose, av
   const [newMemory, setNewMemory] = useState('');
   const [regeneratingToken, setRegeneratingToken] = useState(false);
 
-  useEffect(() => {
-    if (isOpen) {
-      fetchProfile();
-    }
-  }, [isOpen]);
-
-  const fetchProfile = async () => {
+  const fetchProfile = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
-      const data = await apiCall('GET', '/user/profile');
+      const data = await getProfile();
       setProfile(data);
     } catch {
       setError('Failed to load profile');
     } finally {
       setLoading(false);
     }
-  };
+  }, [getProfile]);
+
+  useEffect(() => {
+    if (isOpen) {
+      fetchProfile();
+    }
+  }, [isOpen, fetchProfile]);
 
   const handleSave = async () => {
     if (!profile) return;
@@ -63,7 +53,7 @@ const UserProfilePopup: React.FC<UserProfilePopupProps> = ({ isOpen, onClose, av
         password: password.trim() ? password.trim() : undefined,
       };
 
-      await apiCall('PUT', '/user/profile', payload);
+      await updateProfile(payload);
       onClose();
     } catch {
       setError('Failed to save profile');
@@ -103,7 +93,7 @@ const UserProfilePopup: React.FC<UserProfilePopupProps> = ({ isOpen, onClose, av
     if (!profile) return;
     setRegeneratingToken(true);
     try {
-        const response = await apiCall('POST', '/user/regenerate_token');
+        const response = await regenerateToken();
         setProfile({ ...profile, api_token: response.api_token });
         window.location.reload();
     } catch {
