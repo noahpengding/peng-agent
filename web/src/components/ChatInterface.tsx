@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { RootState, AppDispatch } from '../store';
 import { fetchBaseModels } from '../store/slices/modelSlice';
@@ -240,16 +240,21 @@ const ChatbotUI = () => {
     }
   };
 
-  const handleSubmitFeedback = (messageId: string, chatId: number, feedback: 'upvote' | 'downvote' | 'no_response') => {
-    dispatch(
-      submitMessageFeedback({
-        messageId,
-        chatId,
-        userName: username,
-        feedback,
-      })
-    );
-  };
+  // ⚡ Bolt Optimization: Memoize the feedback handler to keep its reference stable across renders.
+  // This prevents the expensive MessageList component from re-rendering on every keystroke in the input area.
+  const handleSubmitFeedback = useCallback(
+    (messageId: string, chatId: number, feedback: 'upvote' | 'downvote' | 'no_response') => {
+      dispatch(
+        submitMessageFeedback({
+          messageId,
+          chatId,
+          userName: username,
+          feedback,
+        })
+      );
+    },
+    [dispatch, username]
+  );
 
   // Base Model Selection
   const renderBaseModelSelection = () => {

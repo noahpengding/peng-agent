@@ -8,7 +8,9 @@ interface MessageListProps {
   onSubmitFeedback: (messageId: string, chatId: number, feedback: 'upvote' | 'downvote' | 'no_response') => void;
 }
 
-export const MessageList: React.FC<MessageListProps> = ({ messages, isLoading, onSubmitFeedback }) => {
+// ⚡ Bolt Optimization: Wrapped the component in React.memo to prevent unnecessary re-renders.
+// This avoids mapping over potentially hundreds of messages on every keystroke in the ChatInterface input field.
+export const MessageList: React.FC<MessageListProps> = React.memo(({ messages, isLoading, onSubmitFeedback }) => {
   const [foldedMessages, setFoldedMessages] = useState<Record<string, boolean>>({});
   const messageRefs = useRef<Record<number, HTMLDivElement | null>>({});
 
@@ -77,4 +79,6 @@ export const MessageList: React.FC<MessageListProps> = ({ messages, isLoading, o
       )}
     </div>
   );
-};
+});
+
+MessageList.displayName = 'MessageList';
