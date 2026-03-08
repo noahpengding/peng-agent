@@ -1,3 +1,0 @@
-## 2026-03-06 - Prevent Excessive React Renders with React.memo
-**Learning:** The ChatInterface component was re-rendering the entire MessageList on every keystroke in the input area because the input state was stored in Redux and triggered a full parent re-render. Since MessageList is an expensive component with potentially hundreds of messages, this caused significant input lag.
-**Action:** Always wrap large list components like MessageList in `React.memo()` and ensure props like callback functions are stabilized using `useCallback()` to prevent unnecessary re-renders when the parent component updates due to unrelated state changes.
