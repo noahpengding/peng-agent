@@ -21,7 +21,7 @@ def system_prompt(user_name, mysql_conn):
     ]
 
 
-def add_short_term_memory_to_prompt(short_term_memory, mysql_conn, model_name) -> list:
+def add_short_term_memory_to_prompt(short_term_memory, mysql_conn, model_name, user_name) -> list:
     result = []
     if isinstance(short_term_memory, list) and short_term_memory:
         reasonings_list = mysql_conn.read_records("ai_reasoning", conditions={"chat_id": short_term_memory})
@@ -53,7 +53,7 @@ def add_short_term_memory_to_prompt(short_term_memory, mysql_conn, model_name) -
             if user_inputs:
                 user_input = user_inputs[0]
                 result += add_human_message_to_prompt(user_input["input_content"]) if user_input["input_content"] else []
-                result += add_image_to_prompt(model_name, user_input["input_location"]) if user_input["input_location"] else []
+                result += add_image_to_prompt(model_name, user_name, user_input["input_location"]) if user_input["input_location"] else []
 
             if reasonings:
                 result.append(AIMessage(content_blocks=[
@@ -102,6 +102,10 @@ def _download_image_to_base64(image, user_name, mime_type="image/png"):
             "data": img_data,
             "mime_type": img_mime_type
         }
+    return {
+        "data": None,
+        "mime_type": mime_type
+    }
 
 def add_image_to_prompt(model_name, images, user_name, mime_type="image/png") -> list:
     if images is None or images == "":
