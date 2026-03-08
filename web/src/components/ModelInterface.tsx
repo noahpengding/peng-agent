@@ -194,8 +194,8 @@ const ModelInterface: React.FC = () => {
           <div className="filters">
             {/* Operator Filter */}
             <div className="filter-group">
-              <div className="filter-title">Operator</div>
-              <select className="form-select" value={selectedOperator} onChange={(e) => setSelectedOperator(e.target.value)}>
+              <label htmlFor="operator-filter" className="filter-title" style={{ display: 'block', marginBottom: '8px' }}>Operator</label>
+              <select id="operator-filter" className="form-select" value={selectedOperator} onChange={(e) => setSelectedOperator(e.target.value)}>
                 <option value="">All Operators</option>
                 {operators.map((operator) => (
                   <option key={operator} value={operator}>
@@ -207,8 +207,8 @@ const ModelInterface: React.FC = () => {
 
             {/* Availability Filter */}
             <div className="filter-group">
-              <div className="filter-title">Availability</div>
-              <select className="form-select" value={availabilityFilter} onChange={(e) => setAvailabilityFilter(e.target.value)}>
+              <label htmlFor="availability-filter" className="filter-title" style={{ display: 'block', marginBottom: '8px' }}>Availability</label>
+              <select id="availability-filter" className="form-select" value={availabilityFilter} onChange={(e) => setAvailabilityFilter(e.target.value)}>
                 <option value="all">All Models</option>
                 <option value="available">Available</option>
                 <option value="unavailable">Unavailable</option>
@@ -227,6 +227,7 @@ const ModelInterface: React.FC = () => {
                 placeholder="Search by model name..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
+                aria-label="Search by model name"
               />
               <button className="search-button">Search</button>
             </div>
@@ -262,6 +263,7 @@ const ModelInterface: React.FC = () => {
                             className="availability-checkbox"
                             checked={model.isAvailable}
                             onChange={() => handleAvailabilityToggle(model.model_name)}
+                            aria-label={`Toggle availability for ${model.model_name}`}
                           />
                         </td>
                         <td className="modality-cell">{renderModalityButtons(model, 'input')}</td>
@@ -271,6 +273,7 @@ const ModelInterface: React.FC = () => {
                             className="reasoning-effect-select"
                             value={model.reasoning_effect}
                             onChange={(e) => handleModelReasoningEffect(model.model_name, e.target.value)}
+                            aria-label={`Select reasoning effect for ${model.model_name}`}
                           >
                             <option value="not a reasoning model">Not a Reasoning Model</option>
                             <option value="low">Low</option>

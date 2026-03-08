@@ -260,8 +260,8 @@ const ChatbotUI = () => {
   const renderBaseModelSelection = () => {
     return (
       <div className="form-group">
-        <label className="form-label">Base Model</label>
-        <select className="form-select" value={baseModel} onChange={(e) => dispatch(setBaseModel(e.target.value))} disabled={baseModelsLoading}>
+        <label htmlFor="base_model" className="form-label">Base Model</label>
+        <select id="base_model" className="form-select" value={baseModel} onChange={(e) => dispatch(setBaseModel(e.target.value))} disabled={baseModelsLoading}>
           {availableBaseModels.map((model) => (
             <option key={model.id || model.model_name} value={model.model_name}>
               {model.model_name}
@@ -277,8 +277,8 @@ const ChatbotUI = () => {
     const isDisabled = collectionsLoading || collections.length === 0;
     return (
       <div className="form-group">
-        <label className="form-label">Knowledge Base</label>
-        <select className="form-select" value={knowledgeBase} onChange={(e) => dispatch(setKnowledgeBase(e.target.value))} disabled={isDisabled}>
+        <label htmlFor="knowledge_base" className="form-label">Knowledge Base</label>
+        <select id="knowledge_base" className="form-select" value={knowledgeBase} onChange={(e) => dispatch(setKnowledgeBase(e.target.value))} disabled={isDisabled}>
           {collections.length === 0 ? (
             <option value="">No collections available</option>
           ) : (
@@ -399,7 +399,7 @@ const ChatbotUI = () => {
             <div className="form-group">
               <div className="tool-section-header">
                 <label className="form-label">Tools</label>
-                <button className="tool-add-button" onClick={openToolPopup} title="Add Tools">
+                <button className="tool-add-button" onClick={openToolPopup} title="Add Tools" aria-label="Add Tools">
                   +
                 </button>
               </div>
@@ -408,7 +408,7 @@ const ChatbotUI = () => {
                   {selectedToolNames.map((toolName, index) => (
                     <div key={index} className="selected-tool-item">
                       <span className="selected-tool-name">{toolName}</span>
-                      <button type="button" className="tool-remove-button" onClick={() => handleToolSelection(toolName, false)} title="Remove tool">
+                      <button type="button" className="tool-remove-button" onClick={() => handleToolSelection(toolName, false)} title="Remove tool" aria-label={`Remove tool ${toolName}`}>
                         ×
                       </button>
                     </div>
@@ -472,7 +472,7 @@ const ChatbotUI = () => {
                 <button className="update-button" onClick={handleUpdateTools} disabled={toolsLoading}>
                   {toolsLoading ? 'Updating...' : 'Update'}
                 </button>
-                <button className="close-button" onClick={closeToolPopup}>
+                <button className="close-button" onClick={closeToolPopup} aria-label="Close tool popup">
                   ×
                 </button>
               </div>

@@ -115,7 +115,7 @@ const UserProfilePopup: React.FC<UserProfilePopupProps> = ({ isOpen, onClose, av
             <button className="update-button" onClick={handleSave} disabled={saving}>
               {saving ? 'Saving...' : 'Save'}
             </button>
-            <button className="close-button" onClick={onClose}>
+            <button className="close-button" onClick={onClose} aria-label="Close user profile">
               ×
             </button>
           </div>
@@ -129,13 +129,14 @@ const UserProfilePopup: React.FC<UserProfilePopupProps> = ({ isOpen, onClose, av
           ) : profile ? (
             <div className="profile-form">
               <div className="form-group">
-                <label className="form-label">Username</label>
-                <input type="text" value={profile.username} disabled className="form-input form-select disabled-input" />
+                <label htmlFor="username" className="form-label">Username</label>
+                <input id="username" type="text" value={profile.username} disabled className="form-input form-select disabled-input" />
               </div>
 
               <div className="form-group">
-                <label className="form-label">Email</label>
+                <label htmlFor="email" className="form-label">Email</label>
                 <input
+                  id="email"
                   type="email"
                   value={profile.email}
                   onChange={(e) => setProfile({ ...profile, email: e.target.value })}
@@ -144,8 +145,9 @@ const UserProfilePopup: React.FC<UserProfilePopupProps> = ({ isOpen, onClose, av
               </div>
 
               <div className="form-group">
-                <label className="form-label">Password</label>
+                <label htmlFor="password" className="form-label">Password</label>
                 <input
+                  id="password"
                   type="password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
@@ -155,9 +157,9 @@ const UserProfilePopup: React.FC<UserProfilePopupProps> = ({ isOpen, onClose, av
               </div>
 
               <div className="form-group">
-                <label className="form-label">API Token</label>
+                <label htmlFor="api_token" className="form-label">API Token</label>
                 <div className="api-token-container">
-                  <input type="text" value={profile.api_token} readOnly className="form-input form-select api-token-input" />
+                  <input id="api_token" type="text" value={profile.api_token} readOnly className="form-input form-select api-token-input" />
                   <button type="button" onClick={handleCopyToken} className="token-action-button" title="Copy Token">
                     Copy
                   </button>
@@ -174,8 +176,9 @@ const UserProfilePopup: React.FC<UserProfilePopupProps> = ({ isOpen, onClose, av
               </div>
 
               <div className="form-group">
-                <label className="form-label">Default Base Model</label>
+                <label htmlFor="default_base_model" className="form-label">Default Base Model</label>
                 <select
+                  id="default_base_model"
                   value={profile.default_base_model}
                   onChange={(e) => setProfile({ ...profile, default_base_model: e.target.value })}
                   className="form-select"
@@ -190,8 +193,9 @@ const UserProfilePopup: React.FC<UserProfilePopupProps> = ({ isOpen, onClose, av
               </div>
 
               <div className="form-group">
-                <label className="form-label">Default Output Model</label>
+                <label htmlFor="default_output_model" className="form-label">Default Output Model</label>
                 <select
+                  id="default_output_model"
                   value={profile.default_output_model}
                   onChange={(e) => setProfile({ ...profile, default_output_model: e.target.value })}
                   className="form-select"
@@ -206,8 +210,9 @@ const UserProfilePopup: React.FC<UserProfilePopupProps> = ({ isOpen, onClose, av
               </div>
 
               <div className="form-group">
-                <label className="form-label">Default Embedding Model</label>
+                <label htmlFor="default_embedding_model" className="form-label">Default Embedding Model</label>
                 <select
+                  id="default_embedding_model"
                   value={profile.default_embedding_model}
                   onChange={(e) => setProfile({ ...profile, default_embedding_model: e.target.value })}
                   className="form-select"
@@ -222,8 +227,9 @@ const UserProfilePopup: React.FC<UserProfilePopupProps> = ({ isOpen, onClose, av
               </div>
 
               <div className="form-group">
-                <label className="form-label">System Prompt</label>
+                <label htmlFor="system_prompt" className="form-label">System Prompt</label>
                 <textarea
+                  id="system_prompt"
                   value={profile.system_prompt || ''}
                   onChange={(e) => setProfile({ ...profile, system_prompt: e.target.value })}
                   className="form-textarea form-select"
@@ -232,12 +238,12 @@ const UserProfilePopup: React.FC<UserProfilePopupProps> = ({ isOpen, onClose, av
               </div>
 
               <div className="form-group">
-                <label className="form-label">Long Term Memory</label>
+                <label htmlFor="new_memory" className="form-label">Long Term Memory</label>
                 <div className="memory-list">
                   {profile.long_term_memory.map((mem, idx) => (
                     <div key={idx} className="memory-item">
-                      <input type="text" value={mem} readOnly className="form-input form-select memory-item-input" />
-                      <button type="button" onClick={() => handleDeleteMemory(idx)} className="tool-remove-button">
+                      <input type="text" value={mem} readOnly className="form-input form-select memory-item-input" aria-label={`Memory ${idx + 1}`} />
+                      <button type="button" onClick={() => handleDeleteMemory(idx)} className="tool-remove-button" aria-label="Remove memory">
                         ×
                       </button>
                     </div>
@@ -245,6 +251,7 @@ const UserProfilePopup: React.FC<UserProfilePopupProps> = ({ isOpen, onClose, av
                 </div>
                 <div className="add-memory-container">
                   <input
+                    id="new_memory"
                     type="text"
                     value={newMemory}
                     onChange={(e) => setNewMemory(e.target.value)}
@@ -252,7 +259,7 @@ const UserProfilePopup: React.FC<UserProfilePopupProps> = ({ isOpen, onClose, av
                     onKeyDown={(e) => e.key === 'Enter' && handleAddMemory()}
                     className="form-input form-select add-memory-input"
                   />
-                  <button type="button" onClick={handleAddMemory} className="update-button add-memory-button">
+                  <button type="button" onClick={handleAddMemory} className="update-button add-memory-button" disabled={!newMemory.trim()}>
                     Add
                   </button>
                 </div>
