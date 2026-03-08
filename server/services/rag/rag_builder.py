@@ -153,7 +153,6 @@ class RagBuilder:
                 image=[base64_image],
                 chat_config=chat_config,
             )
-            print(f"OCR result: {orc_result}")
             orc_result = orc_result[-1].content[0]["text"].strip()
             return orc_result
         except Exception as e:
