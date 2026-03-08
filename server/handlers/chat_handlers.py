@@ -13,7 +13,7 @@ from typing import AsyncIterator
 
 
 def _generate_prompt_params(
-    user_name: str, message: str, knowledge_base: str, image: str, chat_config: ChatConfig, mysql_conn: MysqlConnect = None
+    user_name: str, message: str, knowledge_base: str, image: str,  chat_config: ChatConfig, mysql_conn: MysqlConnect = None
 ):
     chat = mysql_conn.create_record(
         table="chat",
@@ -41,7 +41,7 @@ def _generate_prompt_params(
             "chat_id": chat_id,
             "input_content": message[:4096],
             "input_type": "chat",
-            "input_location": "|".join(image) if image else "",
+            "input_location": "|".join(image) if image and not image[0].startswith("data:image") else "",
         }
     )
     return prompt, chat_id
@@ -207,24 +207,7 @@ def create_streaming_response(
     )
 
 
-async def chat_completions_handler(
-    user_name: str, message: str, knowledge_base: str, image: List[str], chat_config: ChatConfig
-) -> str:
-    output_log(
-        f"Chat Completion for User: {user_name}, Base: {knowledge_base}, Message: {message}, Image: {image}, Config: {chat_config}",
-        "debug",
-    )
-
-    mysql = MysqlConnect()
-    prompt, chat_id = _generate_prompt_params(user_name, message, knowledge_base, image, chat_config, mysql)
-
-    agent = PengAgent(
-        operater=chat_config.operator,
-        model=chat_config.base_model,
-        tools=chat_config.tools_name,
-        user_name=user_name,
-    )
-    responses = await agent.ainvoke(AgentState(messages=prompt))
+def _invoke_message_storage(chat_id, responses, mysql: MysqlConnect):
     for response in responses["messages"]:
         if not isinstance(response, AIMessage):
             continue
@@ -264,6 +247,26 @@ async def chat_completions_handler(
                     )
         else:
             continue
+
+async def chat_completions_handler(
+    user_name: str, message: str, knowledge_base: str, image: List[str], chat_config: ChatConfig
+) -> str:
+    output_log(
+        f"Chat Completion for User: {user_name}, Base: {knowledge_base}, Message: {message}, Image: {image}, Config: {chat_config}",
+        "debug",
+    )
+
+    mysql = MysqlConnect()
+    prompt, chat_id = _generate_prompt_params(user_name, message, knowledge_base, image, chat_config, mysql)
+
+    agent = PengAgent(
+        operater=chat_config.operator,
+        model=chat_config.base_model,
+        tools=chat_config.tools_name,
+        user_name=user_name,
+    )
+    responses = await agent.ainvoke(AgentState(messages=prompt))
+    _invoke_message_storage(chat_id, responses, mysql)
     return responses["messages"]
 
 

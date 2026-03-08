@@ -90,6 +90,19 @@ def add_knowledge_base_to_prompt(knowledge_base, message) -> list[SystemMessage]
     return []
 
 
+def _download_image_to_base64(image, mime_type="image/png"):
+    m = MinioStorage()
+    img_data = m.file_download_to_memory(file_name=image)
+    if img_data:
+        # Compute per-image mime_type from file extension
+        file_name = image.split("/")[-1]
+        file_ext = file_name.split('.')[-1]
+        img_mime_type = f"image/{file_ext}" if file_ext else mime_type
+        return {
+            "data": img_data,
+            "mime_type": img_mime_type
+        }
+
 def add_image_to_prompt(model_name, images, mime_type="image/png") -> list:
     if images is None or images == "":
         return []
@@ -99,18 +112,16 @@ def add_image_to_prompt(model_name, images, mime_type="image/png") -> list:
     
     output_log(f"Adding images to prompt for model {model_name}: {images}", "debug")
     messages = []
-    m = MinioStorage()
     for image in images:
-        img_data = m.file_download_to_memory(file_name=image)
-        if img_data:
-            # Compute per-image mime_type from file extension
-            file_name = image.split("/")[-1]
-            file_ext = file_name.split('.')[-1]
-            img_mime_type = f"image/{file_ext}" if file_ext else mime_type
+        if image.startswith("data:image"):
+            header, _ = image.split(",", 1)
+            mime_type = header.split(";")[0].split(":")[1] if ";" in header else "image/png"
             messages.append({
-                "data": img_data,
-                "mime_type": img_mime_type
+                "data": image.split(',')[1].encode("utf-8"),
+                "mime_type": mime_type
             })
+        else:
+            messages.append(_download_image_to_base64(image))
     if check_multimodal(model_name) and messages:
         return [HumanMessage(
             content_blocks=[
