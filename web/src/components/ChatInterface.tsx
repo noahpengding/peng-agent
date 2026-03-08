@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { RootState, AppDispatch } from '../store';
 import { fetchBaseModels } from '../store/slices/modelSlice';
@@ -196,7 +196,7 @@ const ChatbotUI = () => {
       role: 'user',
       content: input,
       type: 'user',
-      images: uploadedImages.map((img) => img.preview),
+      images: uploadedImages.filter((img) => img.contentType.startsWith('image/')).map((img) => img.preview),
     };
 
     dispatch(addUserMessage(userMessage));
@@ -240,23 +240,28 @@ const ChatbotUI = () => {
     }
   };
 
-  const handleSubmitFeedback = (messageId: string, chatId: number, feedback: 'upvote' | 'downvote' | 'no_response') => {
-    dispatch(
-      submitMessageFeedback({
-        messageId,
-        chatId,
-        userName: username,
-        feedback,
-      })
-    );
-  };
+  // ⚡ Bolt Optimization: Memoize the feedback handler to keep its reference stable across renders.
+  // This prevents the expensive MessageList component from re-rendering on every keystroke in the input area.
+  const handleSubmitFeedback = useCallback(
+    (messageId: string, chatId: number, feedback: 'upvote' | 'downvote' | 'no_response') => {
+      dispatch(
+        submitMessageFeedback({
+          messageId,
+          chatId,
+          userName: username,
+          feedback,
+        })
+      );
+    },
+    [dispatch, username]
+  );
 
   // Base Model Selection
   const renderBaseModelSelection = () => {
     return (
       <div className="form-group">
-        <label className="form-label">Base Model</label>
-        <select className="form-select" value={baseModel} onChange={(e) => dispatch(setBaseModel(e.target.value))} disabled={baseModelsLoading}>
+        <label htmlFor="base_model" className="form-label">Base Model</label>
+        <select id="base_model" className="form-select" value={baseModel} onChange={(e) => dispatch(setBaseModel(e.target.value))} disabled={baseModelsLoading}>
           {availableBaseModels.map((model) => (
             <option key={model.id || model.model_name} value={model.model_name}>
               {model.model_name}
@@ -272,8 +277,8 @@ const ChatbotUI = () => {
     const isDisabled = collectionsLoading || collections.length === 0;
     return (
       <div className="form-group">
-        <label className="form-label">Knowledge Base</label>
-        <select className="form-select" value={knowledgeBase} onChange={(e) => dispatch(setKnowledgeBase(e.target.value))} disabled={isDisabled}>
+        <label htmlFor="knowledge_base" className="form-label">Knowledge Base</label>
+        <select id="knowledge_base" className="form-select" value={knowledgeBase} onChange={(e) => dispatch(setKnowledgeBase(e.target.value))} disabled={isDisabled}>
           {collections.length === 0 ? (
             <option value="">No collections available</option>
           ) : (
@@ -394,7 +399,7 @@ const ChatbotUI = () => {
             <div className="form-group">
               <div className="tool-section-header">
                 <label className="form-label">Tools</label>
-                <button className="tool-add-button" onClick={openToolPopup} title="Add Tools">
+                <button className="tool-add-button" onClick={openToolPopup} title="Add Tools" aria-label="Add Tools">
                   +
                 </button>
               </div>
@@ -403,7 +408,7 @@ const ChatbotUI = () => {
                   {selectedToolNames.map((toolName, index) => (
                     <div key={index} className="selected-tool-item">
                       <span className="selected-tool-name">{toolName}</span>
-                      <button type="button" className="tool-remove-button" onClick={() => handleToolSelection(toolName, false)} title="Remove tool">
+                      <button type="button" className="tool-remove-button" onClick={() => handleToolSelection(toolName, false)} title="Remove tool" aria-label={`Remove tool ${toolName}`}>
                         ×
                       </button>
                     </div>
@@ -467,7 +472,7 @@ const ChatbotUI = () => {
                 <button className="update-button" onClick={handleUpdateTools} disabled={toolsLoading}>
                   {toolsLoading ? 'Updating...' : 'Update'}
                 </button>
-                <button className="close-button" onClick={closeToolPopup}>
+                <button className="close-button" onClick={closeToolPopup} aria-label="Close tool popup">
                   ×
                 </button>
               </div>

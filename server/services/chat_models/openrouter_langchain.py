@@ -144,6 +144,8 @@ class CustomOpenRouterCompletion(BaseChatModel):
         tool_calls_id = ""
         for event in stream:
             output_log(f"Received event: {event}", "debug")
+            if not event.choices or len(event.choices) == 0:
+                continue
             choice = event.choices[0]
             token = choice.delta
             if getattr(token, "tool_calls", None):

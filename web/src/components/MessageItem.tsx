@@ -114,6 +114,8 @@ export const MessageItem = React.memo(({ message, index, isFolded, onToggleFold,
             event.stopPropagation();
             onToggleFold(index, isFolded);
           }}
+          aria-expanded={!isFolded}
+          aria-label={isFolded ? `Expand ${message.type?.replace('_', ' ')}` : `Collapse ${message.type?.replace('_', ' ')}`}
         >
           <span className="fold-arrow" aria-hidden="true">
             {isFolded ? '⇨' : '⇩'}

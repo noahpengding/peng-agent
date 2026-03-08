@@ -5,12 +5,13 @@ interface UploadResponse {
 
 export const UploadService = {
   /**
-   * Uploads an image to S3 via the upload API
+   * Uploads a file to S3 via the upload API
    * @param fileContent - Base64 encoded file content (including data URL prefix)
-   * @param contentType - MIME type (e.g., 'image/png', 'image/jpeg')
+   * @param contentType - MIME type (e.g., 'image/png', 'application/pdf')
+   * @param fileName - Original file name from browser (optional)
    * @returns Promise with [upload_path, success] tuple
    */
-  async uploadImage(fileContent: string, contentType: string): Promise<[string, boolean]> {
+  async uploadFile(fileContent: string, contentType: string, fileName?: string): Promise<[string, boolean]> {
     try {
       const apiUrl = `/proxy/upload`;
 
@@ -26,6 +27,7 @@ export const UploadService = {
         body: JSON.stringify({
           file_content: fileContent,
           content_type: contentType,
+          file_name: fileName,
         }),
         credentials: 'include',
       });
@@ -55,7 +57,6 @@ export const UploadService = {
     if (match && match[1]) {
       return match[1];
     }
-    // Default to PNG if unable to detect
-    return 'image/png';
+    return 'application/octet-stream';
   },
 };

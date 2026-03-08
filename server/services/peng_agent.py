@@ -109,6 +109,7 @@ class PengAgent:
     async def call_model(self, state: AgentState):
         from handlers.model_utils import get_model_instance
 
+        output_log(f"Node: Call Model. Current state {state}", "DEBUG")
         writer = get_stream_writer()
         await self._ensure_tools()
         if not hasattr(self, "_llm_instance") or self._llm_instance is None:
@@ -148,6 +149,7 @@ class PengAgent:
         return {"messages": [response for response in [final_reasoning, final_response, tool_calls] if response != ""]}
 
     async def call_tools(self, state: AgentState):
+        output_log(f"Node: Call Tools. Current state {state}", "DEBUG")
         writer = get_stream_writer()
         self.total_tool_calls -= 1
         last_message = list(state["messages"])[-1]
@@ -227,6 +229,7 @@ class PengAgent:
         return {"messages": message}
 
     def should_continue(self, state: AgentState) -> str:
+        output_log(f"Node: Should Continue. Current state {state}", "DEBUG")
         last_message = list(state["messages"])[-1]
         if (
             isinstance(last_message, AIMessage)

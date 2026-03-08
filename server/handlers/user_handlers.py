@@ -29,6 +29,8 @@ def get_user_profile(username: str) -> UserProfile:
         default_base_model=user.get("default_base_model") or "",
         default_output_model=user.get("default_output_model") or "",
         default_embedding_model=user.get("default_embedding_model") or "",
+        s3_access_key=user.get("s3_access_key") or "",
+        s3_secret_key=user.get("s3_secret_key") or "",
         system_prompt=user.get("system_prompt"),
         long_term_memory=long_term_memory
     )
@@ -51,6 +53,12 @@ def update_user_profile(username: str, user_data: UserUpdate) -> Dict:
 
         if user_data.default_embedding_model is not None:
             update_fields["default_embedding_model"] = user_data.default_embedding_model
+
+        if user_data.s3_access_key is not None:
+            update_fields["s3_access_key"] = user_data.s3_access_key
+
+        if user_data.s3_secret_key is not None:
+            update_fields["s3_secret_key"] = user_data.s3_secret_key
 
         if user_data.system_prompt is not None:
             update_fields["system_prompt"] = user_data.system_prompt

@@ -21,7 +21,7 @@ async def index_file_api(
         request.user_name = auth["username"]
     from handlers.rag_handlers import index_all
 
-    return index_all(
+    return await index_all(
         request.user_name,
         request.file_path,
         request.type_of_file,

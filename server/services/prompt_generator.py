@@ -21,7 +21,7 @@ def system_prompt(user_name, mysql_conn):
     ]
 
 
-def add_short_term_memory_to_prompt(short_term_memory, mysql_conn, model_name) -> list:
+def add_short_term_memory_to_prompt(short_term_memory, mysql_conn, model_name, user_name) -> list:
     result = []
     if isinstance(short_term_memory, list) and short_term_memory:
         reasonings_list = mysql_conn.read_records("ai_reasoning", conditions={"chat_id": short_term_memory})
@@ -53,7 +53,7 @@ def add_short_term_memory_to_prompt(short_term_memory, mysql_conn, model_name) -
             if user_inputs:
                 user_input = user_inputs[0]
                 result += add_human_message_to_prompt(user_input["input_content"]) if user_input["input_content"] else []
-                result += add_image_to_prompt(model_name, user_input["input_location"]) if user_input["input_location"] else []
+                result += add_image_to_prompt(model_name, user_name, user_input["input_location"]) if user_input["input_location"] else []
 
             if reasonings:
                 result.append(AIMessage(content_blocks=[
@@ -90,7 +90,24 @@ def add_knowledge_base_to_prompt(knowledge_base, message) -> list[SystemMessage]
     return []
 
 
-def add_image_to_prompt(model_name, images, mime_type="image/png") -> list:
+def _download_image_to_base64(image, user_name, mime_type="image/png"):
+    m = MinioStorage(user_name=user_name)
+    img_data = m.file_download_to_memory(file_name=image)
+    if img_data:
+        # Compute per-image mime_type from file extension
+        file_name = image.split("/")[-1]
+        file_ext = file_name.split('.')[-1]
+        img_mime_type = f"image/{file_ext}" if file_ext else mime_type
+        return {
+            "data": img_data,
+            "mime_type": img_mime_type
+        }
+    return {
+        "data": None,
+        "mime_type": mime_type
+    }
+
+def add_image_to_prompt(model_name, images, user_name, mime_type="image/png") -> list:
     if images is None or images == "":
         return []
 
@@ -99,18 +116,18 @@ def add_image_to_prompt(model_name, images, mime_type="image/png") -> list:
     
     output_log(f"Adding images to prompt for model {model_name}: {images}", "debug")
     messages = []
-    m = MinioStorage()
     for image in images:
-        img_data = m.file_download_to_memory(file_name=image)
-        if img_data:
-            # Compute per-image mime_type from file extension
-            file_name = image.split("/")[-1]
-            file_ext = file_name.split('.')[-1]
-            img_mime_type = f"image/{file_ext}" if file_ext else mime_type
+        if image.startswith("data:image"):
+            header, _ = image.split(",", 1)
+            mime_type = header.split(";")[0].split(":")[1] if ";" in header else "image/png"
             messages.append({
-                "data": img_data,
-                "mime_type": img_mime_type
+                "data": image.split(',')[1].encode("utf-8"),
+                "mime_type": mime_type
             })
+        else:
+            data = _download_image_to_base64(image, user_name=user_name)
+            if data["data"]:
+                messages.append(data)
     if check_multimodal(model_name) and messages:
         return [HumanMessage(
             content_blocks=[

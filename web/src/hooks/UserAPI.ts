@@ -8,6 +8,8 @@ export interface UserProfile {
   default_base_model: string;
   default_output_model: string;
   default_embedding_model: string;
+  s3_access_key: string;
+  s3_secret_key: string;
   system_prompt: string | null;
   long_term_memory: string[];
 }
@@ -17,6 +19,8 @@ export interface UpdateUserProfilePayload {
   default_base_model: string;
   default_output_model: string;
   default_embedding_model: string;
+  s3_access_key: string;
+  s3_secret_key: string;
   system_prompt: string | null;
   long_term_memory: string[];
   password?: string;

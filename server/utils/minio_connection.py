@@ -6,32 +6,61 @@ import os
 import threading
 
 
-_client = None
+_clients = {}
 _lock = threading.RLock()
 
 
+def _get_user_s3_credentials(user_name: str):
+    try:
+        # Lazy import avoids circular import issues at module load time.
+        from services.redis_service import get_table_record
+
+        user = get_table_record("user", user_name)
+        if not user:
+            return None, None
+        access_key = (user.get("s3_access_key") or "").strip()
+        secret_key = (user.get("s3_secret_key") or "").strip()
+        return access_key, secret_key
+    except Exception as e:
+        output_log(f"Error loading user S3 credentials for {user_name}: {e}", "error")
+        return None, None
+
+
 class MinioStorage:
-    def __init__(self):
+    def __init__(self, user_name: str = "default"):
         self.entrypoint = config.s3_url
         self.access_key = config.s3_access_key
         self.secret_key = config.s3_secret_key
         self.region = config.s3_region
-        global _client
-        if _client is None:
+        self.user_name = user_name or "default"
+        self.client = None
+
+        cache_key = (self.user_name, self.access_key, self.secret_key)
+
+        global _clients
+        if cache_key in _clients.keys():
+            self.client = _clients[cache_key]
+        if self.user_name != "default" and self.client is None:
+            user_access_key, user_secret_key = _get_user_s3_credentials(self.user_name)
+            if user_access_key and user_secret_key:
+                self.access_key = user_access_key
+                self.secret_key = user_secret_key
+
+        if cache_key not in _clients:
             with _lock:
-                if _client is None:
                     output_log(
                         f"S3 connection to {self.entrypoint}",
                         "debug",
                     )
-                    _client = boto3.client(
+                    _clients[cache_key] = boto3.client(
                         's3',
                         endpoint_url=self.entrypoint,
                         aws_access_key_id=self.access_key,
                         aws_secret_access_key=self.secret_key,
                         region_name=self.region,
                     )
-        self.client = _client
+            self.client = _clients[cache_key]
+
 
     # @file_path: Local file path
     # @file_name: File name to be saved in S3

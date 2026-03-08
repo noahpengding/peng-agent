@@ -238,6 +238,8 @@ class User(Base):
     default_base_model = Column(Text, default=config.default_base_model)
     default_output_model = Column(Text, default=config.default_base_model)
     default_embedding_model = Column(Text, default=config.embedding_model)
+    s3_access_key = Column(String(256), nullable=True)
+    s3_secret_key = Column(String(256), nullable=True)
     system_prompt = Column(Text, nullable=True)
     long_term_memory = Column(Text, nullable=True, default="[]")
     created_at = Column(TIMESTAMP, default=datetime.now)
@@ -253,6 +255,8 @@ class User(Base):
             "default_base_model": self.default_base_model,
             "default_output_model": self.default_output_model,
             "default_embedding_model": self.default_embedding_model,
+            "s3_access_key": self.s3_access_key,
+            "s3_secret_key": self.s3_secret_key,
             "system_prompt": self.system_prompt,
             "long_term_memory": self.long_term_memory,
             "created_at": self.created_at,

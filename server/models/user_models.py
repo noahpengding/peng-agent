@@ -28,6 +28,8 @@ class UserProfile(BaseModel):
     default_base_model: str
     default_output_model: str
     default_embedding_model: str
+    s3_access_key: str
+    s3_secret_key: str
     system_prompt: Optional[str] = None
     long_term_memory: List[str] = Field(default_factory=list)
 
@@ -38,5 +40,7 @@ class UserUpdate(BaseModel):
     default_base_model: Optional[str] = None
     default_output_model: Optional[str] = None
     default_embedding_model: Optional[str] = None
+    s3_access_key: Optional[str] = None
+    s3_secret_key: Optional[str] = None
     system_prompt: Optional[str] = None
     long_term_memory: Optional[List[str]] = None

@@ -8,7 +8,7 @@ interface InputAreaProps {
   s3PathsInput: string;
   setS3PathsInput: (value: string) => void;
   uploadedImages: UploadedImage[];
-  setUploadedImages: (images: UploadedImage[]) => void;
+  setUploadedImages: (images: UploadedImage[] | ((prev: UploadedImage[]) => UploadedImage[])) => void;
   isLoading: boolean;
   onSubmit: (e: React.FormEvent) => void;
   onError: (error: string) => void;
@@ -31,8 +31,11 @@ export const InputArea: React.FC<InputAreaProps> = ({
 }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
-  const [isUploading, setIsUploading] = useState(false);
-  const maxImages = 10;
+  const [uploadingCount, setUploadingCount] = useState(0);
+  const isUploading = uploadingCount > 0;
+  const maxAttachments = 10;
+
+  const isImageType = (contentType: string) => contentType.startsWith('image/');
 
   // Helper: adjust textarea height based on content up to max
   const adjustTextareaSize = useCallback(() => {
@@ -49,9 +52,9 @@ export const InputArea: React.FC<InputAreaProps> = ({
     adjustTextareaSize();
   }, [input, adjustTextareaSize]);
 
-  // Handle image file processing and upload
-  const processAndUploadImage = async (file: File) => {
-    setIsUploading(true);
+  // Handle file processing and upload
+  const processAndUploadFile = async (file: File) => {
+    setUploadingCount((prev) => prev + 1);
     const reader = new FileReader();
 
     reader.onload = async (event) => {
@@ -60,43 +63,51 @@ export const InputArea: React.FC<InputAreaProps> = ({
         const contentType = UploadService.extractContentType(base64Data);
 
         try {
-          const [uploadPath, success] = await UploadService.uploadImage(base64Data, contentType);
+          const [uploadPath, success] = await UploadService.uploadFile(base64Data, contentType, file.name);
 
           if (success) {
-            // Add to uploaded images list
-            setUploadedImages([...uploadedImages, { path: uploadPath, preview: base64Data }]);
+            // Keep image previews for image files; for PDFs render a document-style chip.
+            setUploadedImages((prev) => [
+              ...prev,
+              {
+                path: uploadPath,
+                preview: isImageType(contentType) ? base64Data : '',
+                fileName: file.name,
+                contentType,
+              },
+            ]);
           } else {
-            onError('Image upload failed. Please try again.');
+            onError('File upload failed. Please try again.');
           }
         } catch (error) {
-          onError(`Image upload error: ${error instanceof Error ? error.message : 'Unknown error'}`);
+          onError(`File upload error: ${error instanceof Error ? error.message : 'Unknown error'}`);
         } finally {
-          setIsUploading(false);
+          setUploadingCount((prev) => Math.max(0, prev - 1));
         }
       }
     };
 
     reader.onerror = () => {
-      onError('Failed to read image file.');
-      setIsUploading(false);
+      onError('Failed to read file.');
+      setUploadingCount((prev) => Math.max(0, prev - 1));
     };
 
     reader.readAsDataURL(file);
   };
 
-  // Function to handle image uploads from file input
-  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  // Function to handle file uploads from file input
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (files) {
-      const remainingSlots = maxImages - uploadedImages.length;
+      const remainingSlots = maxAttachments - uploadedImages.length;
       const filesToProcess = Math.min(files.length, remainingSlots);
 
       if (filesToProcess < files.length) {
-        onError(`Only ${remainingSlots} more image(s) can be added. Maximum is ${maxImages} images.`);
+        onError(`Only ${remainingSlots} more file(s) can be added. Maximum is ${maxAttachments} files.`);
       }
 
       for (let i = 0; i < filesToProcess; i++) {
-        processAndUploadImage(files[i]);
+        processAndUploadFile(files[i]);
       }
     }
   };
@@ -126,7 +137,7 @@ export const InputArea: React.FC<InputAreaProps> = ({
         if (items[i].type.indexOf('image') !== -1) {
           const blob = items[i].getAsFile();
           if (blob) {
-            processAndUploadImage(blob);
+            processAndUploadFile(blob);
             break;
           }
         }
@@ -148,18 +159,25 @@ export const InputArea: React.FC<InputAreaProps> = ({
             disabled={isLoading || isUploading}
           />
         </div>
-        {/* Image previews */}
+        {/* File previews */}
         {uploadedImages.length > 0 && (
           <div className="image-preview-list">
             {uploadedImages.map((img, index) => (
               <div key={index} className="image-preview-container">
-                <img src={img.preview} alt="Preview" className="image-preview" />
+                {isImageType(img.contentType) ? (
+                  <img src={img.preview} alt={img.fileName || 'Preview'} className="image-preview" />
+                ) : (
+                  <div className="file-preview-badge" title={img.fileName || img.path}>
+                    <span className="file-preview-icon">PDF</span>
+                    <span className="file-preview-name">{img.fileName || 'document.pdf'}</span>
+                  </div>
+                )}
                 <button
                   type="button"
                   onClick={() => handleClearImage(index)}
                   className="clear-image-button"
-                  title="Remove image"
-                  aria-label="Remove image"
+                  title="Remove file"
+                  aria-label="Remove file"
                 >
                   ×
                 </button>
@@ -192,8 +210,8 @@ export const InputArea: React.FC<InputAreaProps> = ({
             <input
               ref={fileInputRef}
               type="file"
-              accept="image/*"
-              onChange={handleImageUpload}
+              accept="image/*,application/pdf"
+              onChange={handleFileUpload}
               className="file-input"
               disabled={isLoading || isUploading}
             />
@@ -201,8 +219,8 @@ export const InputArea: React.FC<InputAreaProps> = ({
               type="button"
               onClick={() => fileInputRef.current?.click()}
               className="upload-button"
-              title="Upload image"
-              aria-label="Upload image"
+              title="Upload image or PDF"
+              aria-label="Upload image or PDF"
               disabled={isLoading || isUploading}
             >
               {isUploading ? '⏳' : '📎'}

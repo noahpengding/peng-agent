@@ -12,15 +12,15 @@ def get_collections():
     return set([result["knowledge_base"] for result in results])
 
 
-def index_file(user_name, file_path, type_of_file, collection_name):
+async def index_file(user_name, file_path, type_of_file, collection_name):
     rag_builder = RagBuilder(user_name, collection_name)
-    rag_builder.file_process(file_path, type_of_file)
+    await rag_builder.file_process(file_path, type_of_file)
     output_log(f"File {file_path} is put into the collection {collection_name}", "info")
     return f"File {file_path} is put into the collection {collection_name}"
 
 
-def index_all(user_name, folder_path, type_of_file, collection_name):
-    m = MinioStorage()
+async def index_all(user_name, folder_path, type_of_file, collection_name):
+    m = MinioStorage(user_name=user_name)
     output_log(
         f"Indexing all files in {folder_path} into the collection {collection_name}",
         "debug",
@@ -33,7 +33,7 @@ def index_all(user_name, folder_path, type_of_file, collection_name):
                 "info",
             )
             continue
-        rag_builder.file_process(file, type_of_file)
+        await rag_builder.file_process(file, type_of_file)
         output_log(f"File {file} is put into the collection {collection_name}", "info")
     output_log(
         f"All files in {folder_path} are put into the collection {collection_name}",

@@ -33,7 +33,7 @@ class RagBuilder:
             port=config.qdrant_port,
             collection_name=self.collection_name,
         )
-        self.minio = MinioStorage()
+        self.minio = MinioStorage(user_name=self.user_name)
 
     def _add_to_db(
         self, local_path, type_of_file, file_path, create_by="Python RAG Builder"
@@ -71,7 +71,7 @@ class RagBuilder:
                 redis_id="path",
             )
 
-    def file_process(self, file_path, type_of_file) -> None:
+    async def file_process(self, file_path, type_of_file) -> None:
         m = self.minio
         local_path = os.path.join(self.temp_dir, os.path.basename(file_path))
         m.file_download(file_path, local_path)
@@ -79,7 +79,7 @@ class RagBuilder:
             chucks = self._pure_text_pdf_process(local_path)
             self.qdrant.add_documents(local_path.split("/")[-1], chucks)
         elif type_of_file == "handwriting":
-            chucks = self._handwriting_pdf_process(local_path)
+            chucks = await self._handwriting_pdf_process(local_path)
             self.qdrant.add_texts(local_path.split("/")[-1], chucks)
         output_log(f"Text chunks: {chucks}", "debug")
         self._add_to_db(local_path, type_of_file, file_path)
@@ -92,13 +92,19 @@ class RagBuilder:
         self._add_to_db(local_path, "standard", file_path, create_by)
 
     def _pdf_page_to_base64(self, pdf_path: str, page_number: int):
+        from handlers.file_handlers import file_upload_frontend
         pdf_document = fitz.open(pdf_path)
         page = pdf_document.load_page(page_number - 1)
         pix = page.get_pixmap()
         img = Image.frombytes("RGB", [pix.width, pix.height], pix.samples)
         buffer = io.BytesIO()
         img.save(buffer, format="PNG")
-        return f"data:image/jpeg;base64,{base64.b64encode(buffer.getvalue()).decode('utf-8')}"
+        content = f"data:image/png;base64,{base64.b64encode(buffer.getvalue()).decode('utf-8')}"
+        uploaded_path, success = file_upload_frontend(content, "image/png", user_name=self.user_name)
+        if success:
+            return uploaded_path
+        output_log(f"Failed to upload image for page {page_number} of PDF {pdf_path}", "error")
+        return ""
 
     def _pdf_to_base64(self, pdf_path: str):
         pdf_document = fitz.open(pdf_path)
@@ -123,41 +129,46 @@ class RagBuilder:
         chunks = text_splitter.split_text(text)
         return chunks
 
-    def _process_single_image(self, base64_image):
-        from handlers.model_utils import get_model_instance
+    async def _process_single_image(self, base64_image):
+        from handlers.chat_handlers import chat_completions_handler
+        from models.chat_config import ChatConfig
 
-        prompt = [
-            (
-                "system",
-                """
-            The image attached is a handwriting note. Read and describe any information you can find. 
+        prompt = """
+            The image attached is a handwriting note. Read and extract any information you can find. 
             Rules:
             1. Identify all noun phrases, named entities, numbers, dates, locations, and technical terms.
             2. Make sure the information is mathematically correct and make sense.
             3. All information should be directly coming from the image.
             4. All information should be in standard Markdown format with as simple format as possible.
-            """,
-            ),
-            ("human", base64_image),
-        ]
-        base_model_ins = get_model_instance(
-            model_name=config.default_base_model,
-            operator_name=config.default_operator,
+            """
+        chat_config = ChatConfig(
+            operator=config.default_operator,
+            base_model=config.default_base_model,
         )
-        return base_model_ins.invoke(prompt).content
+        try:
+            orc_result = await chat_completions_handler(
+                user_name=self.user_name,
+                message=prompt,
+                knowledge_base=None,
+                image=[base64_image],
+                chat_config=chat_config,
+            )
+            orc_result = orc_result[-1].content[0]["text"].strip()
+            return orc_result
+        except Exception as e:
+            output_log(f"Error processing handwriting image: {e}", "error")
+            return ""
 
-    def _handwriting_pdf_process(self, file_path):
+    async def _handwriting_pdf_process(self, file_path):
         base64_images = self._pdf_to_base64(file_path)
         results = []
         for image in base64_images:
-            results.append(self._process_single_image(image))
+            ocr_result = await self._process_single_image(image)
+            results.append(ocr_result)
         output_log(f"Text chunks: {results}", "debug")
         combined_text = ""
         for result in results:
             if isinstance(result, list):
                 result = result[0]
-            if result["type"] and result["type"] == "text":
-                combined_text += result["text"] + "\n"
-            else:
-                combined_text += str(result) + "\n"
+            combined_text += str(result) + "\n"
         return self._pure_text_text_process(combined_text)

@@ -62,6 +62,8 @@ def create_user(user_data: UserCreate) -> Optional[Dict]:
                 "default_base_model": user_data.default_based_model,
                 "default_output_model": user_data.default_based_model,
                 "default_embedding_model": user_data.default_embedding_model,
+                "s3_access_key": "",
+                "s3_secret_key": "",
             },
             redis_id="user_name",
         )
