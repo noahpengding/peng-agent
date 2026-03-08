@@ -35,29 +35,31 @@ class MinioStorage:
         self.user_name = user_name or "default"
         self.client = None
 
+        cache_key = (self.user_name, self.access_key, self.secret_key)
+
         global _clients
-        if self.user_name in _clients.keys():
-            self.client = _clients[self.user_name]
+        if cache_key in _clients.keys():
+            self.client = _clients[cache_key]
         if self.user_name != "default" and self.client is None:
             user_access_key, user_secret_key = _get_user_s3_credentials(self.user_name)
             if user_access_key and user_secret_key:
                 self.access_key = user_access_key
                 self.secret_key = user_secret_key
 
-        if self.user_name not in _clients:
+        if cache_key not in _clients:
             with _lock:
                     output_log(
                         f"S3 connection to {self.entrypoint}",
                         "debug",
                     )
-                    _clients[self.user_name] = boto3.client(
+                    _clients[cache_key] = boto3.client(
                         's3',
                         endpoint_url=self.entrypoint,
                         aws_access_key_id=self.access_key,
                         aws_secret_access_key=self.secret_key,
                         region_name=self.region,
                     )
-            self.client = _clients[self.user_name]
+            self.client = _clients[cache_key]
 
 
     # @file_path: Local file path

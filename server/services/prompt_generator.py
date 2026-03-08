@@ -125,7 +125,9 @@ def add_image_to_prompt(model_name, images, user_name, mime_type="image/png") ->
                 "mime_type": mime_type
             })
         else:
-            messages.append(_download_image_to_base64(image, user_name=user_name))
+            data = _download_image_to_base64(image, user_name=user_name)
+            if data["data"]:
+                messages.append(data)
     if check_multimodal(model_name) and messages:
         return [HumanMessage(
             content_blocks=[
