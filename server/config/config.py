@@ -73,7 +73,7 @@ try:
         else "us-east-1",
         "s3_base_path": os.environ.get("S3_BASE_PATH")
         if os.environ.get("S3_BASE_PATH")
-        else "files",
+        else os.environ.get("ENV"),
         "qdrant_host": os.environ.get("QDRANT_HOST")
         if os.environ.get("QDRANT_HOST")
         else "localhost",

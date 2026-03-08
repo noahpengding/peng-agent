@@ -49,6 +49,8 @@ const UserProfilePopup: React.FC<UserProfilePopupProps> = ({ isOpen, onClose, av
         default_base_model: profile.default_base_model,
         default_output_model: profile.default_output_model,
         default_embedding_model: profile.default_embedding_model,
+        s3_access_key: profile.s3_access_key,
+        s3_secret_key: profile.s3_secret_key,
         system_prompt: profile.system_prompt,
         long_term_memory: profile.long_term_memory,
         password: password.trim() ? password.trim() : undefined,
@@ -224,6 +226,30 @@ const UserProfilePopup: React.FC<UserProfilePopupProps> = ({ isOpen, onClose, av
                     </option>
                   ))}
                 </select>
+              </div>
+
+              <div className="form-group">
+                <label htmlFor="s3_access_key" className="form-label">S3 Access Key</label>
+                <input
+                  id="s3_access_key"
+                  type="text"
+                  value={profile.s3_access_key}
+                  onChange={(e) => setProfile({ ...profile, s3_access_key: e.target.value })}
+                  placeholder="Leave blank to use system default"
+                  className="form-input form-select"
+                />
+              </div>
+
+              <div className="form-group">
+                <label htmlFor="s3_secret_key" className="form-label">S3 Secret Key</label>
+                <input
+                  id="s3_secret_key"
+                  type="password"
+                  value={profile.s3_secret_key}
+                  onChange={(e) => setProfile({ ...profile, s3_secret_key: e.target.value })}
+                  placeholder="Leave blank to use system default"
+                  className="form-input form-select"
+                />
               </div>
 
               <div className="form-group">

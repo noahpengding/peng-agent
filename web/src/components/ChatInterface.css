@@ -632,6 +632,43 @@
   display: block;
 }
 
+.file-preview-badge {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.25rem;
+  background: #303030;
+  color: #e5e7eb;
+  padding: 0.35rem;
+  text-align: center;
+}
+
+.file-preview-icon {
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  padding: 0.15rem 0.35rem;
+  border-radius: 0.25rem;
+  background: #7f1d1d;
+  color: #fecaca;
+}
+
+.file-preview-name {
+  width: 100%;
+  font-size: 0.62rem;
+  line-height: 1.1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  -webkit-box-orient: vertical;
+  word-break: break-word;
+}
+
 .clear-image-button {
   position: absolute;
   top: -0.25rem;

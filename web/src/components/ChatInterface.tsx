@@ -196,7 +196,7 @@ const ChatbotUI = () => {
       role: 'user',
       content: input,
       type: 'user',
-      images: uploadedImages.map((img) => img.preview),
+      images: uploadedImages.filter((img) => img.contentType.startsWith('image/')).map((img) => img.preview),
     };
 
     dispatch(addUserMessage(userMessage));

@@ -12,10 +12,13 @@ async def options_upload():
 
 @router.post("/upload")
 async def upload_file(request: dict, auth: dict = Depends(authenticate_request)):
-    from handlers.file_handlers import file_upload_frontend
+    from handlers.file_handlers import file_upload_frontend_with_name
 
-    upload_path, success = file_upload_frontend(
-        request["file_content"], request["content_type"]
+    upload_path, success = file_upload_frontend_with_name(
+        request["file_content"],
+        request["content_type"],
+        request.get("file_name"),
+        auth.get("username", ""),
     )
 
     return {"upload_path": upload_path, "success": success}

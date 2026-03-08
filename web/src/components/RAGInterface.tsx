@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useRAGApi, RAGDocument } from '../hooks/RAGAPI';
 import { useNavigate } from 'react-router-dom';
+import { UploadService } from '../services/uploadService';
 import './RAGInterface.css';
 
 const RAGInterface: React.FC = () => {
@@ -16,11 +17,14 @@ const RAGInterface: React.FC = () => {
   const [collectionName, setCollectionName] = useState<string>('');
   const [typeOfFile, setTypeOfFile] = useState<'standard' | 'handwriting'>('standard');
   const [indexResult, setIndexResult] = useState<string>('');
+  const [isUploading, setIsUploading] = useState<boolean>(false);
 
   // Get API functions and state
   const { getAllRAGDocuments, indexDocument, isLoading } = useRAGApi();
   // Add navigate for routing
   const navigate = useNavigate();
+
+  const fileInputRef = React.useRef<HTMLInputElement>(null);
 
   // Load documents on component mount
   useEffect(() => {
@@ -82,6 +86,49 @@ const RAGInterface: React.FC = () => {
     }
   };
 
+  const handleUploadFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) {
+      return;
+    }
+
+    setIsUploading(true);
+    setIndexResult('');
+
+    const reader = new FileReader();
+    reader.onload = async (event) => {
+      try {
+        const base64Data = event.target?.result as string;
+        const contentType = UploadService.extractContentType(base64Data);
+        const [uploadPath, success] = await UploadService.uploadFile(base64Data, contentType, file.name);
+
+        if (!success) {
+          throw new Error('Upload failed.');
+        }
+
+        setFilePath(uploadPath);
+        setIndexResult(`Uploaded: ${uploadPath}`);
+      } catch (err) {
+        setIndexResult(err instanceof Error ? err.message : 'Failed to upload file');
+      } finally {
+        setIsUploading(false);
+        if (fileInputRef.current) {
+          fileInputRef.current.value = '';
+        }
+      }
+    };
+
+    reader.onerror = () => {
+      setIndexResult('Failed to read file for upload');
+      setIsUploading(false);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+    };
+
+    reader.readAsDataURL(file);
+  };
+
   return (
     <div className="rag-container">
       {error && <div className="error-message">{error}</div>}
@@ -106,6 +153,24 @@ const RAGInterface: React.FC = () => {
                 onChange={(e) => setFilePath(e.target.value)}
                 placeholder="Enter file path"
               />
+              <div className="upload-controls">
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/*,application/pdf"
+                  onChange={handleUploadFile}
+                  className="file-upload-input"
+                  disabled={isUploading || isLoading}
+                />
+                <button
+                  type="button"
+                  className="upload-file-button"
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={isUploading || isLoading}
+                >
+                  {isUploading ? 'Uploading...' : 'Upload File'}
+                </button>
+              </div>
             </div>
 
             <div className="form-group">
@@ -147,7 +212,7 @@ const RAGInterface: React.FC = () => {
               </div>
             </div>
 
-            <button type="submit" className="index-button" disabled={isLoading || !filePath.trim() || !collectionName.trim()}>
+            <button type="submit" className="index-button" disabled={isLoading || isUploading || !filePath.trim() || !collectionName.trim()}>
               Index Document
             </button>
           </form>

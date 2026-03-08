@@ -20,7 +20,7 @@ async def index_file(user_name, file_path, type_of_file, collection_name):
 
 
 async def index_all(user_name, folder_path, type_of_file, collection_name):
-    m = MinioStorage()
+    m = MinioStorage(user_name=user_name)
     output_log(
         f"Indexing all files in {folder_path} into the collection {collection_name}",
         "debug",

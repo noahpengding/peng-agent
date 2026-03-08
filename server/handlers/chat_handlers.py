@@ -29,7 +29,7 @@ def _generate_prompt_params(
     prompt = []
     prompt += prompt_generator.system_prompt(user_name, mysql_conn)
     prompt += prompt_generator.add_short_term_memory_to_prompt(chat_config.short_term_memory, mysql_conn, chat_config.base_model)
-    prompt += prompt_generator.add_image_to_prompt(chat_config.base_model, image)
+    prompt += prompt_generator.add_image_to_prompt(chat_config.base_model, image, user_name=user_name)
     prompt += prompt_generator.add_knowledge_base_to_prompt(knowledge_base, message)
     prompt += prompt_generator.add_human_message_to_prompt(message)
     output_log(f"Generated Prompt: {prompt}", "DEBUG")

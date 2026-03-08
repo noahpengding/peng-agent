@@ -33,7 +33,7 @@ class RagBuilder:
             port=config.qdrant_port,
             collection_name=self.collection_name,
         )
-        self.minio = MinioStorage()
+        self.minio = MinioStorage(user_name=self.user_name)
 
     def _add_to_db(
         self, local_path, type_of_file, file_path, create_by="Python RAG Builder"
@@ -100,7 +100,7 @@ class RagBuilder:
         buffer = io.BytesIO()
         img.save(buffer, format="PNG")
         content = f"data:image/jpeg;base64,{base64.b64encode(buffer.getvalue()).decode('utf-8')}"
-        uploaded_path, success = file_upload_frontend(content, "image/jpeg")
+        uploaded_path, success = file_upload_frontend(content, "image/jpeg", user_name=self.user_name)
         if success:
             return uploaded_path
         output_log(f"Failed to upload image for page {page_number} of PDF {pdf_path}", "error")

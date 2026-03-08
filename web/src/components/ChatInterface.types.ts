@@ -26,6 +26,8 @@ export interface ModelInfo {
 export interface UploadedImage {
   path: string;
   preview: string; // Base64 for UI preview
+  fileName: string;
+  contentType: string;
 }
 
 export interface Tool {

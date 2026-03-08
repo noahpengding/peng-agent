@@ -90,8 +90,8 @@ def add_knowledge_base_to_prompt(knowledge_base, message) -> list[SystemMessage]
     return []
 
 
-def _download_image_to_base64(image, mime_type="image/png"):
-    m = MinioStorage()
+def _download_image_to_base64(image, user_name, mime_type="image/png"):
+    m = MinioStorage(user_name=user_name)
     img_data = m.file_download_to_memory(file_name=image)
     if img_data:
         # Compute per-image mime_type from file extension
@@ -103,7 +103,7 @@ def _download_image_to_base64(image, mime_type="image/png"):
             "mime_type": img_mime_type
         }
 
-def add_image_to_prompt(model_name, images, mime_type="image/png") -> list:
+def add_image_to_prompt(model_name, images, user_name, mime_type="image/png") -> list:
     if images is None or images == "":
         return []
 
@@ -121,7 +121,7 @@ def add_image_to_prompt(model_name, images, mime_type="image/png") -> list:
                 "mime_type": mime_type
             })
         else:
-            messages.append(_download_image_to_base64(image))
+            messages.append(_download_image_to_base64(image, user_name=user_name))
     if check_multimodal(model_name) and messages:
         return [HumanMessage(
             content_blocks=[

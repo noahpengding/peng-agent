@@ -78,6 +78,33 @@
   color: white;
 }
 
+.upload-controls {
+  margin-top: 0.5rem;
+}
+
+.file-upload-input {
+  display: none;
+}
+
+.upload-file-button {
+  width: 100%;
+  background-color: #303030;
+  color: #f3f4f6;
+  border: 1px solid #3f3f46;
+  padding: 0.55rem 0.75rem;
+  border-radius: 0.25rem;
+  cursor: pointer;
+}
+
+.upload-file-button:hover {
+  background-color: #3f3f46;
+}
+
+.upload-file-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
 /* Radio button styles */
 .radio-group {
   display: flex;
