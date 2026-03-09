@@ -55,11 +55,11 @@ jobs:
 
       - name: Install dependencies
         run: bun install
-        working-directory: ./web
+        working-directory: ./app/web
 
       - name: Run ESLint
         run: bun run lint
-        working-directory: ./web
+        working-directory: ./app/web
 
   # CodeQL security analysis - runs on all branches and outputs to Security tab
   codeql-analysis:
@@ -77,7 +77,7 @@ jobs:
           - language: python
             path: './server'
           - language: javascript
-            path: './web'
+            path: './app/web'
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
