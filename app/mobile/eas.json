@@ -1,0 +1,29 @@
+{
+  "cli": {
+    "version": ">= 14.1.1",
+    "appVersionSource": "remote"
+  },
+  "build": {
+    "development": {
+      "developmentClient": true,
+      "distribution": "internal",
+      "env": {
+        "API_URL": "http://localhost:8000"
+      }
+    },
+    "preview": {
+      "distribution": "internal",
+      "env": {
+        "API_URL": "https://preview.your-api.com"
+      }
+    },
+    "production": {
+      "env": {
+        "API_URL": "https://api.your-production.com"
+      }
+    }
+  },
+  "submit": {
+    "production": {}
+  }
+}

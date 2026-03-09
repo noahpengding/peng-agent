@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
-import { RootState, AppDispatch } from '../store';
-import { fetchBaseModels } from '../store/slices/modelSlice';
-import { fetchTools, updateTools } from '../store/slices/toolSlice';
+import { RootState, AppDispatch } from '@share/store';
+import { fetchBaseModels } from '@share/store/slices/modelSlice';
+import { fetchTools, updateTools } from '@share/store/slices/toolSlice';
 import {
   setInput,
   setSidebarHidden,
@@ -16,14 +16,14 @@ import {
   sendMessage,
   setError,
   submitMessageFeedback,
-} from '../store/slices/chatSlice';
+} from '@share/store/slices/chatSlice';
 import './ChatInterface.css';
-import { Message, UploadedImage } from './ChatInterface.types';
+import { Message, UploadedImage } from '@share/types/ChatInterface.types';
 import { InputArea } from './InputArea';
 import { MessageList } from './MessageList';
 import UserProfilePopup from './UserProfilePopup';
-import { Memory } from '../hooks/MemoryAPI';
-import { useRAGApi } from '../hooks/RAGAPI';
+import { Memory } from '@share/hooks/MemoryAPI';
+import { useRAGApi } from '@share/hooks/RAGAPI';
 
 // Main App Component
 const ChatbotUI = () => {

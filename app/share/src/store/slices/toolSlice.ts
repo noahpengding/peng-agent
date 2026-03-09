@@ -1,5 +1,5 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
-import { Tool } from '../../components/ChatInterface.types';
+import { Tool } from '@share/types/ChatInterface.types';
 import { ToolService } from '../../services/toolService';
 
 interface ToolState {

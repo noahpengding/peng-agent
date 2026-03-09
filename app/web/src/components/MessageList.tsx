@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { Message } from './ChatInterface.types';
+import { Message } from '@share/types/ChatInterface.types';
 import { MessageItem } from './MessageItem';
 
 interface MessageListProps {

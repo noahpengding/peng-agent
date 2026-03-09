@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { ModelInfo } from './ChatInterface.types';
-import { useUserApi, UserProfile } from '../hooks/UserAPI';
+import { ModelInfo } from '@share/types/ChatInterface.types';
+import { useUserApi, UserProfile } from '@share/hooks/UserAPI';
 import './UserProfilePopup.css';
 
 interface UserProfilePopupProps {

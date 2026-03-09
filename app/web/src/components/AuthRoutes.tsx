@@ -1,7 +1,7 @@
 import React from 'react';
 import { Navigate } from 'react-router-dom';
 import { useSelector } from 'react-redux';
-import type { RootState } from '../store';
+import type { RootState } from '@share/store';
 import Login from './Login';
 
 export const LoginRoute: React.FC = () => {

@@ -1,6 +1,6 @@
 import React, { useRef, useEffect, useState, useCallback } from 'react';
-import { UploadService } from '../services/uploadService';
-import { UploadedImage } from './ChatInterface.types';
+import { UploadService } from '@share/services/uploadService';
+import { UploadedImage } from '@share/types/ChatInterface.types';
 
 interface InputAreaProps {
   input: string;

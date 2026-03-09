@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useModelApi, Model } from '../hooks/ModelAPI';
+import { useModelApi, Model } from '@share/hooks/ModelAPI';
 import './ModelInterface.css';
 
 const ModelInterface: React.FC = () => {
