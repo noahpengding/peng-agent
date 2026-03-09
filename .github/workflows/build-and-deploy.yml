@@ -190,8 +190,8 @@ jobs:
       - name: Build and push web test image
         uses: docker/build-push-action@v5
         with:
-          context: ./web
-          file: ./web/Dockerfile
+          context: .
+          file: ./app/web/Dockerfile
           platforms: linux/amd64
           push: true
           tags: ${{ env.WEB_IMAGE }}:${{ env.VERSION }}-nightly
@@ -260,8 +260,8 @@ jobs:
       - name: Build and push web x64 image
         uses: docker/build-push-action@v5
         with:
-          context: ./web
-          file: ./web/Dockerfile
+          context: .
+          file: ./app/web/Dockerfile
           platforms: linux/amd64, linux/arm64
           push: true
           tags: |
