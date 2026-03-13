@@ -23,7 +23,7 @@ export default {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"
       },
-      "package": "com.noahpengding.peng-agent"
+      "package": "com.noahpengding.pengagent"
     },
     "web": {
       "favicon": "./assets/favicon.png"
