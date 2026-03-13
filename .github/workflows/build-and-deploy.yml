@@ -271,3 +271,68 @@ jobs:
             DD_GIT_REPOSITORY_URL=${{ env.GITHUB_REPOSITORY }}
             DD_GIT_COMMIT_SHA=${{ env.GITHUB_COMMIT_SHA }}
             VERSION=${{ env.VERSION }}
+
+  # Mobile App Builds
+  mobile-preview:
+    if: github.ref != 'refs/heads/main'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Setup Expo
+        uses: expo/expo-github-action@v8
+        with:
+          expo-version: latest
+          eas-version: latest
+          token: ${{ secrets.EXPO_TOKEN }}
+
+      - name: Install dependencies
+        run: |
+          cd app/share && bun install
+          cd ../mobile && bun install
+
+      - name: Build Mobile App (Preview)
+        run: cd app/mobile && eas build --platform android --profile preview --non-interactive
+
+  mobile-production:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Setup Expo
+        uses: expo/expo-github-action@v8
+        with:
+          expo-version: latest
+          eas-version: latest
+          token: ${{ secrets.EXPO_TOKEN }}
+
+      - name: Install dependencies
+        run: |
+          cd app/share && bun install
+          cd ../mobile && bun install
+
+      - name: Build Mobile App (Production)
+        run: cd app/mobile && eas build --platform android --profile production --non-interactive
