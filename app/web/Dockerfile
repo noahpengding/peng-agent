@@ -2,20 +2,23 @@ FROM dhi.io/bun:1-debian13-dev AS builder
 
 WORKDIR /app
 
-COPY . .
+COPY app/share ./app/share
+COPY app/web ./app/web
 
-RUN bun install --frozen-lockfile
+RUN cd app/share && bun install
 
-RUN bun run build
+RUN cd app/web && bun install
+
+RUN cd app/web && bun run build
 
 FROM dhi.io/nginx:1-debian13-dev
 
 
 WORKDIR /usr/share/nginx/html
 
-COPY --from=builder /app/dist ./
-COPY --from=builder /app/nginx.conf /etc/nginx/conf.d/
-COPY --from=builder /app/docker-entrypoint.sh /docker-entrypoint.sh
+COPY --from=builder /app/app/web/dist ./
+COPY --from=builder /app/app/web/nginx.conf /etc/nginx/conf.d/
+COPY --from=builder /app/app/web/docker-entrypoint.sh /docker-entrypoint.sh
 
 ARG DD_GIT_REPOSITORY_URL
 ARG DD_GIT_COMMIT_SHA
