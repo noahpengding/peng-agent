@@ -1,3 +1,5 @@
+import { storage } from '../utils/storage';
+
 interface UploadResponse {
   upload_path: string;
   success: boolean;
@@ -15,8 +17,8 @@ export const UploadService = {
     try {
       const apiUrl = `/proxy/upload`;
 
-      // Get auth token from localStorage
-      const token = localStorage.getItem('access_token');
+      // Get auth token from storage
+      const token = await storage.getItem('access_token');
 
       const response = await fetch(apiUrl, {
         method: 'POST',

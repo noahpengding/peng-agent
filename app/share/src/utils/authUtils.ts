@@ -1,5 +1,6 @@
 import { apiCall } from './apiUtils';
 import { jwtDecode } from 'jwt-decode';
+import { storage } from './storage';
 
 // Login function that calls the backend API
 export const login = async (username: string, password: string) => {
@@ -22,13 +23,14 @@ export const isTokenValid = (token: string | null): boolean => {
   }
 };
 
-// Helper to get token from localStorage
-export const getToken = (): string | null => {
-  return localStorage.getItem('access_token');
+// Helper to get token from storage
+export const getToken = async (): Promise<string | null> => {
+  const token = await storage.getItem('access_token');
+  return token;
 };
 
 // Add token to API requests
-export const getAuthHeader = () => {
-  const token = getToken();
+export const getAuthHeader = async () => {
+  const token = await getToken();
   return token ? { Authorization: `Bearer ${token}` } : {};
 };

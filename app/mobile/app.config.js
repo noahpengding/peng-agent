@@ -1,6 +1,7 @@
 export default {
   "expo": {
     "name": "PengAgent",
+    "owner": "noahpengding",
     "slug": "peng-agent",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -22,13 +23,16 @@ export default {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"
       },
-      "package": "com.pengagent.app"
+      "package": "com.noahpengding.peng-agent"
     },
     "web": {
       "favicon": "./assets/favicon.png"
     },
     "extra": {
-      "apiUrl": process.env.API_URL || "http://localhost:8000"
+      "eas": {
+        "projectId": "cde16b50-d44d-4e28-bad6-3ddac46544f7"
+      },
+      "apiUrl": process.env.API_URL
     }
   }
 };

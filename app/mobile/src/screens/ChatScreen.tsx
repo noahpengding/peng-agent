@@ -8,8 +8,8 @@ import {
   StyleSheet,
   KeyboardAvoidingView,
   Platform,
-  SafeAreaView
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useSelector, useDispatch } from 'react-redux';
 import { RootState } from '@share/store';
 import { sendMessage, setInput } from '@share/store/slices/chatSlice';

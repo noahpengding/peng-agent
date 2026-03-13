@@ -1,4 +1,5 @@
 import { apiCall } from '../utils/apiUtils';
+import { storage } from '../utils/storage';
 
 interface ChatRequest {
   user_name: string;
@@ -25,8 +26,8 @@ export const ChatService = {
     try {
       const apiUrl = `/proxy/chat`;
 
-      // Get auth token from localStorage
-      const token = localStorage.getItem('access_token');
+      // Get auth token from storage
+      const token = await storage.getItem('access_token');
 
       const response = await fetch(apiUrl, {
         method: 'POST',

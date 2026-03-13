@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { storage } from './storage';
 
 /**
  * Make an API call with the specified method and endpoint
@@ -7,8 +8,8 @@ export const apiCall = async (method: string, endpoint: string, data?: Record<st
   // Use the proxy path instead of the full backend URL
   const url = `/proxy${endpoint}`;
 
-  // Get token from localStorage for authenticated requests
-  const token = localStorage.getItem('access_token');
+  // Get token from storage for authenticated requests
+  const token = await storage.getItem('access_token');
 
   try {
     const response = await axios({
@@ -45,7 +46,7 @@ export const apiCall = async (method: string, endpoint: string, data?: Record<st
       // Handle authentication errors (401 Unauthorized)
       if (error.response?.status === 401) {
         // Clear the token
-        localStorage.removeItem('access_token');
+        await storage.removeItem('access_token');
         // Redirect to login page if we're in a browser environment
         if (typeof window !== 'undefined') {
           window.location.href = '/login';
