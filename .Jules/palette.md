@@ -5,3 +5,7 @@
 ## 2025-06-03 - Code Highlighting Robustness
 **Learning:** Regex `\w+` for language detection fails for languages with special characters like C++ or C#.
 **Action:** Use robust parsing (e.g., `split(' ')`) to ensure correct language identification in syntax highlighters.
+
+## 2025-06-03 - Password Toggle Accessibility
+**Learning:** Using `tabIndex={-1}` on password visibility toggles is a common anti-pattern that completely breaks keyboard accessibility for a crucial form element.
+**Action:** Remove `tabIndex={-1}` from password toggles and ensure they are focusable and have proper `aria-label` attributes.
