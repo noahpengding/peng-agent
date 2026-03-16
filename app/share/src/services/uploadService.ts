@@ -1,4 +1,5 @@
 import { storage } from '../utils/storage';
+import { buildApiUrl } from '../utils/apiBase';
 
 interface UploadResponse {
   upload_path: string;
@@ -15,7 +16,7 @@ export const UploadService = {
    */
   async uploadFile(fileContent: string, contentType: string, fileName?: string): Promise<[string, boolean]> {
     try {
-      const apiUrl = `/proxy/upload`;
+      const apiUrl = buildApiUrl('/upload');
 
       // Get auth token from storage
       const token = await storage.getItem('access_token');

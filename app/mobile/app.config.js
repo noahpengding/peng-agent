@@ -15,6 +15,12 @@ export default {
     "assetBundlePatterns": [
       "**/*"
     ],
+    "plugins": [
+      "expo-document-picker",
+      "expo-file-system",
+      "expo-image-picker",
+      "expo-secure-store"
+    ],
     "ios": {
       "supportsTablet": true
     },

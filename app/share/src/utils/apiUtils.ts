@@ -1,12 +1,12 @@
 import axios from 'axios';
 import { storage } from './storage';
+import { buildApiUrl } from './apiBase';
 
 /**
  * Make an API call with the specified method and endpoint
  */
 export const apiCall = async (method: string, endpoint: string, data?: Record<string, unknown>) => {
-  // Use the proxy path instead of the full backend URL
-  const url = `/proxy${endpoint}`;
+  const url = buildApiUrl(endpoint);
 
   // Get token from storage for authenticated requests
   const token = await storage.getItem('access_token');
@@ -48,7 +48,8 @@ export const apiCall = async (method: string, endpoint: string, data?: Record<st
         // Clear the token
         await storage.removeItem('access_token');
         // Redirect to login page if we're in a browser environment
-        if (typeof window !== 'undefined') {
+        const isReactNative = typeof navigator !== 'undefined' && navigator.product === 'ReactNative';
+        if (typeof window !== 'undefined' && !isReactNative) {
           window.location.href = '/login';
         }
       }

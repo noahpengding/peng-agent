@@ -1,5 +1,6 @@
 import { apiCall } from '../utils/apiUtils';
 import { storage } from '../utils/storage';
+import { buildApiUrl } from '../utils/apiBase';
 
 interface ChatRequest {
   user_name: string;
@@ -24,7 +25,7 @@ export const ChatService = {
     onError: (error: Error) => void
   ): Promise<void> {
     try {
-      const apiUrl = `/proxy/chat`;
+      const apiUrl = buildApiUrl('/chat');
 
       // Get auth token from storage
       const token = await storage.getItem('access_token');
@@ -44,55 +45,80 @@ export const ChatService = {
         throw new Error(`API error (${response.status}): ${errorText}`);
       }
 
-      if (!response.body) {
-        throw new Error('Response body is null');
-      }
+      const processPayloadLine = (line: string): boolean => {
+        const trimmed = line.trim();
+        if (!trimmed) return false;
 
-      const reader = response.body.getReader();
-      const decoder = new TextDecoder();
+        const normalized = trimmed.startsWith('data:') ? trimmed.slice(5).trim() : trimmed;
+        if (!normalized) return false;
 
-      let buffer = '';
-      let isCompleted = false; // Flag to prevent duplicate completion calls
-
-      while (true) {
-        if (isCompleted) {
-          onComplete();
-          break;
+        try {
+          const data = JSON.parse(normalized);
+          onChunk(data.chunk, data.type, data.done);
+          return Boolean(data.done);
+        } catch {
+          // Ignore malformed or partial lines.
+          return false;
         }
+      };
 
-        const { done, value } = await reader.read();
-
-        if (done) {
-          if (!isCompleted) {
-            isCompleted = true;
-            onComplete();
-          }
-          break;
-        }
-
-        buffer += decoder.decode(value, { stream: true });
-
-        // Process any complete JSON lines in the buffer
-        const lines = buffer.split('\n');
-        buffer = lines.pop() || ''; // Keep the last incomplete line in the buffer
+      const processBufferedLines = (payload: string): boolean => {
+        const lines = payload.split('\n');
+        let completed = false;
 
         for (const line of lines) {
+          if (completed) break;
+          completed = processPayloadLine(line);
+        }
+
+        return completed;
+      };
+
+      if (response.body && typeof response.body.getReader === 'function') {
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder();
+
+        let buffer = '';
+        let isCompleted = false;
+
+        while (true) {
           if (isCompleted) {
+            onComplete();
             break;
           }
-          if (line.trim()) {
-            try {
-              const data = JSON.parse(line);
-              onChunk(data.chunk, data.type, data.done);
-              if (data.done) {
-                isCompleted = true;
-              }
-            } catch {
-              // Silently handle JSON parsing errors to avoid console warnings
-              // This can happen with incomplete streaming data
+
+          const { done, value } = await reader.read();
+
+          if (done) {
+            // Flush any buffered final line before completing.
+            if (buffer.trim()) {
+              isCompleted = processBufferedLines(buffer);
+              buffer = '';
             }
+            if (!isCompleted) {
+              isCompleted = true;
+              onComplete();
+            }
+            break;
+          }
+
+          buffer += decoder.decode(value, { stream: true });
+          const lines = buffer.split('\n');
+          buffer = lines.pop() || '';
+
+          for (const line of lines) {
+            if (isCompleted) break;
+            isCompleted = processPayloadLine(line);
           }
         }
+      } else {
+        // React Native may not expose a readable stream body; parse the full text payload instead.
+        const rawText = await response.text();
+        processBufferedLines(rawText);
+        // Let UI paint chunk updates before completion state cleanup/folding.
+        await new Promise<void>((resolve) => setTimeout(resolve, 0));
+
+        onComplete();
       }
     } catch (error) {
       if (error instanceof Error) {

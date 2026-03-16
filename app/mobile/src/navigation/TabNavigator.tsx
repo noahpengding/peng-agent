@@ -1,110 +1,51 @@
 import React from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
-import { View, Text, StyleSheet } from 'react-native';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 import ChatScreen from '../screens/ChatScreen';
-import ModelModal from '../components/ModelModal';
-import RAGModal from '../components/RAGModal';
-import UserProfileModal from '../components/UserProfileModal';
+import ProfileScreen from '../screens/ProfileScreen';
 
 const Tab = createBottomTabNavigator();
 
 export default function TabNavigator() {
-  const [modelModalVisible, setModelModalVisible] = React.useState(false);
-  const [userProfileVisible, setUserProfileVisible] = React.useState(false);
-
   return (
-    <>
     <Tab.Navigator
       initialRouteName="Chat"
       screenOptions={{
         headerShown: false,
-        tabBarShowLabel: false,
+        tabBarShowLabel: true,
+        tabBarActiveTintColor: '#10B981',
+        tabBarInactiveTintColor: '#9CA3AF',
         tabBarStyle: {
-          backgroundColor: '#ffffff',
+          backgroundColor: '#212121',
           borderTopWidth: 1,
-          borderTopColor: '#e0e0e0',
-          height: 60,
+          borderTopColor: '#374151',
+          height: 64,
+          paddingBottom: 8,
+          paddingTop: 6,
         },
       }}
     >
       <Tab.Screen
-        name="ModelsMemory"
+        name="Chat"
+        component={ChatScreen}
         options={{
           tabBarIcon: ({ color, size }) => (
-            <View style={styles.iconContainer}>
-              <Text style={{ color, fontSize: size }} onPress={() => setModelModalVisible(true)}>M/M</Text>
-            </View>
+            <MaterialCommunityIcons name="chat-processing-outline" size={size} color={color} />
           ),
+          title: 'Chat',
         }}
-        listeners={{
-          tabPress: e => {
-            e.preventDefault();
-            setModelModalVisible(true);
-          },
-        }}
-      >
-        {() => <View />}
-      </Tab.Screen>
-
-      <Tab.Screen
-        name="Chat"
-        options={{
-          tabBarIcon: ({ color }) => (
-            <View style={styles.centerIconContainer}>
-              <Text style={{ color: 'white', fontSize: 24 }}>C</Text>
-            </View>
-          ),
-        }}
-        component={ChatScreen}
       />
 
       <Tab.Screen
-        name="ToolsProfile"
+        name="Profile"
+        component={ProfileScreen}
         options={{
           tabBarIcon: ({ color, size }) => (
-            <View style={styles.iconContainer}>
-              <Text style={{ color, fontSize: size }}>T/P</Text>
-            </View>
+            <MaterialCommunityIcons name="account-circle-outline" size={size} color={color} />
           ),
+          title: 'Profile',
         }}
-        listeners={{
-          tabPress: e => {
-            e.preventDefault();
-            setUserProfileVisible(true);
-          },
-        }}
-      >
-        {() => <View />}
-      </Tab.Screen>
+      />
     </Tab.Navigator>
-    <ModelModal visible={modelModalVisible} onClose={() => setModelModalVisible(false)} />
-    <UserProfileModal visible={userProfileVisible} onClose={() => setUserProfileVisible(false)} />
-    </>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  iconContainer: {
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  centerIconContainer: {
-    justifyContent: 'center',
-    alignItems: 'center',
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    backgroundColor: '#007AFF', // Theme color
-    marginBottom: 20, // Push it up
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.3,
-    shadowRadius: 3,
-    elevation: 5,
-  },
-});

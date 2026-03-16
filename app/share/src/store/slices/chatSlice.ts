@@ -54,6 +54,13 @@ const initialState: ChatState = {
   shortTermMemory: [],
 };
 
+const SUPPORTED_CHUNK_TYPES: Array<NonNullable<Message['type']>> = [
+  'output_text',
+  'reasoning_summary',
+  'tool_calls',
+  'tool_output',
+];
+
 const extractChatIdFromChunk = (chunk: string): number | null => {
   const trimmed = chunk.trim();
   if (!trimmed) return null;
@@ -152,33 +159,23 @@ const chatSlice = createSlice({
     // Actions for streaming
     handleChunk: (state, action: PayloadAction<{ chunk: string; type: string; done: boolean; messageId: string }>) => {
       const { chunk, type, done, messageId } = action.payload;
+      const normalizedType = type?.trim() as Message['type'];
 
       if (done && !chunk) return;
+      if (!SUPPORTED_CHUNK_TYPES.includes(normalizedType)) return;
 
-      if (type === 'tool_calls' || type === 'tool_output') {
-        state.messages.push({
-          role: 'assistant',
-          content: chunk,
-          type: type as Message['type'],
-          folded: false,
-          messageId,
+      if (normalizedType === 'output_text') {
+        // Collapse intermediate chunks only after final text starts streaming.
+        state.messages = state.messages.map((message) => {
+          if (
+            message.messageId === messageId &&
+            (message.type === 'reasoning_summary' || message.type === 'tool_calls' || message.type === 'tool_output')
+          ) {
+            return { ...message, folded: true };
+          }
+          return message;
         });
-      } else if (type === 'reasoning_summary') {
-        const lastMessage = state.messages[state.messages.length - 1];
-        const isContinuation = lastMessage && lastMessage.type === 'reasoning_summary' && lastMessage.messageId === messageId;
 
-        if (isContinuation) {
-          lastMessage.content += chunk;
-        } else {
-          state.messages.push({
-            role: 'assistant',
-            content: chunk,
-            type: 'reasoning_summary',
-            folded: false,
-            messageId,
-          });
-        }
-      } else if (type === 'output_text') {
         const lastMessage = state.messages[state.messages.length - 1];
         const isOutputContinuation = lastMessage && lastMessage.type === 'output_text' && lastMessage.messageId === messageId;
 
@@ -192,13 +189,28 @@ const chatSlice = createSlice({
             messageId,
           });
         }
+      } else {
+        const lastMessage = state.messages[state.messages.length - 1];
+        const isContinuation = lastMessage && lastMessage.type === normalizedType && lastMessage.messageId === messageId;
+
+        if (isContinuation) {
+          lastMessage.content += chunk;
+        } else {
+          state.messages.push({
+            role: 'assistant',
+            content: chunk,
+            type: normalizedType as Message['type'],
+            folded: false,
+            messageId,
+          });
+        }
       }
     },
     finishMessage: (state, action: PayloadAction<{ messageId: string }>) => {
       const { messageId } = action.payload;
       state.messages = state.messages.map((m) => {
         if (m.messageId === messageId) {
-          if (m.type === 'tool_calls' || m.type === 'tool_output' || m.type === 'reasoning_summary') {
+          if (m.type && m.type !== 'output_text' && m.type !== 'assistant' && m.type !== 'user') {
             return { ...m, folded: true };
           } else if (m.type === 'output_text') {
             return { ...m, content: m.content.replace(/\n\n+/g, '\n') };
