@@ -252,7 +252,7 @@ jobs:
           cd ../mobile && bun install
 
       - name: Build Mobile App (Preview)
-        run: cd app/mobile && eas build --platform android --profile preview --local --non-interactive --output=./build-preview.aab
+        run: cd app/mobile && eas build --platform android --profile preview --local --non-interactive --output=./build-preview.apk
         env:
           EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
 
@@ -265,7 +265,7 @@ jobs:
       - name: Upload build to EAS Dashboard
         run: |
           cd app/mobile
-          eas build:upload --platform android --path=./build-preview.aab --profile preview --non-interactive
+          eas build create --platform android --path=./build-preview.apk --profile preview --non-interactive
         env:
           EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
 
@@ -385,7 +385,7 @@ jobs:
       - name: Upload build to EAS Dashboard
         run: |
           cd app/mobile
-          eas build:upload --platform android --path=./build-production.aab --profile production --non-interactive
+          eas build create --platform android --path=./build-production.aab --profile production --non-interactive
         env:
           EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
 
