@@ -1,7 +1,7 @@
 {
   "name": "peng-agent-web",
   "private": true,
-  "version": "2.4.1",
+  "version": "2.4.2",
   "type": "module",
   "scripts": {
     "dev": "bun --env-file=../../test/front.env run vite",

@@ -3,7 +3,7 @@ export default {
     "name": "PengAgent",
     "owner": "noahpengding",
     "slug": "peng-agent",
-    "version": "1.0.0",
+    "version": "2.4.2",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
