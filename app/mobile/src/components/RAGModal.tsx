@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   Modal,
   View,
@@ -9,7 +9,6 @@ import {
   TextInput,
   ActivityIndicator,
   Alert,
-  FlatList,
 } from 'react-native';
 import * as DocumentPicker from 'expo-document-picker';
 import * as FileSystem from 'expo-file-system';
@@ -32,11 +31,21 @@ export default function RAGModal({ visible, onClose }: { visible: boolean; onClo
 
   const { getAllRAGDocuments, indexDocument, isLoading } = useRAGApi();
 
+  const loadDocuments = useCallback(async () => {
+    try {
+      const docs = await getAllRAGDocuments();
+      setDocuments(docs || []);
+      setFilteredDocuments(docs || []);
+    } catch (err) {
+      Alert.alert('Error', `Failed to load documents: ${err}`);
+    }
+  }, [getAllRAGDocuments]);
+
   useEffect(() => {
     if (visible) {
       loadDocuments();
     }
-  }, [visible]);
+  }, [visible, loadDocuments]);
 
   useEffect(() => {
     if (documents.length > 0) {
@@ -52,16 +61,6 @@ export default function RAGModal({ visible, onClose }: { visible: boolean; onClo
       setFilteredDocuments(documents);
     }
   }, [selectedKnowledgeBase, documents]);
-
-  const loadDocuments = async () => {
-    try {
-      const docs = await getAllRAGDocuments();
-      setDocuments(docs);
-      setFilteredDocuments(docs);
-    } catch (err) {
-      Alert.alert('Error', `Failed to load documents: ${err}`);
-    }
-  };
 
   const handlePickDocument = async () => {
     try {
@@ -126,14 +125,6 @@ export default function RAGModal({ visible, onClose }: { visible: boolean; onClo
       Alert.alert('Error', `Indexing failed: ${err}`);
     }
   };
-
-  const renderDocumentItem = ({ item }: { item: RAGDocument }) => (
-    <View style={styles.docCard}>
-      <Text style={styles.docTitle}>{item.title || 'Untitled'}</Text>
-      <Text style={styles.docInfo}>KB: {item.knowledge_base} | Type: {item.type}</Text>
-      <Text style={styles.docPath} numberOfLines={1}>{item.path}</Text>
-    </View>
-  );
 
   return (
     <Modal animationType="slide" transparent={true} visible={visible} onRequestClose={onClose}>

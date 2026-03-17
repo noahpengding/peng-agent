@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Image,
@@ -19,9 +19,7 @@ import Animated, {
   FadeOut, 
   FadeInDown, 
   FadeInUp,
-  Layout, 
   SlideInRight,
-  SlideOutRight,
   LinearTransition,
   ZoomIn
 } from 'react-native-reanimated';
@@ -378,11 +376,7 @@ export default function ChatScreen() {
   ), [foldedMessages, toggleFolded, handleFeedback]);
 
   return (
-    <SafeAreaView style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.headerTitle}>Chat</Text>
-      </View>
-
+    <SafeAreaView style={styles.container} edges={['top']}>
       <Animated.View layout={LinearTransition} style={styles.configPanel}>
         <Pressable style={styles.configToggleButton} onPress={() => setIsConfigExpanded((prev) => !prev)}>
           <Text style={styles.configToggleText}>Chat Configuration</Text>
@@ -577,26 +571,6 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: Colors.bgDeep,
   },
-  header: {
-    height: 60,
-    flexDirection: 'row',
-    justifyContent: 'flex-start',
-    alignItems: 'center',
-    backgroundColor: Colors.primary,
-    paddingHorizontal: Typography.spacing.sm,
-    elevation: 4,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
-  },
-
-  headerTitle: {
-    fontSize: Typography.sizes.lg,
-    fontWeight: Typography.weights.black,
-    color: Colors.white,
-    letterSpacing: Typography.letterSpacing.tight,
-  },
   listContent: {
     padding: Typography.spacing.sm,
   },
@@ -678,8 +652,6 @@ const styles = StyleSheet.create({
     fontWeight: Typography.weights.black,
     fontSize: Typography.sizes.sm,
     textTransform: 'uppercase',
-  },
-
   },
   configPanel: {
     backgroundColor: Colors.bgSurface,

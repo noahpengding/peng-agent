@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import {
   Modal,
   View,
@@ -14,7 +14,6 @@ import {
 import { useMemoryApi, Memory } from '@share/hooks/MemoryAPI';
 import { useSelector, useDispatch } from 'react-redux';
 import { RootState } from '@share/store';
-import { storage } from '@share/utils/storage';
 import { setShortTermMemory, setMessages } from '@share/store/slices/chatSlice';
 import { Message } from '@share/types/ChatInterface.types';
 import { Colors } from '../utils/colors';
@@ -29,20 +28,21 @@ export default function MemoryModal({ visible, onClose }: { visible: boolean; on
   const { user } = useSelector((state: RootState) => state.auth);
   const dispatch = useDispatch();
 
-  useEffect(() => {
-    if (visible && user) {
-      loadMemories();
-    }
-  }, [visible, user]);
-
-  const loadMemories = async () => {
+  const loadMemories = useCallback(async () => {
+    if (!user) return;
     try {
-      const fetched = await fetchMemories(user || 'peng');
+      const fetched = await fetchMemories(user);
       setMemories(fetched);
     } catch (err) {
       Alert.alert('Error', `Failed to fetch memories: ${err}`);
     }
-  };
+  }, [fetchMemories, user]);
+
+  useEffect(() => {
+    if (visible && user) {
+      loadMemories();
+    }
+  }, [visible, user, loadMemories]);
 
   const filteredMemories = useMemo(() => {
     if (!searchTerm.trim()) return memories;

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import { UserService } from '../services/userService';
 
 export interface UserProfile {
@@ -30,7 +30,7 @@ export const useUserApi = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const getProfile = async (): Promise<UserProfile> => {
+  const getProfile = useCallback(async (): Promise<UserProfile> => {
     setIsLoading(true);
     setError(null);
 
@@ -44,9 +44,9 @@ export const useUserApi = () => {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, []);
 
-  const updateProfile = async (payload: UpdateUserProfilePayload): Promise<void> => {
+  const updateProfile = useCallback(async (payload: UpdateUserProfilePayload): Promise<void> => {
     setIsLoading(true);
     setError(null);
 
@@ -59,9 +59,9 @@ export const useUserApi = () => {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, []);
 
-  const regenerateToken = async (): Promise<{ api_token: string }> => {
+  const regenerateToken = useCallback(async (): Promise<{ api_token: string }> => {
     setIsLoading(true);
     setError(null);
 
@@ -75,7 +75,7 @@ export const useUserApi = () => {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, []);
 
   return {
     getProfile,

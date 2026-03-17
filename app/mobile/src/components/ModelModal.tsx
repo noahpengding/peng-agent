@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   Modal,
   View,
@@ -13,13 +13,13 @@ import {
 } from 'react-native';
 import { useModelApi, Model } from '@share/hooks/ModelAPI';
 import { Colors } from '../utils/colors';
+import { Typography } from '../utils/typography';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 
 export default function ModelModal({ visible, onClose }: { visible: boolean; onClose: () => void }) {
   const {
     getAllModels,
     toggleModelAvailability,
-    toggleModelMultimodal,
-    toggleModelReasoningEffect,
     refreshModels,
     isLoading,
   } = useModelApi();
@@ -28,22 +28,23 @@ export default function ModelModal({ visible, onClose }: { visible: boolean; onC
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedOperator, setSelectedOperator] = useState<string>('');
   const [availabilityFilter, setAvailabilityFilter] = useState<string>('all');
-  const [error, setError] = useState<string>('');
+
+  const fetchModels = useCallback(async () => {
+    try {
+      const fetchedModels = await getAllModels();
+      setModels(fetchedModels || []);
+    } catch (err) {
+      console.error(`Failed to fetch models: ${err}`);
+      // Only alert if we're not loading (to avoid multiple alerts during re-renders if any)
+      Alert.alert('Error', 'Failed to fetch models. Please check your connection.');
+    }
+  }, [getAllModels]);
 
   useEffect(() => {
     if (visible) {
       fetchModels();
     }
-  }, [visible]);
-
-  const fetchModels = async () => {
-    try {
-      const fetchedModels = await getAllModels();
-      setModels(fetchedModels);
-    } catch (err) {
-      setError(`Failed to fetch models: ${err}`);
-    }
-  };
+  }, [visible, fetchModels]);
 
   const handleRefresh = async () => {
     try {
@@ -68,63 +69,19 @@ export default function ModelModal({ visible, onClose }: { visible: boolean; onC
     }
   };
 
-  const handleModelMultimodal = async (modelName: string, column: keyof Model) => {
-    try {
-      await toggleModelMultimodal(modelName, column as string);
-      setModels((prevModels) =>
-        prevModels.map((model) =>
-          model.model_name === modelName
-            ? {
-                ...model,
-                [column]: !model[column],
-              }
-            : model
-        )
-      );
-    } catch (err) {
-      Alert.alert('Error', `Failed to toggle multimodal: ${err}`);
-    }
-  };
+  const operators = useMemo(() => Array.from(new Set(models.map((m) => m.operator))), [models]);
 
-  const handleModelReasoningEffect = async (modelName: string, effect: string) => {
-    try {
-      await toggleModelReasoningEffect(modelName, effect);
-      setModels((prevModels) =>
-        prevModels.map((model) =>
-          model.model_name === modelName ? { ...model, reasoning_effect: effect } : model
-        )
-      );
-    } catch (err) {
-      Alert.alert('Error', `Failed to set reasoning effect: ${err}`);
-    }
-  };
-
-  const operators = Array.from(new Set(models.map((m) => m.operator)));
-
-  const filteredModels = models.filter((model) => {
-    const matchesSearch = model.model_name.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesOperator = selectedOperator === '' || model.operator === selectedOperator;
-    const matchesAvailability =
-      availabilityFilter === 'all' ||
-      (availabilityFilter === 'available' && model.isAvailable) ||
-      (availabilityFilter === 'unavailable' && !model.isAvailable);
-    return matchesSearch && matchesOperator && matchesAvailability;
-  });
-
-  const renderModalityIcon = (type: string, active: boolean) => {
-    let emoji = '';
-    switch (type) {
-      case 'text': emoji = '📝'; break;
-      case 'image': emoji = '🖼️'; break;
-      case 'audio': emoji = '🔊'; break;
-      case 'video': emoji = '🎥'; break;
-    }
-    return (
-      <View style={[styles.modalityIcon, active && styles.modalityIconActive]}>
-        <Text style={{ fontSize: 12 }}>{emoji}</Text>
-      </View>
-    );
-  };
+  const filteredModels = useMemo(() => {
+    return models.filter((model) => {
+      const matchesSearch = model.model_name.toLowerCase().includes(searchTerm.toLowerCase());
+      const matchesOperator = selectedOperator === '' || model.operator === selectedOperator;
+      const matchesAvailability =
+        availabilityFilter === 'all' ||
+        (availabilityFilter === 'available' && model.isAvailable) ||
+        (availabilityFilter === 'unavailable' && !model.isAvailable);
+      return matchesSearch && matchesOperator && matchesAvailability;
+    });
+  }, [models, searchTerm, selectedOperator, availabilityFilter]);
 
   return (
     <Modal animationType="slide" transparent={true} visible={visible} onRequestClose={onClose}>
@@ -133,7 +90,7 @@ export default function ModelModal({ visible, onClose }: { visible: boolean; onC
           <View style={styles.header}>
             <Text style={styles.modalText}>Model Management</Text>
             <TouchableOpacity onPress={onClose} style={styles.closeButton}>
-              <Text style={styles.closeButtonText}>✕</Text>
+              <MaterialCommunityIcons name="close" size={24} color={Colors.textDim} />
             </TouchableOpacity>
           </View>
 
@@ -141,6 +98,7 @@ export default function ModelModal({ visible, onClose }: { visible: boolean; onC
             <TextInput
               style={styles.searchInput}
               placeholder="Search models..."
+              placeholderTextColor={Colors.textMuted}
               value={searchTerm}
               onChangeText={setSearchTerm}
             />
@@ -149,9 +107,11 @@ export default function ModelModal({ visible, onClose }: { visible: boolean; onC
               onPress={handleRefresh}
               disabled={isLoading}
             >
-              <Text style={styles.refreshButtonText}>
-                {isLoading ? 'Refreshing...' : 'Refresh Models'}
-              </Text>
+              {isLoading ? (
+                <ActivityIndicator size="small" color={Colors.white} />
+              ) : (
+                <MaterialCommunityIcons name="refresh" size={20} color={Colors.white} />
+              )}
             </TouchableOpacity>
           </View>
 
@@ -161,7 +121,7 @@ export default function ModelModal({ visible, onClose }: { visible: boolean; onC
                   style={[styles.filterChip, selectedOperator === '' && styles.filterChipActive]}
                   onPress={() => setSelectedOperator('')}
                 >
-                  <Text style={[styles.filterChipText, selectedOperator === '' && styles.filterChipTextActive]}>All</Text>
+                  <Text style={[styles.filterChipText, selectedOperator === '' && styles.filterChipTextActive]}>All Operators</Text>
                 </TouchableOpacity>
                 {operators.map(op => (
                   <TouchableOpacity 
@@ -175,88 +135,50 @@ export default function ModelModal({ visible, onClose }: { visible: boolean; onC
              </ScrollView>
           </View>
 
+          <View style={styles.filterRow}>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+              {['all', 'available', 'unavailable'].map(filter => (
+                <TouchableOpacity
+                  key={filter}
+                  style={[styles.filterChip, availabilityFilter === filter && styles.filterChipActive]}
+                  onPress={() => setAvailabilityFilter(filter)}
+                >
+                  <Text style={[styles.filterChipText, availabilityFilter === filter && styles.filterChipTextActive]}>
+                    {filter === 'all' ? 'All Status' : filter.charAt(0).toUpperCase() + filter.slice(1)}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          </View>
+
           {isLoading && models.length === 0 ? (
-            <ActivityIndicator size="large" color="#007AFF" style={{ marginTop: 20 }} />
+            <ActivityIndicator size="large" color={Colors.primary} style={{ marginTop: 20 }} />
           ) : (
-            <ScrollView style={styles.modelList}>
+            <ScrollView 
+              style={styles.modelList} 
+              showsVerticalScrollIndicator={false}
+              removeClippedSubviews={true}
+            >
               {filteredModels.map((model) => (
                 <View key={model.id} style={styles.modelCard}>
                   <View style={styles.modelHeader}>
-                    <View>
-                      <Text style={styles.modelName}>{model.model_name}</Text>
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.modelName} numberOfLines={1}>{model.model_name}</Text>
                       <Text style={styles.modelOperator}>{model.operator}</Text>
                     </View>
                     <Switch
                       value={model.isAvailable}
                       onValueChange={() => handleAvailabilityToggle(model.model_name)}
+                      trackColor={{ false: Colors.bgHover, true: Colors.primarySoft }}
+                      thumbColor={model.isAvailable ? Colors.primary : Colors.textMuted}
                     />
-                  </View>
-
-                  <View style={styles.modalitySection}>
-                    <Text style={styles.sectionLabel}>Input Modalities:</Text>
-                    <View style={styles.modalityRow}>
-                      <TouchableOpacity onPress={() => handleModelMultimodal(model.model_name, 'input_text')}>
-                        {renderModalityIcon('text', model.input_text)}
-                      </TouchableOpacity>
-                      <TouchableOpacity onPress={() => handleModelMultimodal(model.model_name, 'input_image')}>
-                        {renderModalityIcon('image', model.input_image)}
-                      </TouchableOpacity>
-                      <TouchableOpacity onPress={() => handleModelMultimodal(model.model_name, 'input_audio')}>
-                        {renderModalityIcon('audio', model.input_audio)}
-                      </TouchableOpacity>
-                      <TouchableOpacity onPress={() => handleModelMultimodal(model.model_name, 'input_video')}>
-                        {renderModalityIcon('video', model.input_video)}
-                      </TouchableOpacity>
-                    </View>
-                  </View>
-
-                  <View style={styles.modalitySection}>
-                    <Text style={styles.sectionLabel}>Output Modalities:</Text>
-                    <View style={styles.modalityRow}>
-                      <TouchableOpacity onPress={() => handleModelMultimodal(model.model_name, 'output_text')}>
-                        {renderModalityIcon('text', model.output_text)}
-                      </TouchableOpacity>
-                      <TouchableOpacity onPress={() => handleModelMultimodal(model.model_name, 'output_image')}>
-                        {renderModalityIcon('image', model.output_image)}
-                      </TouchableOpacity>
-                      <TouchableOpacity onPress={() => handleModelMultimodal(model.model_name, 'output_audio')}>
-                        {renderModalityIcon('audio', model.output_audio)}
-                      </TouchableOpacity>
-                      <TouchableOpacity onPress={() => handleModelMultimodal(model.model_name, 'output_video')}>
-                        {renderModalityIcon('video', model.output_video)}
-                      </TouchableOpacity>
-                    </View>
-                  </View>
-
-                  <View style={styles.reasoningSection}>
-                    <Text style={styles.sectionLabel}>Reasoning Effect:</Text>
-                    <View style={styles.reasoningButtons}>
-                      {['not a reasoning model', 'low', 'medium', 'high'].map((effect) => (
-                        <TouchableOpacity
-                          key={effect}
-                          style={[
-                            styles.reasoningButton,
-                            model.reasoning_effect === effect && styles.reasoningButtonActive,
-                          ]}
-                          onPress={() => handleModelReasoningEffect(model.model_name, effect)}
-                        >
-                          <Text
-                            style={[
-                              styles.reasoningButtonText,
-                              model.reasoning_effect === effect && styles.reasoningButtonTextActive,
-                            ]}
-                          >
-                            {effect === 'not a reasoning model' ? 'None' : effect.charAt(0).toUpperCase() + effect.slice(1)}
-                          </Text>
-                        </TouchableOpacity>
-                      ))}
-                    </View>
                   </View>
                 </View>
               ))}
               {filteredModels.length === 0 && (
                 <Text style={styles.noModels}>No models found matching your criteria.</Text>
               )}
+              <View style={{ height: 40 }} />
             </ScrollView>
           )}
         </View>
@@ -269,166 +191,123 @@ const styles = StyleSheet.create({
   centeredView: {
     flex: 1,
     justifyContent: 'flex-end',
-    backgroundColor: 'rgba(0,0,0,0.5)',
+    backgroundColor: 'rgba(0,0,0,0.7)',
   },
   modalView: {
-    backgroundColor: '#f8f9fa',
-    borderTopLeftRadius: 25,
-    borderTopRightRadius: 25,
-    padding: 20,
-    height: '90%',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: -2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 4,
-    elevation: 5,
+    backgroundColor: Colors.bgSurface,
+    borderTopLeftRadius: 28,
+    borderTopRightRadius: 28,
+    padding: Typography.spacing.lg,
+    height: '95%',
+    borderWidth: 1,
+    borderColor: Colors.border,
   },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 20,
+    marginBottom: Typography.spacing.lg,
   },
   modalText: {
-    fontSize: 22,
-    fontWeight: 'bold',
-    color: '#1a1a1a',
+    fontSize: Typography.sizes.xl,
+    fontWeight: Typography.weights.black,
+    color: Colors.primary,
+    letterSpacing: Typography.letterSpacing.tight,
   },
   closeButton: {
     padding: 5,
-  },
-  closeButtonText: {
-    fontSize: 24,
-    color: '#6c757d',
+    backgroundColor: Colors.bgDeep,
+    borderRadius: 10,
+    width: 36,
+    height: 36,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: Colors.border,
   },
   controls: {
     flexDirection: 'row',
-    marginBottom: 15,
-    gap: 10,
+    marginBottom: Typography.spacing.md,
+    gap: Typography.spacing.sm,
   },
   searchInput: {
     flex: 1,
-    backgroundColor: 'white',
-    paddingHorizontal: 15,
-    paddingVertical: 10,
-    borderRadius: 10,
+    backgroundColor: Colors.bgDeep,
+    paddingHorizontal: Typography.spacing.sm,
+    paddingVertical: Typography.spacing.sm,
+    borderRadius: 12,
     borderWidth: 1,
-    borderColor: '#dee2e6',
+    borderColor: Colors.border,
+    color: Colors.textMain,
+    fontSize: Typography.sizes.base,
   },
   refreshButton: {
-    backgroundColor: '#007AFF',
-    paddingHorizontal: 15,
-    paddingVertical: 10,
-    borderRadius: 10,
+    backgroundColor: Colors.primary,
+    width: 48,
+    borderRadius: 12,
     justifyContent: 'center',
-  },
-  refreshButtonText: {
-    color: 'white',
-    fontWeight: '600',
+    alignItems: 'center',
+    elevation: 2,
+    shadowColor: Colors.primary,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
   },
   filterRow: {
-    marginBottom: 15,
+    marginBottom: Typography.spacing.sm,
   },
   filterChip: {
-    paddingHorizontal: 15,
+    paddingHorizontal: Typography.spacing.sm,
     paddingVertical: 6,
     borderRadius: 20,
-    backgroundColor: '#e9ecef',
+    backgroundColor: Colors.bgDeep,
     marginRight: 8,
+    borderWidth: 1,
+    borderColor: Colors.border,
   },
   filterChipActive: {
-    backgroundColor: '#007AFF',
+    backgroundColor: Colors.primarySoft,
+    borderColor: Colors.primary,
   },
   filterChipText: {
-    color: '#495057',
-    fontSize: 14,
+    color: Colors.textDim,
+    fontSize: Typography.sizes.xs,
+    fontWeight: Typography.weights.bold,
   },
   filterChipTextActive: {
-    color: 'white',
+    color: Colors.primary,
   },
   modelList: {
     flex: 1,
   },
   modelCard: {
-    backgroundColor: 'white',
-    borderRadius: 15,
-    padding: 15,
-    marginBottom: 15,
+    backgroundColor: Colors.bgCard,
+    borderRadius: 16,
+    padding: Typography.spacing.md,
+    marginBottom: Typography.spacing.sm,
     borderWidth: 1,
-    borderColor: '#dee2e6',
+    borderColor: Colors.border,
   },
   modelHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 12,
   },
   modelName: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#1a1a1a',
+    fontSize: Typography.sizes.base,
+    fontWeight: Typography.weights.bold,
+    color: Colors.textMain,
   },
   modelOperator: {
-    fontSize: 14,
-    color: '#6c757d',
-  },
-  modalitySection: {
-    marginBottom: 10,
-  },
-  sectionLabel: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#495057',
-    marginBottom: 5,
-  },
-  modalityRow: {
-    flexDirection: 'row',
-    gap: 8,
-  },
-  modalityIcon: {
-    width: 32,
-    height: 32,
-    borderRadius: 6,
-    backgroundColor: '#f8f9fa',
-    borderWidth: 1,
-    borderColor: '#dee2e6',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  modalityIconActive: {
-    backgroundColor: '#e7f3ff',
-    borderColor: '#007AFF',
-  },
-  reasoningSection: {
-    marginTop: 5,
-  },
-  reasoningButtons: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 6,
-  },
-  reasoningButton: {
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: 6,
-    borderWidth: 1,
-    borderColor: '#dee2e6',
-    backgroundColor: '#f8f9fa',
-  },
-  reasoningButtonActive: {
-    backgroundColor: '#007AFF',
-    borderColor: '#007AFF',
-  },
-  reasoningButtonText: {
-    fontSize: 12,
-    color: '#495057',
-  },
-  reasoningButtonTextActive: {
-    color: 'white',
+    fontSize: Typography.sizes.xs,
+    color: Colors.primary,
+    fontWeight: Typography.weights.bold,
+    marginTop: 2,
   },
   noModels: {
     textAlign: 'center',
-    marginTop: 20,
-    color: '#6c757d',
+    marginTop: Typography.spacing.xl,
+    color: Colors.textMuted,
+    fontSize: Typography.sizes.base,
   },
 });

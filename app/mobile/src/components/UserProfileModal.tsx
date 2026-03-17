@@ -9,7 +9,6 @@ import {
   TextInput,
   ActivityIndicator,
   Alert,
-  Switch,
 } from 'react-native';
 import { useUserApi, UserProfile } from '@share/hooks/UserAPI';
 import { ModelInfo } from '@share/types/ChatInterface.types';
@@ -35,7 +34,7 @@ export default function UserProfileModal({
     try {
       const data = await getProfile();
       setProfile(data);
-    } catch (err) {
+    } catch {
       Alert.alert('Error', 'Failed to load profile');
     }
   }, [getProfile]);
@@ -65,7 +64,7 @@ export default function UserProfileModal({
       await updateProfile(payload);
       Alert.alert('Success', 'Profile updated successfully');
       onClose();
-    } catch (err) {
+    } catch {
       Alert.alert('Error', 'Failed to save profile');
     } finally {
       setSaving(false);
@@ -100,7 +99,7 @@ export default function UserProfileModal({
       const response = await regenerateToken();
       setProfile({ ...profile, api_token: response.api_token });
       Alert.alert('Success', 'API Token regenerated');
-    } catch (err) {
+    } catch {
       Alert.alert('Error', 'Failed to regenerate token');
     } finally {
       setRegeneratingToken(false);

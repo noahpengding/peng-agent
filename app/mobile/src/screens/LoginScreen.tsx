@@ -12,7 +12,6 @@ import {
 } from 'react-native';
 import Animated, { 
   FadeInDown, 
-  FadeInUp, 
   FadeIn,
   Layout,
   SlideInUp
@@ -25,6 +24,7 @@ import { login as loginApi } from '@share/utils/authUtils';
 import { Colors } from '../utils/colors';
 import { Typography } from '../utils/typography';
 
+// eslint-disable-next-line @typescript-eslint/no-require-imports
 const HERO_IMAGE = require('../../assets/splash.png');
 
 export default function LoginScreen() {

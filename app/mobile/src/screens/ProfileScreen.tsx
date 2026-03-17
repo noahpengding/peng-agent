@@ -7,6 +7,7 @@ import { UserService } from '@share/services/userService';
 import { RootState } from '@share/store';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { Colors } from '../utils/colors';
+import { Typography } from '../utils/typography';
 
 import UserProfileModal from '../components/UserProfileModal';
 import ModelModal from '../components/ModelModal';
@@ -20,7 +21,6 @@ export default function ProfileScreen() {
   const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
 
   // Modal visibility states
   const [profileVisible, setProfileVisible] = useState(false);
@@ -34,7 +34,7 @@ export default function ProfileScreen() {
       setUsername(profile.username || 'Unknown user');
       setEmail(profile.email || 'No email set');
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load profile');
+      console.error(err instanceof Error ? err.message : 'Failed to load profile');
     } finally {
       setLoading(false);
     }
@@ -44,7 +44,7 @@ export default function ProfileScreen() {
     fetchProfile();
   }, []);
 
-  const menuItems = [
+  const menuItems: { title: string; icon: keyof typeof MaterialCommunityIcons.glyphMap; onPress: () => void; description: string }[] = [
     {
       title: 'User Profile',
       icon: 'account-cog-outline',
@@ -72,7 +72,7 @@ export default function ProfileScreen() {
   ];
 
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <SafeAreaView style={styles.safeArea} edges={['top']}>
       <ScrollView contentContainerStyle={styles.container}>
         <View style={styles.header}>
             <Text style={styles.title}>Settings & Profile</Text>
@@ -96,7 +96,7 @@ export default function ProfileScreen() {
           {menuItems.map((item, index) => (
             <Pressable key={index} style={styles.menuItem} onPress={item.onPress}>
               <View style={styles.menuIconContainer}>
-                <MaterialCommunityIcons name={item.icon as any} size={24} color="#10B981" />
+                <MaterialCommunityIcons name={item.icon} size={24} color="#10B981" />
               </View>
               <View style={styles.menuTextContainer}>
                 <Text style={styles.menuItemTitle}>{item.title}</Text>
@@ -130,7 +130,7 @@ export default function ProfileScreen() {
             setProfileVisible(false);
             fetchProfile(); // Refresh profile info after edit
         }} 
-        availableModels={availableBaseModels as any}
+        availableModels={availableBaseModels}
       />
       <ModelModal 
         visible={modelVisible} 
@@ -175,7 +175,6 @@ const styles = StyleSheet.create({
     marginBottom: Typography.spacing.lg,
     borderWidth: 1,
     borderColor: Colors.border,
-    boxShadow: var(--shadow-md),
   },
   avatar: {
     width: 64,

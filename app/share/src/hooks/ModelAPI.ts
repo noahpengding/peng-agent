@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useCallback, useRef } from 'react';
 import { ModelService } from '../services/modelService';
 
 // Export the Model interface from the hook file for component use
@@ -22,24 +22,35 @@ export interface Model {
 export const useModelApi = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const getAllModelsInFlightRef = useRef<Promise<Model[]> | null>(null);
 
-  const getAllModels = async (): Promise<Model[]> => {
+  const getAllModels = useCallback(async (): Promise<Model[]> => {
+    if (getAllModelsInFlightRef.current) {
+      return getAllModelsInFlightRef.current;
+    }
+
     setIsLoading(true);
     setError(null);
 
-    try {
-      const data = await ModelService.getAllModels();
-      return data || [];
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Unknown error occurred';
-      setError(errorMessage);
-      throw err;
-    } finally {
-      setIsLoading(false);
-    }
-  };
+    const request = (async () => {
+      try {
+        const data = await ModelService.getAllModels();
+        return data || [];
+      } catch (err) {
+        const errorMessage = err instanceof Error ? err.message : 'Unknown error occurred';
+        setError(errorMessage);
+        throw err;
+      } finally {
+        setIsLoading(false);
+        getAllModelsInFlightRef.current = null;
+      }
+    })();
 
-  const toggleModelAvailability = async (modelName: string): Promise<string> => {
+    getAllModelsInFlightRef.current = request;
+    return request;
+  }, []);
+
+  const toggleModelAvailability = useCallback(async (modelName: string): Promise<string> => {
     setIsLoading(true);
     setError(null);
 
@@ -53,9 +64,9 @@ export const useModelApi = () => {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, []);
 
-  const toggleModelMultimodal = async (modelName: string, column: string): Promise<string> => {
+  const toggleModelMultimodal = useCallback(async (modelName: string, column: string): Promise<string> => {
     setIsLoading(true);
     setError(null);
 
@@ -69,9 +80,9 @@ export const useModelApi = () => {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, []);
 
-  const toggleModelReasoningEffect = async (modelName: string, reasoning_effect: string): Promise<string> => {
+  const toggleModelReasoningEffect = useCallback(async (modelName: string, reasoning_effect: string): Promise<string> => {
     setIsLoading(true);
     setError(null);
 
@@ -85,9 +96,9 @@ export const useModelApi = () => {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, []);
 
-  const refreshModels = async (): Promise<string> => {
+  const refreshModels = useCallback(async (): Promise<string> => {
     setIsLoading(true);
     setError(null);
 
@@ -101,7 +112,7 @@ export const useModelApi = () => {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, []);
 
   return {
     getAllModels,
