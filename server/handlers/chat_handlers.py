@@ -166,7 +166,7 @@ def _chunk_message_process(chunk: str, math_flag: bool):
     if chunk.find("[\n") != -1 or chunk.find("]\n") != -1:
         math_flag = not math_flag
         chunk = chunk.replace("[\n", "\$\n").replace("]\n", "\$\n")
-    if chunk.find("$") != -1:
+    if chunk.find("$") != -1 or chunk.find("$$") != -1:
         math_flag = not math_flag
     if not math_flag:
         chunk = chunk.replace("\\", "")

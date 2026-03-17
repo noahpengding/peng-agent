@@ -9,7 +9,7 @@ export const getApiBase = (): string => {
   }
 
   if (isReactNative) {
-    return 'http://172.22.109.21:1532';
+    return trimTrailingSlash(process.env.API_URL || 'http://localhost:8080');
   }
 
   return '/proxy';

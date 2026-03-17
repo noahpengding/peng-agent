@@ -61,6 +61,25 @@ jobs:
         run: bun run lint
         working-directory: ./app/web
 
+  mobile-lint:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Install dependencies
+        run: bun install
+        working-directory: ./app/mobile
+
+      - name: Run ESLint
+        run: bun run lint
+        working-directory: ./app/mobile
+
   # CodeQL security analysis - runs on all branches and outputs to Security tab
   codeql-analysis:
     name: CodeQL Security Analysis
@@ -77,7 +96,7 @@ jobs:
           - language: python
             path: './server'
           - language: javascript
-            path: './app/web'
+            path: './app'
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -135,7 +154,7 @@ jobs:
   # Test builds for non-main branches (PRs)
   test-server-x64:
     if: github.ref != 'refs/heads/main'
-    needs: [ruff-check, web-lint, codeql-analysis]
+    needs: [ruff-check, codeql-analysis]
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -168,7 +187,7 @@ jobs:
 
   test-web-x64:
     if: github.ref != 'refs/heads/main'
-    needs: [ruff-check, web-lint, codeql-analysis]
+    needs: [web-lint, codeql-analysis]
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -200,10 +219,43 @@ jobs:
             DD_GIT_COMMIT_SHA=${{ env.GITHUB_COMMIT_SHA }}
             VERSION=${{ env.VERSION }}-nightly
 
+  mobile-preview:
+    if: github.ref != 'refs/heads/main'
+    needs: [mobile-lint, codeql-analysis]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Setup Expo
+        uses: expo/expo-github-action@v8
+        with:
+          expo-version: latest
+          eas-version: latest
+          token: ${{ secrets.EXPO_TOKEN }}
+
+      - name: Install dependencies
+        run: |
+          cd app/share && bun install
+          cd ../mobile && bun install
+
+      - name: Build Mobile App (Preview)
+        run: cd app/mobile && eas build --platform android --profile preview --non-interactive
+
   # Production builds for main branch
   server:
     if: github.ref == 'refs/heads/main'
-    needs: [ruff-check, web-lint, codeql-analysis]
+    needs: [ruff-check, codeql-analysis]
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -238,7 +290,7 @@ jobs:
 
   web:
     if: github.ref == 'refs/heads/main'
-    needs: [ruff-check, web-lint, codeql-analysis]
+    needs: [web-lint, codeql-analysis]
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -272,41 +324,9 @@ jobs:
             DD_GIT_COMMIT_SHA=${{ env.GITHUB_COMMIT_SHA }}
             VERSION=${{ env.VERSION }}
 
-  # Mobile App Builds
-  mobile-preview:
-    if: github.ref != 'refs/heads/main'
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: 20
-
-      - name: Setup Bun
-        uses: oven-sh/setup-bun@v2
-        with:
-          bun-version: latest
-
-      - name: Setup Expo
-        uses: expo/expo-github-action@v8
-        with:
-          expo-version: latest
-          eas-version: latest
-          token: ${{ secrets.EXPO_TOKEN }}
-
-      - name: Install dependencies
-        run: |
-          cd app/share && bun install
-          cd ../mobile && bun install
-
-      - name: Build Mobile App (Preview)
-        run: cd app/mobile && eas build --platform android --profile preview --non-interactive
-
   mobile-production:
     if: github.ref == 'refs/heads/main'
+    needs: [mobile-lint, codeql-analysis]
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
@@ -315,7 +335,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
 
       - name: Setup Bun
         uses: oven-sh/setup-bun@v2
