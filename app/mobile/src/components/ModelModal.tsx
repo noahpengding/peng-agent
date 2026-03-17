@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useCallback, useMemo } from 'react';
 import {
   Modal,
   View,
@@ -33,18 +33,10 @@ export default function ModelModal({ visible, onClose }: { visible: boolean; onC
     try {
       const fetchedModels = await getAllModels();
       setModels(fetchedModels || []);
-    } catch (err) {
-      console.error(`Failed to fetch models: ${err}`);
-      // Only alert if we're not loading (to avoid multiple alerts during re-renders if any)
+    } catch {
       Alert.alert('Error', 'Failed to fetch models. Please check your connection.');
     }
   }, [getAllModels]);
-
-  useEffect(() => {
-    if (visible) {
-      fetchModels();
-    }
-  }, [visible, fetchModels]);
 
   const handleRefresh = async () => {
     try {
@@ -84,7 +76,13 @@ export default function ModelModal({ visible, onClose }: { visible: boolean; onC
   }, [models, searchTerm, selectedOperator, availabilityFilter]);
 
   return (
-    <Modal animationType="slide" transparent={true} visible={visible} onRequestClose={onClose}>
+    <Modal
+      animationType="slide"
+      transparent={true}
+      visible={visible}
+      onRequestClose={onClose}
+      onShow={fetchModels}
+    >
       <View style={styles.centeredView}>
         <View style={styles.modalView}>
           <View style={styles.header}>

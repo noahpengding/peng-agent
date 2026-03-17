@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useMemo, useCallback } from 'react';
 import {
   Modal,
   View,
@@ -37,12 +37,6 @@ export default function MemoryModal({ visible, onClose }: { visible: boolean; on
       Alert.alert('Error', `Failed to fetch memories: ${err}`);
     }
   }, [fetchMemories, user]);
-
-  useEffect(() => {
-    if (visible && user) {
-      loadMemories();
-    }
-  }, [visible, user, loadMemories]);
 
   const filteredMemories = useMemo(() => {
     if (!searchTerm.trim()) return memories;
@@ -92,7 +86,13 @@ export default function MemoryModal({ visible, onClose }: { visible: boolean; on
   };
 
   return (
-    <Modal animationType="slide" transparent={true} visible={visible} onRequestClose={onClose}>
+    <Modal
+      animationType="slide"
+      transparent={true}
+      visible={visible}
+      onRequestClose={onClose}
+      onShow={loadMemories}
+    >
       <View style={styles.centeredView}>
         <View style={styles.modalView}>
           <View style={styles.header}>

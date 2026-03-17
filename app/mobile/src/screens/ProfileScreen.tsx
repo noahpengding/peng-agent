@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { ActivityIndicator, Pressable, StyleSheet, Text, View, ScrollView } from 'react-native';
+import { ActivityIndicator, Pressable, StyleSheet, Text, View, ScrollView, Linking } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useDispatch, useSelector } from 'react-redux';
 import { logout } from '@share/store/slices/authSlice';
@@ -13,6 +13,7 @@ import UserProfileModal from '../components/UserProfileModal';
 import ModelModal from '../components/ModelModal';
 import RAGModal from '../components/RAGModal';
 import MemoryModal from '../components/MemoryModal';
+import { setError } from '@share/store/slices/chatSlice';
 
 export default function ProfileScreen() {
   const dispatch = useDispatch();
@@ -33,8 +34,8 @@ export default function ProfileScreen() {
       const profile = await UserService.getProfile();
       setUsername(profile.username || 'Unknown user');
       setEmail(profile.email || 'No email set');
-    } catch (err) {
-      console.error(err instanceof Error ? err.message : 'Failed to load profile');
+    } catch {
+      dispatch(setError('Failed to fetch profile'));
     } finally {
       setLoading(false);
     }
@@ -109,7 +110,10 @@ export default function ProfileScreen() {
 
         <View style={styles.externalLinks}>
             <Text style={styles.sectionLabel}>Resources</Text>
-            <Pressable style={styles.externalLink}>
+            <Pressable
+              style={styles.externalLink}
+              onPress={() => void Linking.openURL('https://github.com/noahpengding/peng-agent/')}
+            >
                 <MaterialCommunityIcons name="github" size={20} color="#9CA3AF" />
                 <Text style={styles.externalLinkText}>GitHub Repository</Text>
             </Pressable>

@@ -6,10 +6,7 @@
   "build": {
     "development": {
       "developmentClient": true,
-      "distribution": "internal",
-      "env": {
-        "API_URL": "http://172.22.109.21:1532"
-      }
+      "distribution": "internal"
     },
     "preview": {
       "distribution": "internal",
