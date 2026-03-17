@@ -252,7 +252,22 @@ jobs:
           cd ../mobile && bun install
 
       - name: Build Mobile App (Preview)
-        run: cd app/mobile && eas build --platform android --profile preview --non-interactive
+        run: cd app/mobile && eas build --platform android --profile preview --local --non-interactive --output=./build-preview.aab
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ env.VERSION }}-android-preview
+          path: app/mobile/build-preview.aab
+
+      - name: Upload build to EAS Dashboard
+        run: |
+          cd app/mobile
+          eas build:upload --platform android --path=./build-preview.aab --profile preview --non-interactive
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
 
   # Production builds for main branch
   server:
@@ -357,7 +372,22 @@ jobs:
           cd ../mobile && bun install
 
       - name: Build Mobile App (Production)
-        run: cd app/mobile && eas build --platform android --profile production --non-interactive
+        run: cd app/mobile && eas build --platform android --profile production --local --non-interactive --output=./build-production.aab
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ env.VERSION }}-android
+          path: app/mobile/build-production.aab
+      
+      - name: Upload build to EAS Dashboard
+        run: |
+          cd app/mobile
+          eas build:upload --platform android --path=./build-production.aab --profile production --non-interactive
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
 
   publish-release:
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
