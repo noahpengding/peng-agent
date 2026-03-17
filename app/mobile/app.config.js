@@ -25,7 +25,6 @@ export default {
       "supportsTablet": true
     },
     "android": {
-      "gradleVersion": "8.14.4",
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"

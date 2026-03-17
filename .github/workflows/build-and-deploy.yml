@@ -262,13 +262,6 @@ jobs:
           name: ${{ env.VERSION }}-android-preview
           path: app/mobile/build-preview.apk
 
-      - name: Upload build to EAS Dashboard
-        run: |
-          cd app/mobile
-          eas build create --platform android --path=./build-preview.apk --profile preview --non-interactive
-        env:
-          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
-
   # Production builds for main branch
   server:
     if: github.ref == 'refs/heads/main'
@@ -372,22 +365,15 @@ jobs:
           cd ../mobile && bun install
 
       - name: Build Mobile App (Production)
-        run: cd app/mobile && eas build --platform android --profile production --local --non-interactive --output=./build-production.aab
+        run: cd app/mobile && eas build --platform android --profile production --non-interactive
         env:
           EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
 
-      - name: Upload build artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: ${{ env.VERSION }}-android
-          path: app/mobile/build-production.aab
-      
-      - name: Upload build to EAS Dashboard
-        run: |
-          cd app/mobile
-          eas build create --platform android --path=./build-production.aab --profile production --non-interactive
+      - name: Submitt to Google Play Console
+        run: cd app/mobile && eas submit --platform android --non-interactive
         env:
           EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+      
 
   publish-release:
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
