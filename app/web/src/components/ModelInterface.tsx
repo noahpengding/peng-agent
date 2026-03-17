@@ -189,8 +189,6 @@ const ModelInterface: React.FC = () => {
             Back to Home
           </button>
 
-          <div className="sidebar-title">Filters</div>
-
           <div className="filters">
             {/* Operator Filter */}
             <div className="filter-group">

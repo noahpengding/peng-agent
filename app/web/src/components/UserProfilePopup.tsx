@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { ModelInfo } from '@share/types/ChatInterface.types';
 import { useUserApi, UserProfile } from '@share/hooks/UserAPI';
 import './UserProfilePopup.css';
@@ -106,195 +107,247 @@ const UserProfilePopup: React.FC<UserProfilePopupProps> = ({ isOpen, onClose, av
     }
   };
 
-  if (!isOpen) return null;
-
   return (
-    <div className="popup-overlay" onClick={onClose}>
-      <div className="popup-content user-profile-popup" onClick={(e) => e.stopPropagation()}>
-        <div className="popup-header">
-          <h3>User Profile</h3>
-          <div className="popup-actions">
-            <button className="update-button" onClick={handleSave} disabled={saving}>
-              {saving ? 'Saving...' : 'Save'}
-            </button>
-            <button className="close-button" onClick={onClose} aria-label="Close user profile">
-              ×
-            </button>
-          </div>
-        </div>
-
-        <div className="popup-body">
-          {loading ? (
-            <div className="loading-indicator">Loading profile...</div>
-          ) : error ? (
-            <div className="error-message">{error}</div>
-          ) : profile ? (
-            <div className="profile-form">
-              <div className="form-group">
-                <label htmlFor="username" className="form-label">Username</label>
-                <input id="username" type="text" value={profile.username} disabled className="form-input form-select disabled-input" />
-              </div>
-
-              <div className="form-group">
-                <label htmlFor="email" className="form-label">Email</label>
-                <input
-                  id="email"
-                  type="email"
-                  value={profile.email}
-                  onChange={(e) => setProfile({ ...profile, email: e.target.value })}
-                  className="form-input form-select"
-                />
-              </div>
-
-              <div className="form-group">
-                <label htmlFor="password" className="form-label">Password</label>
-                <input
-                  id="password"
-                  type="password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  placeholder="Leave blank to keep current password"
-                  className="form-input form-select"
-                />
-              </div>
-
-              <div className="form-group">
-                <label htmlFor="api_token" className="form-label">API Token</label>
-                <div className="api-token-container">
-                  <input id="api_token" type="text" value={profile.api_token} readOnly className="form-input form-select api-token-input" />
-                  <button type="button" onClick={handleCopyToken} className="token-action-button" title="Copy Token">
-                    Copy
-                  </button>
-                  <button
-                    type="button"
-                    onClick={handleRegenerateToken}
-                    disabled={regeneratingToken}
-                    className="token-action-button"
-                    title="Regenerate Token"
-                  >
-                    {regeneratingToken ? '...' : 'Regenerate'}
-                  </button>
-                </div>
-              </div>
-
-              <div className="form-group">
-                <label htmlFor="default_base_model" className="form-label">Default Base Model</label>
-                <select
-                  id="default_base_model"
-                  value={profile.default_base_model}
-                  onChange={(e) => setProfile({ ...profile, default_base_model: e.target.value })}
-                  className="form-select"
+    <AnimatePresence>
+      {isOpen && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          className="popup-overlay"
+          onClick={onClose}
+        >
+          <motion.div
+            initial={{ scale: 0.9, opacity: 0, y: 20 }}
+            animate={{ scale: 1, opacity: 1, y: 0 }}
+            exit={{ scale: 0.9, opacity: 0, y: 20 }}
+            transition={{ type: 'spring', stiffness: 400, damping: 30 }}
+            className="popup-content user-profile-popup"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="popup-header">
+              <h3>User Profile</h3>
+              <div className="popup-actions">
+                <motion.button
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  className="update-button"
+                  onClick={handleSave}
+                  disabled={saving}
                 >
-                  <option value="">Select a model</option>
-                  {availableModels.map((model) => (
-                    <option key={model.model_name} value={model.model_name}>
-                      {model.model_name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div className="form-group">
-                <label htmlFor="default_output_model" className="form-label">Default Output Model</label>
-                <select
-                  id="default_output_model"
-                  value={profile.default_output_model}
-                  onChange={(e) => setProfile({ ...profile, default_output_model: e.target.value })}
-                  className="form-select"
+                  {saving ? 'Saving...' : 'Save'}
+                </motion.button>
+                <motion.button
+                  whileHover={{ scale: 1.1, backgroundColor: 'rgba(255, 255, 255, 0.1)' }}
+                  whileTap={{ scale: 0.9 }}
+                  className="close-button"
+                  onClick={onClose}
+                  aria-label="Close user profile"
                 >
-                  <option value="">Select a model</option>
-                  {availableModels.map((model) => (
-                    <option key={model.model_name} value={model.model_name}>
-                      {model.model_name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div className="form-group">
-                <label htmlFor="default_embedding_model" className="form-label">Default Embedding Model</label>
-                <select
-                  id="default_embedding_model"
-                  value={profile.default_embedding_model}
-                  onChange={(e) => setProfile({ ...profile, default_embedding_model: e.target.value })}
-                  className="form-select"
-                >
-                  <option value="">Select a model</option>
-                  {availableModels.map((model) => (
-                    <option key={model.model_name} value={model.model_name}>
-                      {model.model_name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div className="form-group">
-                <label htmlFor="s3_access_key" className="form-label">S3 Access Key</label>
-                <input
-                  id="s3_access_key"
-                  type="text"
-                  value={profile.s3_access_key}
-                  onChange={(e) => setProfile({ ...profile, s3_access_key: e.target.value })}
-                  placeholder="Leave blank to use system default"
-                  className="form-input form-select"
-                />
-              </div>
-
-              <div className="form-group">
-                <label htmlFor="s3_secret_key" className="form-label">S3 Secret Key</label>
-                <input
-                  id="s3_secret_key"
-                  type="password"
-                  value={profile.s3_secret_key}
-                  onChange={(e) => setProfile({ ...profile, s3_secret_key: e.target.value })}
-                  placeholder="Leave blank to use system default"
-                  className="form-input form-select"
-                />
-              </div>
-
-              <div className="form-group">
-                <label htmlFor="system_prompt" className="form-label">System Prompt</label>
-                <textarea
-                  id="system_prompt"
-                  value={profile.system_prompt || ''}
-                  onChange={(e) => setProfile({ ...profile, system_prompt: e.target.value })}
-                  className="form-textarea form-select"
-                  rows={3}
-                />
-              </div>
-
-              <div className="form-group">
-                <label htmlFor="new_memory" className="form-label">Long Term Memory</label>
-                <div className="memory-list">
-                  {profile.long_term_memory.map((mem, idx) => (
-                    <div key={idx} className="memory-item">
-                      <input type="text" value={mem} readOnly className="form-input form-select memory-item-input" aria-label={`Memory ${idx + 1}`} />
-                      <button type="button" onClick={() => handleDeleteMemory(idx)} className="tool-remove-button" aria-label="Remove memory">
-                        ×
-                      </button>
-                    </div>
-                  ))}
-                </div>
-                <div className="add-memory-container">
-                  <input
-                    id="new_memory"
-                    type="text"
-                    value={newMemory}
-                    onChange={(e) => setNewMemory(e.target.value)}
-                    placeholder="Add new memory..."
-                    onKeyDown={(e) => e.key === 'Enter' && handleAddMemory()}
-                    className="form-input form-select add-memory-input"
-                  />
-                  <button type="button" onClick={handleAddMemory} className="update-button add-memory-button" disabled={!newMemory.trim()}>
-                    Add
-                  </button>
-                </div>
+                  ×
+                </motion.button>
               </div>
             </div>
-          ) : null}
-        </div>
-      </div>
-    </div>
+
+            <div className="popup-body">
+              {loading ? (
+                <div className="loading-indicator">Loading profile...</div>
+              ) : error ? (
+                <div className="error-message">{error}</div>
+              ) : profile ? (
+                <div className="profile-form">
+                  <div className="form-group">
+                    <label htmlFor="username" className="form-label">Username</label>
+                    <input id="username" type="text" value={profile.username} disabled className="form-input form-select disabled-input" />
+                  </div>
+
+                  <div className="form-group">
+                    <label htmlFor="email" className="form-label">Email</label>
+                    <input
+                      id="email"
+                      type="email"
+                      value={profile.email}
+                      onChange={(e) => setProfile({ ...profile, email: e.target.value })}
+                      className="form-input form-select"
+                    />
+                  </div>
+
+                  <div className="form-group">
+                    <label htmlFor="password" className="form-label">Password</label>
+                    <input
+                      id="password"
+                      type="password"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      placeholder="Leave blank to keep current password"
+                      className="form-input form-select"
+                    />
+                  </div>
+
+                  <div className="form-group">
+                    <label htmlFor="api_token" className="form-label">API Token</label>
+                    <div className="api-token-container">
+                      <input id="api_token" type="text" value={profile.api_token} readOnly className="form-input form-select api-token-input" />
+                      <motion.button
+                        whileHover={{ scale: 1.05 }}
+                        whileTap={{ scale: 0.95 }}
+                        type="button"
+                        onClick={handleCopyToken}
+                        className="token-action-button"
+                        title="Copy Token"
+                      >
+                        Copy
+                      </motion.button>
+                      <motion.button
+                        whileHover={{ scale: 1.05 }}
+                        whileTap={{ scale: 0.95 }}
+                        type="button"
+                        onClick={handleRegenerateToken}
+                        disabled={regeneratingToken}
+                        className="token-action-button"
+                        title="Regenerate Token"
+                      >
+                        {regeneratingToken ? '...' : 'Regenerate'}
+                      </motion.button>
+                    </div>
+                  </div>
+
+                  <div className="form-group">
+                    <label htmlFor="default_base_model" className="form-label">Default Base Model</label>
+                    <select
+                      id="default_base_model"
+                      value={profile.default_base_model}
+                      onChange={(e) => setProfile({ ...profile, default_base_model: e.target.value })}
+                      className="form-select"
+                    >
+                      <option value="">Select a model</option>
+                      {availableModels.map((model) => (
+                        <option key={model.model_name} value={model.model_name}>
+                          {model.model_name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div className="form-group">
+                    <label htmlFor="default_output_model" className="form-label">Default Output Model</label>
+                    <select
+                      id="default_output_model"
+                      value={profile.default_output_model}
+                      onChange={(e) => setProfile({ ...profile, default_output_model: e.target.value })}
+                      className="form-select"
+                    >
+                      <option value="">Select a model</option>
+                      {availableModels.map((model) => (
+                        <option key={model.model_name} value={model.model_name}>
+                          {model.model_name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div className="form-group">
+                    <label htmlFor="default_embedding_model" className="form-label">Default Embedding Model</label>
+                    <select
+                      id="default_embedding_model"
+                      value={profile.default_embedding_model}
+                      onChange={(e) => setProfile({ ...profile, default_embedding_model: e.target.value })}
+                      className="form-select"
+                    >
+                      <option value="">Select a model</option>
+                      {availableModels.map((model) => (
+                        <option key={model.model_name} value={model.model_name}>
+                          {model.model_name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div className="form-group">
+                    <label htmlFor="s3_access_key" className="form-label">S3 Access Key</label>
+                    <input
+                      id="s3_access_key"
+                      type="text"
+                      value={profile.s3_access_key}
+                      onChange={(e) => setProfile({ ...profile, s3_access_key: e.target.value })}
+                      placeholder="Leave blank to use system default"
+                      className="form-input form-select"
+                    />
+                  </div>
+
+                  <div className="form-group">
+                    <label htmlFor="s3_secret_key" className="form-label">S3 Secret Key</label>
+                    <input
+                      id="s3_secret_key"
+                      type="password"
+                      value={profile.s3_secret_key}
+                      onChange={(e) => setProfile({ ...profile, s3_secret_key: e.target.value })}
+                      placeholder="Leave blank to use system default"
+                      className="form-input form-select"
+                    />
+                  </div>
+
+                  <div className="form-group">
+                    <label htmlFor="system_prompt" className="form-label">System Prompt</label>
+                    <textarea
+                      id="system_prompt"
+                      value={profile.system_prompt || ''}
+                      onChange={(e) => setProfile({ ...profile, system_prompt: e.target.value })}
+                      className="form-textarea form-select"
+                      rows={3}
+                    />
+                  </div>
+
+                  <div className="form-group">
+                    <label htmlFor="new_memory" className="form-label">Long Term Memory</label>
+                    <div className="memory-list">
+                      <AnimatePresence mode="popLayout">
+                        {profile.long_term_memory.map((mem, idx) => (
+                          <motion.div
+                            key={`${mem}-${idx}`}
+                            layout
+                            initial={{ opacity: 0, x: -10 }}
+                            animate={{ opacity: 1, x: 0 }}
+                            exit={{ opacity: 0, x: -10 }}
+                            className="memory-item"
+                          >
+                            <input type="text" value={mem} readOnly className="form-input form-select memory-item-input" aria-label={`Memory ${idx + 1}`} />
+                            <button type="button" onClick={() => handleDeleteMemory(idx)} className="tool-remove-button" aria-label="Remove memory">
+                              ×
+                            </button>
+                          </motion.div>
+                        ))}
+                      </AnimatePresence>
+                    </div>
+                    <div className="add-memory-container">
+                      <input
+                        id="new_memory"
+                        type="text"
+                        value={newMemory}
+                        onChange={(e) => setNewMemory(e.target.value)}
+                        placeholder="Add new memory..."
+                        onKeyDown={(e) => e.key === 'Enter' && handleAddMemory()}
+                        className="form-input form-select add-memory-input"
+                      />
+                      <motion.button
+                        whileHover={{ scale: 1.05 }}
+                        whileTap={{ scale: 0.95 }}
+                        type="button"
+                        onClick={handleAddMemory}
+                        className="update-button add-memory-button"
+                        disabled={!newMemory.trim()}
+                      >
+                        Add
+                      </motion.button>
+                    </div>
+                  </div>
+                </div>
+              ) : null}
+            </div>
+          </motion.div>
+        </motion.div>
+      )}
+    </AnimatePresence>
   );
 };
 

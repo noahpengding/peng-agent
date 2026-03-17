@@ -26,7 +26,7 @@ export const InputArea: React.FC<InputAreaProps> = ({
   isLoading,
   onSubmit,
   onError,
-  maxInputChars = 4000,
+  maxInputChars = 100000,
   maxTextareaHeight = 240,
 }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);

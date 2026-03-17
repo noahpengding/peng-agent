@@ -10,11 +10,20 @@ import {
   TextInput,
   View,
 } from 'react-native';
+import Animated, { 
+  FadeInDown, 
+  FadeInUp, 
+  FadeIn,
+  Layout,
+  SlideInUp
+} from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useDispatch } from 'react-redux';
 import { login as loginAction } from '@share/store/slices/authSlice';
 import { login as loginApi } from '@share/utils/authUtils';
+import { Colors } from '../utils/colors';
+import { Typography } from '../utils/typography';
 
 const HERO_IMAGE = require('../../assets/splash.png');
 
@@ -46,18 +55,23 @@ export default function LoginScreen() {
   return (
     <SafeAreaView style={styles.safeArea}>
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={styles.container}>
-        <View style={styles.backgroundTopGlow} />
-        <View style={styles.backgroundBottomGlow} />
+        <Animated.View entering={FadeIn.duration(1500)} style={styles.backgroundTopGlow} />
+        <Animated.View entering={FadeIn.duration(1500)} style={styles.backgroundBottomGlow} />
 
-        <View style={styles.heroWrap}>
+        <Animated.View entering={SlideInUp.delay(200)} style={styles.heroWrap}>
           <Image source={HERO_IMAGE} style={styles.heroImage} resizeMode="cover" />
-        </View>
+        </Animated.View>
 
-        <View style={styles.card}>
-          <Text style={styles.title}>Peng Agent</Text>
-          <Text style={styles.subtitle}>Sign in to continue</Text>
+        <Animated.View 
+          entering={FadeInDown.springify().damping(20).stiffness(90)} 
+          style={styles.card}
+        >
+          <Animated.View entering={FadeInDown.delay(400)}>
+            <Text style={styles.title}>Peng Agent</Text>
+            <Text style={styles.subtitle}>Sign in to continue</Text>
+          </Animated.View>
 
-          <View style={styles.inputGroup}>
+          <Animated.View entering={FadeInDown.delay(500)} style={styles.inputGroup}>
             <Text style={styles.label}>Username</Text>
             <TextInput
               value={username}
@@ -68,9 +82,9 @@ export default function LoginScreen() {
               autoCapitalize="none"
               autoCorrect={false}
             />
-          </View>
+          </Animated.View>
 
-          <View style={styles.inputGroup}>
+          <Animated.View entering={FadeInDown.delay(600)} style={styles.inputGroup}>
             <Text style={styles.label}>Password</Text>
             <View style={styles.passwordInputWrap}>
               <TextInput
@@ -87,23 +101,31 @@ export default function LoginScreen() {
                 <MaterialCommunityIcons name={showPassword ? 'eye-off-outline' : 'eye-outline'} size={20} color="#CBD5E1" />
               </Pressable>
             </View>
-          </View>
+          </Animated.View>
 
-          {error ? (
-            <View style={styles.errorWrap}>
-              <MaterialCommunityIcons name="alert-circle-outline" size={16} color="#FCA5A5" />
-              <Text style={styles.errorText}>{error}</Text>
-            </View>
-          ) : null}
+          <Animated.View layout={Layout.springify()}>
+            {error ? (
+              <Animated.View entering={FadeInDown} style={styles.errorWrap}>
+                <MaterialCommunityIcons name="alert-circle-outline" size={16} color="#FCA5A5" />
+                <Text style={styles.errorText}>{error}</Text>
+              </Animated.View>
+            ) : null}
+          </Animated.View>
 
-          <Pressable style={[styles.submitButton, !canSubmit && styles.submitButtonDisabled]} onPress={handleLogin} disabled={!canSubmit}>
-            {isSubmitting ? (
-              <ActivityIndicator color="#FFFFFF" />
-            ) : (
-              <Text style={styles.submitText}>Sign in</Text>
-            )}
-          </Pressable>
-        </View>
+          <Animated.View entering={FadeInDown.delay(700)}>
+            <Pressable 
+              style={[styles.submitButton, !canSubmit && styles.submitButtonDisabled]} 
+              onPress={handleLogin} 
+              disabled={!canSubmit}
+            >
+              {isSubmitting ? (
+                <ActivityIndicator color="#FFFFFF" />
+              ) : (
+                <Text style={styles.submitText}>Sign in</Text>
+              )}
+            </Pressable>
+          </Animated.View>
+        </Animated.View>
       </KeyboardAvoidingView>
     </SafeAreaView>
   );
@@ -112,130 +134,153 @@ export default function LoginScreen() {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: '#1A1520',
+    backgroundColor: Colors.bgDeep,
   },
   container: {
     flex: 1,
     justifyContent: 'center',
-    paddingHorizontal: 18,
-    backgroundColor: '#1A1520',
+    paddingHorizontal: Typography.spacing.lg,
+    backgroundColor: Colors.bgDeep,
   },
   backgroundTopGlow: {
     position: 'absolute',
-    top: -140,
-    left: -80,
-    width: 280,
-    height: 280,
-    borderRadius: 140,
-    backgroundColor: 'rgba(124, 58, 237, 0.14)',
+    top: -100,
+    left: -100,
+    width: 300,
+    height: 300,
+    borderRadius: 150,
+    backgroundColor: Colors.primarySoft,
+    opacity: 0.6,
   },
   backgroundBottomGlow: {
     position: 'absolute',
-    bottom: -180,
-    right: -100,
-    width: 340,
-    height: 340,
-    borderRadius: 170,
-    backgroundColor: 'rgba(109, 40, 217, 0.16)',
+    bottom: -150,
+    right: -150,
+    width: 400,
+    height: 400,
+    borderRadius: 200,
+    backgroundColor: 'rgba(124, 58, 237, 0.1)',
+    opacity: 0.5,
   },
   heroWrap: {
     width: '100%',
-    borderRadius: 18,
+    borderRadius: 24,
     overflow: 'hidden',
-    marginBottom: 14,
+    marginBottom: Typography.spacing.md,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.08)',
+    borderColor: Colors.border,
+    elevation: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
   },
   heroImage: {
     width: '100%',
-    height: 130,
+    height: 140,
   },
   card: {
-    backgroundColor: 'rgba(255, 255, 255, 0.06)',
+    backgroundColor: Colors.bgCard,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.1)',
-    borderRadius: 18,
-    padding: 18,
+    borderColor: Colors.border,
+    borderRadius: 28,
+    padding: Typography.spacing.lg,
+    elevation: 10,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.4,
+    shadowRadius: 20,
   },
   title: {
-    color: '#F8FAFC',
-    fontSize: 24,
-    fontWeight: '700',
+    color: Colors.primary,
+    fontSize: Typography.sizes['2xl'],
+    fontWeight: Typography.weights.black,
+    letterSpacing: Typography.letterSpacing.tight,
   },
   subtitle: {
-    marginTop: 4,
-    marginBottom: 16,
-    color: '#94A3B8',
-    fontSize: 13,
+    marginTop: Typography.spacing['2xs'],
+    marginBottom: Typography.spacing.md,
+    color: Colors.textDim,
+    fontSize: Typography.sizes.base,
+    fontWeight: Typography.weights.medium,
   },
   inputGroup: {
-    marginBottom: 12,
+    marginBottom: Typography.spacing.sm,
   },
   label: {
-    marginBottom: 6,
-    color: '#CBD5E1',
-    fontWeight: '600',
-    fontSize: 12,
+    marginBottom: Typography.spacing['2xs'],
+    color: Colors.primary,
+    fontWeight: Typography.weights.black,
+    fontSize: Typography.sizes.xs,
+    textTransform: 'uppercase',
+    letterSpacing: 1,
   },
   input: {
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.12)',
-    borderRadius: 10,
-    backgroundColor: 'rgba(255,255,255,0.08)',
-    color: '#F8FAFC',
-    paddingHorizontal: 12,
-    paddingVertical: 11,
-    fontSize: 15,
+    borderColor: Colors.border,
+    borderRadius: 14,
+    backgroundColor: Colors.bgDeep,
+    color: Colors.textMain,
+    paddingHorizontal: Typography.spacing.sm,
+    paddingVertical: Typography.spacing.sm,
+    fontSize: Typography.sizes.base,
+    fontFamily: Typography.fonts.sans,
   },
   passwordInputWrap: {
     flexDirection: 'row',
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.12)',
-    borderRadius: 10,
-    backgroundColor: 'rgba(255,255,255,0.08)',
+    borderColor: Colors.border,
+    borderRadius: 14,
+    backgroundColor: Colors.bgDeep,
   },
   passwordInput: {
     flex: 1,
-    color: '#F8FAFC',
-    paddingHorizontal: 12,
-    paddingVertical: 11,
-    fontSize: 15,
+    color: Colors.textMain,
+    paddingHorizontal: Typography.spacing.sm,
+    paddingVertical: Typography.spacing.sm,
+    fontSize: Typography.sizes.base,
+    fontFamily: Typography.fonts.sans,
   },
   eyeButton: {
-    paddingHorizontal: 12,
+    paddingHorizontal: Typography.spacing.sm,
   },
   errorWrap: {
-    marginTop: 4,
-    marginBottom: 10,
+    marginTop: Typography.spacing['3xs'],
+    marginBottom: Typography.spacing.sm,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
-    backgroundColor: 'rgba(239, 68, 68, 0.14)',
-    borderColor: 'rgba(239, 68, 68, 0.32)',
+    gap: Typography.spacing['2xs'],
+    backgroundColor: 'rgba(244, 63, 94, 0.15)',
+    borderColor: Colors.error,
     borderWidth: 1,
-    borderRadius: 10,
-    padding: 10,
+    borderRadius: 14,
+    padding: Typography.spacing.sm,
   },
   errorText: {
-    color: '#FCA5A5',
+    color: Colors.error,
     flex: 1,
-    fontSize: 13,
+    fontSize: Typography.sizes.sm,
+    fontWeight: Typography.weights.semibold,
   },
   submitButton: {
-    marginTop: 4,
-    borderRadius: 10,
-    paddingVertical: 12,
+    marginTop: Typography.spacing['2xs'],
+    borderRadius: 14,
+    paddingVertical: Typography.spacing.sm,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#7C3AED',
-  },
-  submitButtonDisabled: {
-    opacity: 0.55,
+    backgroundColor: Colors.primary,
+    elevation: 4,
+    shadowColor: Colors.primary,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
   },
   submitText: {
-    color: '#FFFFFF',
-    fontWeight: '700',
-    fontSize: 15,
+    color: Colors.white,
+    fontWeight: Typography.weights.black,
+    fontSize: Typography.sizes.base,
+    textTransform: 'uppercase',
+    letterSpacing: Typography.letterSpacing.wide,
   },
 });

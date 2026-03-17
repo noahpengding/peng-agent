@@ -162,7 +162,7 @@ const chatSlice = createSlice({
       const normalizedType = type?.trim() as Message['type'];
 
       if (done && !chunk) return;
-      if (!SUPPORTED_CHUNK_TYPES.includes(normalizedType)) return;
+      if (!normalizedType || !SUPPORTED_CHUNK_TYPES.includes(normalizedType)) return;
 
       if (normalizedType === 'output_text') {
         // Collapse intermediate chunks only after final text starts streaming.

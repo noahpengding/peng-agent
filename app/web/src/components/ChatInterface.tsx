@@ -1,4 +1,5 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback, lazy, Suspense } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { useDispatch, useSelector } from 'react-redux';
 import { RootState, AppDispatch } from '@share/store';
 import { fetchBaseModels } from '@share/store/slices/modelSlice';
@@ -21,9 +22,11 @@ import './ChatInterface.css';
 import { Message, UploadedImage } from '@share/types/ChatInterface.types';
 import { InputArea } from './InputArea';
 import { MessageList } from './MessageList';
-import UserProfilePopup from './UserProfilePopup';
 import { Memory } from '@share/hooks/MemoryAPI';
 import { useRAGApi } from '@share/hooks/RAGAPI';
+
+// Code split heavy components
+const UserProfilePopup = lazy(() => import('./UserProfilePopup'));
 
 // Main App Component
 const ChatbotUI = () => {
@@ -298,150 +301,223 @@ const ChatbotUI = () => {
     <div className={`chat-container ${isSidebarHidden ? 'sidebar-hidden' : ''}`}>
       {/* Top-right menu */}
       <div className="top-right-menu" ref={menuRef}>
-        <button type="button" className="menu-button" aria-label="Open menu" title="Menu" onClick={() => setIsMenuOpen((v) => !v)}>
+        <motion.button
+          whileHover={{ scale: 1.05, backgroundColor: 'rgba(255, 255, 255, 0.12)' }}
+          whileTap={{ scale: 0.95 }}
+          type="button"
+          className="menu-button"
+          aria-label="Open menu"
+          title="Menu"
+          onClick={() => setIsMenuOpen((v) => !v)}
+        >
           …
-        </button>
-        {isMenuOpen && (
-          <div className="menu-dropdown" role="menu" aria-label="Navigation Menu">
-            <a href="/memory" className="menu-item" onClick={() => setIsMenuOpen(false)}>
-              Memory
-            </a>
-            <a href="/model" className="menu-item" onClick={() => setIsMenuOpen(false)}>
-              Model
-            </a>
-            <a href="/rag" className="menu-item" onClick={() => setIsMenuOpen(false)}>
-              RAG
-            </a>
-            <a
-              href="https://us5.datadoghq.com/llm/applications?query=&fromUser=true&start=1770794053588&end=1770880453588&paused=false"
-              className="menu-item external-link"
-              target="_blank"
-              rel="noreferrer"
-              onClick={() => setIsMenuOpen(false)}
+        </motion.button>
+        <AnimatePresence>
+          {isMenuOpen && (
+            <motion.div
+              initial={{ opacity: 0, y: -10, scale: 0.95 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: -10, scale: 0.95 }}
+              transition={{ duration: 0.15, ease: "easeOut" }}
+              className="menu-dropdown"
+              role="menu"
+              aria-label="Navigation Menu"
             >
-              Datadog LLM Observability
-            </a>
-            <a
-              href="https://github.com/Noahdingpeng/peng-agent"
-              className="menu-item external-link"
-              target="_blank"
-              rel="noreferrer"
-              onClick={() => setIsMenuOpen(false)}
-            >
-              GitHub
-            </a>
-          </div>
-        )}
+              <a href="/memory" className="menu-item" onClick={() => setIsMenuOpen(false)}>
+                Memory
+              </a>
+              <a href="/model" className="menu-item" onClick={() => setIsMenuOpen(false)}>
+                Model
+              </a>
+              <a href="/rag" className="menu-item" onClick={() => setIsMenuOpen(false)}>
+                RAG
+              </a>
+              <a
+                href="https://us5.datadoghq.com/llm/applications?query=&fromUser=true&start=1770794053588&end=1770880453588&paused=false"
+                className="menu-item external-link"
+                target="_blank"
+                rel="noreferrer"
+                onClick={() => setIsMenuOpen(false)}
+              >
+                Datadog LLM Observability
+              </a>
+              <a
+                href="https://github.com/Noahdingpeng/peng-agent"
+                className="menu-item external-link"
+                target="_blank"
+                rel="noreferrer"
+                onClick={() => setIsMenuOpen(false)}
+              >
+                GitHub
+              </a>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
 
-      {displayError && <div className="error-message">{displayError}</div>}
+      <AnimatePresence>
+        {displayError && (
+          <motion.div
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -20 }}
+            className="error-message"
+          >
+            {displayError}
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       <div className="main-content">
         {/* Show sidebar handle */}
-        {isSidebarHidden && (
-          <button
-            type="button"
-            className="show-sidebar-toggle"
-            onClick={() => dispatch(setSidebarHidden(false))}
-            title="Show sidebar"
-            aria-label="Show sidebar"
-          >
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              width="22"
-              height="22"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
+        <AnimatePresence>
+          {isSidebarHidden && (
+            <motion.button
+              initial={{ opacity: 0, x: -20 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -20 }}
+              whileHover={{ backgroundColor: 'rgba(255, 255, 255, 0.05)' }}
+              type="button"
+              className="show-sidebar-toggle"
+              onClick={() => dispatch(setSidebarHidden(false))}
+              title="Show sidebar"
+              aria-label="Show sidebar"
             >
-              <polyline points="15 18 9 12 15 6" />
-              <rect x="3" y="4" width="18" height="16" rx="2" ry="2" />
-            </svg>
-          </button>
-        )}
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="22"
+                height="22"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <polyline points="15 18 9 12 15 6" />
+                <rect x="3" y="4" width="18" height="16" rx="2" ry="2" />
+              </svg>
+            </motion.button>
+          )}
+        </AnimatePresence>
 
         {/* Sidebar */}
-        {!isSidebarHidden && (
-          <div className="sidebar">
-            <div className="sidebar-header-row">
-              <h2 className="sidebar-title">Configuration</h2>
-              <button
-                type="button"
-                className="sidebar-toggle"
-                onClick={() => dispatch(setSidebarHidden(true))}
-                aria-label="Hide sidebar"
-                title="Hide sidebar"
-              >
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  width="20"
-                  height="20"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
+        <AnimatePresence initial={false}>
+          {!isSidebarHidden && (
+            <motion.div
+              initial={{ width: 0, opacity: 0 }}
+              animate={{ width: '16rem', opacity: 1 }}
+              exit={{ width: 0, opacity: 0 }}
+              transition={{ type: 'spring', stiffness: 300, damping: 30 }}
+              className="sidebar"
+              style={{ overflow: 'hidden' }}
+            >
+              <div className="sidebar-header-row">
+                <h2 className="sidebar-title">Configuration</h2>
+                <motion.button
+                  whileHover={{ scale: 1.1 }}
+                  whileTap={{ scale: 0.9 }}
+                  type="button"
+                  className="sidebar-toggle"
+                  onClick={() => dispatch(setSidebarHidden(true))}
+                  aria-label="Hide sidebar"
+                  title="Hide sidebar"
                 >
-                  <rect x="3" y="4" width="18" height="16" rx="2" ry="2" />
-                  <path d="M9 4v16" />
-                </svg>
-              </button>
-            </div>
-
-            {renderBaseModelSelection()}
-            {renderKnowledgeBaseSelection()}
-
-            {/* Tool Selection */}
-            <div className="form-group">
-              <div className="tool-section-header">
-                <label className="form-label">Tools</label>
-                <button className="tool-add-button" onClick={openToolPopup} title="Add Tools" aria-label="Add Tools">
-                  +
-                </button>
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    width="20"
+                    height="20"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
+                    <rect x="3" y="4" width="18" height="16" rx="2" ry="2" />
+                    <path d="M9 4v16" />
+                  </svg>
+                </motion.button>
               </div>
-              {selectedToolNames.length > 0 ? (
-                <div className="selected-tools-list">
-                  {selectedToolNames.map((toolName, index) => (
-                    <div key={index} className="selected-tool-item">
-                      <span className="selected-tool-name">{toolName}</span>
-                      <button type="button" className="tool-remove-button" onClick={() => handleToolSelection(toolName, false)} title="Remove tool" aria-label={`Remove tool ${toolName}`}>
-                        ×
-                      </button>
-                    </div>
-                  ))}
+
+              {renderBaseModelSelection()}
+              {renderKnowledgeBaseSelection()}
+
+              {/* Tool Selection */}
+              <div className="form-group">
+                <div className="tool-section-header">
+                  <label className="form-label">Tools</label>
+                  <motion.button
+                    whileHover={{ scale: 1.1 }}
+                    whileTap={{ scale: 0.9 }}
+                    className="tool-add-button"
+                    onClick={openToolPopup}
+                    title="Add Tools"
+                    aria-label="Add Tools"
+                  >
+                    +
+                  </motion.button>
                 </div>
-              ) : (
-                <div className="no-tools-selected">No tools selected</div>
-              )}
-            </div>
+                {selectedToolNames.length > 0 ? (
+                  <div className="selected-tools-list">
+                    <AnimatePresence mode="popLayout">
+                      {selectedToolNames.map((toolName) => (
+                        <motion.div
+                          key={toolName}
+                          layout
+                          initial={{ opacity: 0, x: -10 }}
+                          animate={{ opacity: 1, x: 0 }}
+                          exit={{ opacity: 0, x: -10 }}
+                          className="selected-tool-item"
+                        >
+                          <span className="selected-tool-name">{toolName}</span>
+                          <button type="button" className="tool-remove-button" onClick={() => handleToolSelection(toolName, false)} title="Remove tool" aria-label={`Remove tool ${toolName}`}>
+                            ×
+                          </button>
+                        </motion.div>
+                      ))}
+                    </AnimatePresence>
+                  </div>
+                ) : (
+                  <div className="no-tools-selected">No tools selected</div>
+                )}
+              </div>
 
-            {/* Memory Selection Link */}
-            <div className="form-group">
-              <a href="/memory" className="memory-link">
-                Memory Selection
-              </a>
-              {shortTermMemory.length > 0 && <div className="selected-memories-count">{shortTermMemory.length} short-term memories used</div>}
-            </div>
+              {/* Memory Selection Link */}
+              <div className="form-group">
+                <a href="/memory" className="memory-link">
+                  Memory Selection
+                </a>
+                {shortTermMemory.length > 0 && <div className="selected-memories-count">{shortTermMemory.length} short-term memories used</div>}
+              </div>
 
-            {/* User Profile Button */}
-            <div className="form-group user-profile-button-container">
-              <button type="button" className="memory-link user-profile-button" onClick={() => setIsProfilePopupOpen(true)}>
-                User Profile
-              </button>
-            </div>
-          </div>
-        )}
+              {/* User Profile Button */}
+              <div className="form-group user-profile-button-container">
+                <motion.button
+                  whileHover={{ backgroundColor: '#4b5563' }}
+                  whileTap={{ scale: 0.98 }}
+                  type="button"
+                  className="memory-link user-profile-button"
+                  onClick={() => setIsProfilePopupOpen(true)}
+                >
+                  User Profile
+                </motion.button>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
 
         {/* Main Chat Area */}
         <div className="chat-area">
           <div className="top-left-title">
-            <div className="title-chip" title="Peng's Agent">
+            <motion.div
+              initial={{ opacity: 0, x: -10 }}
+              animate={{ opacity: 1, x: 0 }}
+              className="title-chip"
+              title="Peng's Agent"
+            >
               Peng's Agent
-            </div>
+            </motion.div>
           </div>
 
           <div className="messages-container">
@@ -463,52 +539,85 @@ const ChatbotUI = () => {
       </div>
 
       {/* Tool Selection Popup */}
-      {isToolPopupOpen && (
-        <div className="popup-overlay" onClick={closeToolPopup}>
-          <div className="popup-content" onClick={(e) => e.stopPropagation()}>
-            <div className="popup-header">
-              <h3>Select Tools</h3>
-              <div className="popup-actions">
-                <button className="update-button" onClick={handleUpdateTools} disabled={toolsLoading}>
-                  {toolsLoading ? 'Updating...' : 'Update'}
-                </button>
-                <button className="close-button" onClick={closeToolPopup} aria-label="Close tool popup">
-                  ×
-                </button>
-              </div>
-            </div>
-            <div className="popup-body">
-              {toolsLoading ? (
-                <div className="loading-indicator">Loading tools...</div>
-              ) : availableTools.length === 0 ? (
-                <div className="no-tools">No tools available</div>
-              ) : (
-                <div className="tools-list">
-                  {availableTools.map((tool) => (
-                    <div key={tool.id} className="tool-item">
-                      <label className="tool-checkbox-label">
-                        <input
-                          type="checkbox"
-                          className="tool-checkbox"
-                          checked={selectedToolNames.includes(tool.name)}
-                          onChange={(e) => handleToolSelection(tool.name, e.target.checked)}
-                        />
-                        <div className="tool-info">
-                          <div className="tool-name">{tool.name}</div>
-                          <div className="tool-type">{tool.type}</div>
-                          <div className="tool-url">{tool.url}</div>
-                        </div>
-                      </label>
-                    </div>
-                  ))}
+      <AnimatePresence>
+        {isToolPopupOpen && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="popup-overlay"
+            onClick={closeToolPopup}
+          >
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0, y: 20 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.9, opacity: 0, y: 20 }}
+              transition={{ type: 'spring', stiffness: 400, damping: 30 }}
+              className="popup-content"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="popup-header">
+                <h3>Select Tools</h3>
+                <div className="popup-actions">
+                  <motion.button
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                    className="update-button"
+                    onClick={handleUpdateTools}
+                    disabled={toolsLoading}
+                  >
+                    {toolsLoading ? 'Updating...' : 'Update'}
+                  </motion.button>
+                  <motion.button
+                    whileHover={{ scale: 1.1, backgroundColor: 'rgba(255, 255, 255, 0.1)' }}
+                    whileTap={{ scale: 0.9 }}
+                    className="close-button"
+                    onClick={closeToolPopup}
+                    aria-label="Close tool popup"
+                  >
+                    ×
+                  </motion.button>
                 </div>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
+              </div>
+              <div className="popup-body">
+                {toolsLoading ? (
+                  <div className="loading-indicator">Loading tools...</div>
+                ) : availableTools.length === 0 ? (
+                  <div className="no-tools">No tools available</div>
+                ) : (
+                  <div className="tools-list">
+                    {availableTools.map((tool) => (
+                      <motion.div
+                        layout
+                        key={tool.id}
+                        className="tool-item"
+                      >
+                        <label className="tool-checkbox-label">
+                          <input
+                            type="checkbox"
+                            className="tool-checkbox"
+                            checked={selectedToolNames.includes(tool.name)}
+                            onChange={(e) => handleToolSelection(tool.name, e.target.checked)}
+                          />
+                          <div className="tool-info">
+                            <div className="tool-name">{tool.name}</div>
+                            <div className="tool-type">{tool.type}</div>
+                            <div className="tool-url">{tool.url}</div>
+                          </div>
+                        </label>
+                      </motion.div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
-      <UserProfilePopup isOpen={isProfilePopupOpen} onClose={() => setIsProfilePopupOpen(false)} availableModels={availableBaseModels} />
+      <Suspense fallback={null}>
+        <UserProfilePopup isOpen={isProfilePopupOpen} onClose={() => setIsProfilePopupOpen(false)} availableModels={availableBaseModels} />
+      </Suspense>
     </div>
   );
 };

@@ -123,8 +123,8 @@ const MemoryPage: React.FC = () => {
                       <input type="checkbox" checked={selectedMemoryIds.includes(memory.id)} onChange={() => handleCheckboxChange(memory.id)} aria-label={`Select memory ${memory.id}`} />
                     </td>
                     <td>{memory.base_model}</td>
-                    <td title={memory.human_input}>{truncateText(memory.human_input)}</td>
-                    <td title={memory.ai_response}>{truncateText(memory.ai_response, 300)}</td>
+                    <td title={memory.human_input}>{truncateText(memory.human_input, 600)}</td>
+                    <td title={memory.ai_response}>{truncateText(memory.ai_response, 800)}</td>
                   </tr>
                 ))
               ) : (

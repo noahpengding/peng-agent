@@ -6,6 +6,7 @@ import { store } from '@share/store'; // Shared store
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { useDispatch, useSelector } from 'react-redux';
 import * as SecureStore from 'expo-secure-store';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import TabNavigator from './src/navigation/TabNavigator';
 import LoginScreen from './src/screens/LoginScreen';
 import { setStorageAdapter } from '@share/utils/storage';
@@ -63,10 +64,12 @@ const AppNavigator = () => {
 
 export default function App() {
   return (
-    <SafeAreaProvider>
-      <Provider store={store}>
-        <AppNavigator />
-      </Provider>
-    </SafeAreaProvider>
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <SafeAreaProvider>
+        <Provider store={store}>
+          <AppNavigator />
+        </Provider>
+      </SafeAreaProvider>
+    </GestureHandlerRootView>
   );
 }

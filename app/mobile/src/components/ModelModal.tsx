@@ -12,6 +12,7 @@ import {
   Alert,
 } from 'react-native';
 import { useModelApi, Model } from '@share/hooks/ModelAPI';
+import { Colors } from '../utils/colors';
 
 export default function ModelModal({ visible, onClose }: { visible: boolean; onClose: () => void }) {
   const {

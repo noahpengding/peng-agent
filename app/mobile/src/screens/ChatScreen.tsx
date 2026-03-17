@@ -14,6 +14,17 @@ import {
   KeyboardAvoidingView,
   Platform,
 } from 'react-native';
+import Animated, { 
+  FadeIn, 
+  FadeOut, 
+  FadeInDown, 
+  FadeInUp,
+  Layout, 
+  SlideInRight,
+  SlideOutRight,
+  LinearTransition,
+  ZoomIn
+} from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useSelector, useDispatch } from 'react-redux';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
@@ -36,8 +47,103 @@ import { Message, UploadedImage } from '@share/types/ChatInterface.types';
 import { useRAGApi } from '@share/hooks/RAGAPI';
 import { UploadService } from '@share/services/uploadService';
 import Markdown from 'react-native-markdown-display';
+import { Colors } from '../utils/colors';
+import { Typography } from '../utils/typography';
 
 type SelectorType = 'baseModel' | 'knowledgeBase';
+
+const AnimatedFlatList = Animated.createAnimatedComponent(FlatList);
+
+const MessageItem = React.memo(({ 
+  item, 
+  index, 
+  isFolded, 
+  onToggleFold, 
+  onFeedback 
+}: { 
+  item: Message; 
+  index: number; 
+  isFolded: boolean; 
+  onToggleFold: (index: number, current: boolean) => void;
+  onFeedback: (mid: string, cid: number, f: 'upvote' | 'downvote') => void;
+}) => {
+  const isFoldable = item.type === 'reasoning_summary' || item.type === 'tool_calls' || item.type === 'tool_output';
+  const isUser = item.role === 'human' || item.role === 'user';
+
+  const getFoldLabel = (type?: string) => {
+    if (type === 'tool_calls') return 'Tool Call';
+    if (type === 'tool_output') return 'Tool Output';
+    if (type === 'reasoning_summary') return 'Reasoning Summary';
+    return 'System Message';
+  };
+
+  return (
+    <Animated.View 
+      entering={isUser ? SlideInRight : FadeInUp}
+      layout={LinearTransition}
+      style={[
+        styles.messageWrapper,
+        isUser ? styles.messageWrapperUser : styles.messageWrapperAssistant
+      ]}
+    >
+      <View style={[
+        styles.messageBubble,
+        isUser ? styles.messageBubbleUser : styles.messageBubbleAssistant
+      ]}>
+        {!isUser ? (
+          <>
+            {isFoldable && (
+              <Pressable style={styles.foldHeader} onPress={() => onToggleFold(index, isFolded)}>
+                <MaterialCommunityIcons
+                  name={isFolded ? 'chevron-right' : 'chevron-down'}
+                  size={16}
+                  color="#D1D5DB"
+                />
+                <Text style={styles.foldHeaderText}>{getFoldLabel(item.type)}</Text>
+              </Pressable>
+            )}
+            {!isFolded && (
+              <Animated.View entering={FadeIn} layout={LinearTransition}>
+                <Markdown style={markdownStyles}>
+                  {item.content}
+                </Markdown>
+                {item.chatId && item.messageId && item.type === 'output_text' && (
+                  <View style={styles.feedbackContainer}>
+                    <TouchableOpacity
+                      onPress={() => onFeedback(item.messageId!, item.chatId!, 'upvote')}
+                      disabled={item.feedbackUpdating}
+                      style={styles.feedbackButton}
+                    >
+                      <MaterialCommunityIcons
+                        name={item.feedback === 'upvote' ? 'thumb-up' : 'thumb-up-outline'}
+                        size={16}
+                        color={item.feedback === 'upvote' ? '#10B981' : '#9CA3AF'}
+                      />
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      onPress={() => onFeedback(item.messageId!, item.chatId!, 'downvote')}
+                      disabled={item.feedbackUpdating}
+                      style={styles.feedbackButton}
+                    >
+                      <MaterialCommunityIcons
+                        name={item.feedback === 'downvote' ? 'thumb-down' : 'thumb-down-outline'}
+                        size={16}
+                        color={item.feedback === 'downvote' ? '#EF4444' : '#9CA3AF'}
+                      />
+                    </TouchableOpacity>
+                    {item.feedbackUpdating && <ActivityIndicator size="small" color="#10B981" style={{ marginLeft: 5 }} />}
+                  </View>
+                )}
+              </Animated.View>
+            )}
+          </>
+        ) : (
+          <Text style={styles.userText}>{item.content}</Text>
+        )}
+      </View>
+    </Animated.View>
+  );
+});
 
 export default function ChatScreen() {
   const dispatch = useDispatch<AppDispatch>();
@@ -244,7 +350,7 @@ export default function ChatScreen() {
     setSelectorVisible(false);
   };
 
-  const handleFeedback = (messageId: string, chatId: number, feedback: 'upvote' | 'downvote') => {
+  const handleFeedback = useCallback((messageId: string, chatId: number, feedback: 'upvote' | 'downvote') => {
     if (!user) return;
     dispatch(submitMessageFeedback({
       messageId,
@@ -252,93 +358,24 @@ export default function ChatScreen() {
       userName: user,
       feedback
     }));
-  };
+  }, [dispatch, user]);
 
-  const isFoldableMessage = (message: Message) => {
-    return message.type === 'reasoning_summary' || message.type === 'tool_calls' || message.type === 'tool_output';
-  };
-
-  const getFoldLabel = (type?: string) => {
-    if (type === 'tool_calls') return 'Tool Call';
-    if (type === 'tool_output') return 'Tool Output';
-    if (type === 'reasoning_summary') return 'Reasoning Summary';
-    return 'System Message';
-  };
-
-  const toggleFolded = (index: number, currentState: boolean) => {
+  const toggleFolded = useCallback((index: number, currentState: boolean) => {
     setFoldedMessages((prev) => ({
       ...prev,
       [index]: !currentState,
     }));
-  };
+  }, []);
 
-  const renderMessage = ({ item, index }: { item: Message; index: number }) => {
-    const isFoldable = isFoldableMessage(item);
-    const isFolded = foldedMessages[index] ?? item.folded ?? false;
-
-    return (
-    <View style={[
-      styles.messageWrapper,
-      item.role === 'human' || item.role === 'user' ? styles.messageWrapperUser : styles.messageWrapperAssistant
-    ]}>
-      <View style={[
-        styles.messageBubble,
-        item.role === 'human' || item.role === 'user' ? styles.messageBubbleUser : styles.messageBubbleAssistant
-      ]}>
-        {item.role === 'ai' || item.role === 'assistant' ? (
-          <>
-            {isFoldable && (
-              <Pressable style={styles.foldHeader} onPress={() => toggleFolded(index, isFolded)}>
-                <MaterialCommunityIcons
-                  name={isFolded ? 'chevron-right' : 'chevron-down'}
-                  size={16}
-                  color="#D1D5DB"
-                />
-                <Text style={styles.foldHeaderText}>{getFoldLabel(item.type)}</Text>
-              </Pressable>
-            )}
-            {!isFolded && (
-              <>
-                <Markdown style={markdownStyles}>
-                  {item.content}
-                </Markdown>
-                {item.chatId && item.messageId && item.type === 'output_text' && (
-                  <View style={styles.feedbackContainer}>
-                    <TouchableOpacity
-                      onPress={() => handleFeedback(item.messageId!, item.chatId!, 'upvote')}
-                      disabled={item.feedbackUpdating}
-                      style={styles.feedbackButton}
-                    >
-                      <MaterialCommunityIcons
-                        name={item.feedback === 'upvote' ? 'thumb-up' : 'thumb-up-outline'}
-                        size={16}
-                        color={item.feedback === 'upvote' ? '#10B981' : '#9CA3AF'}
-                      />
-                    </TouchableOpacity>
-                    <TouchableOpacity
-                      onPress={() => handleFeedback(item.messageId!, item.chatId!, 'downvote')}
-                      disabled={item.feedbackUpdating}
-                      style={styles.feedbackButton}
-                    >
-                      <MaterialCommunityIcons
-                        name={item.feedback === 'downvote' ? 'thumb-down' : 'thumb-down-outline'}
-                        size={16}
-                        color={item.feedback === 'downvote' ? '#EF4444' : '#9CA3AF'}
-                      />
-                    </TouchableOpacity>
-                    {item.feedbackUpdating && <ActivityIndicator size="small" color="#10B981" style={{ marginLeft: 5 }} />}
-                  </View>
-                )}
-              </>
-            )}
-          </>
-        ) : (
-          <Text style={styles.userText}>{item.content}</Text>
-        )}
-      </View>
-    </View>
-    );
-  };
+  const renderItem = useCallback(({ item, index }: { item: Message; index: number }) => (
+    <MessageItem 
+      item={item} 
+      index={index} 
+      isFolded={foldedMessages[index] ?? item.folded ?? false} 
+      onToggleFold={toggleFolded}
+      onFeedback={handleFeedback}
+    />
+  ), [foldedMessages, toggleFolded, handleFeedback]);
 
   return (
     <SafeAreaView style={styles.container}>
@@ -346,14 +383,14 @@ export default function ChatScreen() {
         <Text style={styles.headerTitle}>Chat</Text>
       </View>
 
-      <View style={styles.configPanel}>
+      <Animated.View layout={LinearTransition} style={styles.configPanel}>
         <Pressable style={styles.configToggleButton} onPress={() => setIsConfigExpanded((prev) => !prev)}>
           <Text style={styles.configToggleText}>Chat Configuration</Text>
           <MaterialCommunityIcons name={isConfigExpanded ? 'chevron-up' : 'chevron-down'} size={20} color="#D1D5DB" />
         </Pressable>
 
         {isConfigExpanded && (
-          <>
+          <Animated.View entering={FadeInUp} exiting={FadeOut} style={{ gap: 8 }}>
             <View style={styles.configRow}>
               <Pressable
                 style={styles.selectorButton}
@@ -397,23 +434,24 @@ export default function ChatScreen() {
                 );
               })}
             </ScrollView>
-          </>
+          </Animated.View>
         )}
-      </View>
+      </Animated.View>
 
       {error ? (
-        <View style={styles.errorBar}>
+        <Animated.View entering={FadeInDown} exiting={FadeOut} style={styles.errorBar}>
           <MaterialCommunityIcons name="alert-circle-outline" size={16} color="#FCA5A5" />
           <Text style={styles.errorText}>{error}</Text>
-        </View>
+        </Animated.View>
       ) : null}
 
-      <FlatList
+      <AnimatedFlatList
         ref={flatListRef}
         data={messages}
         keyExtractor={(_, index) => index.toString()}
-        renderItem={renderMessage}
+        renderItem={renderItem}
         contentContainerStyle={styles.listContent}
+        itemLayoutAnimation={LinearTransition}
         onContentSizeChange={() => flatListRef.current?.scrollToEnd({ animated: true })}
         onLayout={() => flatListRef.current?.scrollToEnd({ animated: true })}
       />
@@ -421,7 +459,13 @@ export default function ChatScreen() {
       {uploadedImages.length > 0 ? (
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.attachmentPreviewWrap}>
           {uploadedImages.map((file, index) => (
-            <View key={`${file.path}-${index}`} style={styles.attachmentItem}>
+            <Animated.View 
+              key={`${file.path}-${index}`} 
+              entering={ZoomIn} 
+              exiting={FadeOut}
+              layout={LinearTransition}
+              style={styles.attachmentItem}
+            >
               {file.contentType.startsWith('image/') ? (
                 <Image source={{ uri: file.preview }} style={styles.attachmentImage} />
               ) : (
@@ -433,7 +477,7 @@ export default function ChatScreen() {
               <Pressable style={styles.removeAttachmentButton} onPress={() => handleRemoveUpload(index)}>
                 <Text style={styles.removeAttachmentText}>×</Text>
               </Pressable>
-            </View>
+            </Animated.View>
           ))}
         </ScrollView>
       ) : null}
@@ -442,42 +486,44 @@ export default function ChatScreen() {
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={styles.inputContainer}
       >
-        {isComposerCollapsed ? (
-          <Pressable style={styles.composerCollapsedBar} onPress={() => setIsComposerCollapsed(false)}>
-            <MaterialCommunityIcons name="message-text-outline" size={18} color="#9CA3AF" />
-            <Text style={styles.composerCollapsedText}>
-              {uploadedImages.length > 0 ? `Continue message (${uploadedImages.length} image${uploadedImages.length > 1 ? 's' : ''})` : 'Tap to compose'}
-            </Text>
-          </Pressable>
-        ) : (
-          <View style={styles.inputRow}>
-            <Pressable
-              style={styles.actionIconButton}
-              onPress={() => setAttachmentMenuVisible(true)}
-              disabled={isUploading || isLoading}
-            >
-              <MaterialCommunityIcons name="camera-plus-outline" size={20} color="#D1D5DB" />
+        <Animated.View layout={LinearTransition}>
+          {isComposerCollapsed ? (
+            <Pressable style={styles.composerCollapsedBar} onPress={() => setIsComposerCollapsed(false)}>
+              <MaterialCommunityIcons name="message-text-outline" size={18} color="#9CA3AF" />
+              <Text style={styles.composerCollapsedText}>
+                {uploadedImages.length > 0 ? `Continue message (${uploadedImages.length} image${uploadedImages.length > 1 ? 's' : ''})` : 'Tap to compose'}
+              </Text>
             </Pressable>
+          ) : (
+            <Animated.View entering={FadeInUp} style={styles.inputRow}>
+              <Pressable
+                style={styles.actionIconButton}
+                onPress={() => setAttachmentMenuVisible(true)}
+                disabled={isUploading || isLoading}
+              >
+                <MaterialCommunityIcons name="camera-plus-outline" size={20} color="#D1D5DB" />
+              </Pressable>
 
-            <TextInput
-              style={styles.input}
-              placeholder="Type a message..."
-              placeholderTextColor="#9CA3AF"
-              value={input}
-              onFocus={() => setIsComposerCollapsed(false)}
-              onChangeText={(text) => dispatch(setInput(text))}
-              multiline
-            />
+              <TextInput
+                style={styles.input}
+                placeholder="Type a message..."
+                placeholderTextColor="#9CA3AF"
+                value={input}
+                onFocus={() => setIsComposerCollapsed(false)}
+                onChangeText={(text) => dispatch(setInput(text))}
+                multiline
+              />
 
-            <TouchableOpacity
-              style={[styles.sendButton, !input.trim() && uploadedImages.length === 0 && styles.sendButtonDisabled]}
-              onPress={handleSend}
-              disabled={isLoading || isUploading || (!input.trim() && uploadedImages.length === 0)}
-            >
-              {isLoading ? <ActivityIndicator size="small" color="#FFFFFF" /> : <Text style={styles.sendButtonText}>Send</Text>}
-            </TouchableOpacity>
-          </View>
-        )}
+              <TouchableOpacity
+                style={[styles.sendButton, !input.trim() && uploadedImages.length === 0 && styles.sendButtonDisabled]}
+                onPress={handleSend}
+                disabled={isLoading || isUploading || (!input.trim() && uploadedImages.length === 0)}
+              >
+                {isLoading ? <ActivityIndicator size="small" color="#FFFFFF" /> : <Text style={styles.sendButtonText}>Send</Text>}
+              </TouchableOpacity>
+            </Animated.View>
+          )}
+        </Animated.View>
       </KeyboardAvoidingView>
 
       <Modal animationType="slide" transparent visible={selectorVisible} onRequestClose={() => setSelectorVisible(false)}>
@@ -517,10 +563,10 @@ export default function ChatScreen() {
       </Modal>
 
       {(isUploading || baseModelsLoading) && (
-        <View style={styles.uploadHint}>
+        <Animated.View entering={FadeIn} exiting={FadeOut} style={styles.uploadHint}>
           <ActivityIndicator size="small" color="#10B981" />
           <Text style={styles.uploadHintText}>{isUploading ? 'Uploading file...' : 'Loading base models...'}</Text>
-        </View>
+        </Animated.View>
       )}
     </SafeAreaView>
   );
@@ -529,29 +575,34 @@ export default function ChatScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#212121',
+    backgroundColor: Colors.bgDeep,
   },
   header: {
-    height: 52,
+    height: 60,
     flexDirection: 'row',
     justifyContent: 'flex-start',
     alignItems: 'center',
-    backgroundColor: '#047857',
-    borderBottomWidth: 1,
-    borderBottomColor: '#065F46',
-    paddingHorizontal: 16,
+    backgroundColor: Colors.primary,
+    paddingHorizontal: Typography.spacing.sm,
+    elevation: 4,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
   },
+
   headerTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#F9FAFB',
+    fontSize: Typography.sizes.lg,
+    fontWeight: Typography.weights.black,
+    color: Colors.white,
+    letterSpacing: Typography.letterSpacing.tight,
   },
   listContent: {
-    padding: 15,
+    padding: Typography.spacing.sm,
   },
   messageWrapper: {
     flexDirection: 'row',
-    marginBottom: 15,
+    marginBottom: Typography.spacing.sm,
   },
   messageWrapperUser: {
     justifyContent: 'flex-end',
@@ -561,214 +612,237 @@ const styles = StyleSheet.create({
     width: '100%',
   },
   messageBubble: {
-    maxWidth: '80%',
-    padding: 12,
-    borderRadius: 16,
+    maxWidth: '85%',
+    padding: Typography.spacing.xs,
+    borderRadius: 18,
   },
   messageBubbleUser: {
-    backgroundColor: '#10B981',
+    backgroundColor: Colors.primary,
     borderBottomRightRadius: 4,
   },
   messageBubbleAssistant: {
-    backgroundColor: 'transparent',
-    borderRadius: 0,
-    borderBottomLeftRadius: 0,
-    borderWidth: 0,
+    backgroundColor: Colors.bgCard,
+    borderBottomLeftRadius: 4,
+    borderWidth: 1,
+    borderColor: Colors.border,
     maxWidth: '100%',
     width: '100%',
-    paddingHorizontal: 0,
-    paddingVertical: 0,
+    paddingHorizontal: 12,
+    paddingVertical: 12,
   },
   userText: {
-    color: '#ffffff',
-    fontSize: 16,
+    color: Colors.white,
+    fontSize: Typography.sizes.base,
+    lineHeight: Typography.sizes.base * Typography.lineHeights.normal,
+    fontWeight: Typography.weights.medium,
   },
   inputContainer: {
-    padding: 10,
-    backgroundColor: '#2F3237',
+    padding: Typography.spacing.xs,
+    backgroundColor: Colors.bgSurface,
     borderTopWidth: 1,
-    borderTopColor: '#374151',
+    borderTopColor: Colors.border,
   },
   inputRow: {
     flexDirection: 'row',
     alignItems: 'flex-end',
-    gap: 8,
+    gap: Typography.spacing['2xs'],
   },
   input: {
-    backgroundColor: '#212121',
-    color: '#F9FAFB',
-    borderRadius: 14,
+    backgroundColor: Colors.bgDeep,
+    color: Colors.textMain,
+    borderRadius: 16,
     flex: 1,
-    paddingHorizontal: 12,
-    paddingTop: 10,
-    paddingBottom: 10,
-    maxHeight: 110,
-    minHeight: 40,
-    fontSize: 15,
+    paddingHorizontal: Typography.spacing.xs,
+    paddingTop: Typography.spacing.xs,
+    paddingBottom: Typography.spacing.xs,
+    maxHeight: 120,
+    minHeight: 48,
+    fontSize: Typography.sizes.base,
+    fontFamily: Typography.fonts.sans,
+    borderWidth: 1,
+    borderColor: Colors.border,
   },
   sendButton: {
-    backgroundColor: '#10B981',
-    borderRadius: 10,
-    height: 42,
-    minWidth: 64,
-    paddingHorizontal: 14,
+    backgroundColor: Colors.primary,
+    borderRadius: 14,
+    height: 48,
+    width: 48,
     justifyContent: 'center',
     alignItems: 'center',
   },
   sendButtonDisabled: {
-    backgroundColor: '#4B5563',
+    backgroundColor: Colors.textMuted,
   },
   sendButtonText: {
-    color: '#ffffff',
-    fontWeight: 'bold',
+    color: Colors.white,
+    fontWeight: Typography.weights.black,
+    fontSize: Typography.sizes.sm,
+    textTransform: 'uppercase',
+  },
+
   },
   configPanel: {
-    backgroundColor: '#212121',
-    paddingHorizontal: 12,
-    paddingTop: 8,
-    paddingBottom: 8,
-    borderBottomColor: '#374151',
+    backgroundColor: Colors.bgSurface,
+    paddingHorizontal: Typography.spacing.xs,
+    paddingVertical: Typography.spacing.xs,
+    borderBottomColor: Colors.border,
     borderBottomWidth: 1,
-    gap: 8,
+    gap: Typography.spacing.xs,
   },
   configToggleButton: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: '#2F3237',
+    backgroundColor: Colors.bgDeep,
     borderWidth: 1,
-    borderColor: '#374151',
-    borderRadius: 10,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
+    borderColor: Colors.border,
+    borderRadius: 12,
+    paddingHorizontal: Typography.spacing.xs,
+    paddingVertical: Typography.spacing.xs,
   },
   configToggleText: {
-    color: '#D1D5DB',
-    fontSize: 13,
-    fontWeight: '600',
+    color: Colors.primary,
+    fontSize: Typography.sizes.sm,
+    fontWeight: Typography.weights.extraBold,
+    textTransform: 'uppercase',
+    letterSpacing: Typography.letterSpacing.wide,
   },
   configRow: {
     flexDirection: 'row',
-    gap: 8,
+    gap: 10,
   },
   selectorButton: {
     flex: 1,
-    backgroundColor: '#2F3237',
-    borderColor: '#374151',
+    backgroundColor: Colors.bgDeep,
+    borderColor: Colors.border,
     borderWidth: 1,
-    borderRadius: 10,
-    paddingHorizontal: 10,
-    paddingVertical: 8,
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
   },
   selectorLabel: {
-    color: '#9CA3AF',
-    fontSize: 12,
+    color: Colors.textMuted,
+    fontSize: Typography.sizes.xs,
+    fontWeight: Typography.weights.black,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+    marginBottom: Typography.spacing['3xs'],
   },
   selectorValue: {
-    color: '#F9FAFB',
-    marginTop: 4,
-    fontSize: 13,
+    color: Colors.textMain,
+    fontSize: Typography.sizes.sm,
+    fontWeight: Typography.weights.bold,
   },
   toolRowHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+    marginTop: Typography.spacing['3xs'],
   },
   toolRowTitle: {
-    color: '#D1D5DB',
-    fontWeight: '600',
-    fontSize: 13,
+    color: Colors.textDim,
+    fontWeight: Typography.weights.black,
+    fontSize: Typography.sizes.xs,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
   },
   toolChipWrap: {
-    gap: 8,
-    paddingBottom: 2,
+    gap: Typography.spacing['2xs'],
+    paddingBottom: 4,
   },
   toolChip: {
-    paddingVertical: 6,
-    paddingHorizontal: 10,
-    borderRadius: 999,
+    paddingVertical: Typography.spacing['2xs'],
+    paddingHorizontal: Typography.spacing.sm,
+    borderRadius: 20,
     borderWidth: 1,
-    borderColor: '#4B5563',
-    backgroundColor: '#2F3237',
+    borderColor: Colors.border,
+    backgroundColor: Colors.bgDeep,
   },
   toolChipSelected: {
-    borderColor: '#10B981',
-    backgroundColor: 'rgba(16, 185, 129, 0.18)',
+    borderColor: Colors.primary,
+    backgroundColor: Colors.primarySoft,
   },
   toolChipText: {
-    color: '#D1D5DB',
-    fontSize: 12,
+    color: Colors.textDim,
+    fontSize: Typography.sizes.sm,
+    fontWeight: Typography.weights.semibold,
   },
   toolChipTextSelected: {
-    color: '#D1FAE5',
+    color: Colors.primary,
   },
   errorBar: {
-    marginHorizontal: 12,
-    marginTop: 8,
-    borderRadius: 10,
+    margin: Typography.spacing.xs,
+    borderRadius: 12,
     borderWidth: 1,
-    borderColor: 'rgba(239, 68, 68, 0.36)',
-    backgroundColor: 'rgba(239, 68, 68, 0.15)',
-    paddingHorizontal: 10,
-    paddingVertical: 8,
+    borderColor: Colors.error,
+    backgroundColor: 'rgba(244, 63, 94, 0.1)',
+    paddingHorizontal: Typography.spacing.xs,
+    paddingVertical: Typography.spacing['2xs'],
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: 10,
   },
   errorText: {
-    color: '#FCA5A5',
+    color: Colors.error,
     flex: 1,
-    fontSize: 12,
+    fontSize: Typography.sizes.sm,
+    fontWeight: Typography.weights.bold,
   },
   selectorOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.4)',
+    backgroundColor: 'rgba(0,0,0,0.7)',
     justifyContent: 'flex-end',
   },
   selectorSheet: {
-    maxHeight: '70%',
-    backgroundColor: '#212121',
-    borderTopLeftRadius: 16,
-    borderTopRightRadius: 16,
-    padding: 14,
-    borderColor: '#374151',
+    maxHeight: '75%',
+    backgroundColor: Colors.bgSurface,
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    padding: 20,
+    borderColor: Colors.border,
     borderWidth: 1,
   },
   selectorSheetTitle: {
-    color: '#F9FAFB',
-    fontSize: 17,
-    fontWeight: '700',
-    marginBottom: 10,
+    color: Colors.primary,
+    fontSize: Typography.sizes.lg,
+    fontWeight: Typography.weights.black,
+    marginBottom: Typography.spacing.sm,
+    letterSpacing: Typography.letterSpacing.tight,
   },
   selectorOption: {
-    paddingVertical: 11,
-    paddingHorizontal: 10,
-    borderRadius: 8,
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    borderRadius: 12,
+    marginBottom: 8,
+    backgroundColor: Colors.bgDeep,
   },
   selectorOptionSelected: {
-    backgroundColor: 'rgba(16, 185, 129, 0.2)',
+    backgroundColor: Colors.primarySoft,
+    borderColor: Colors.primary,
+    borderWidth: 1,
   },
   selectorOptionText: {
-    color: '#E5E7EB',
-    fontSize: 14,
+    color: Colors.textDim,
+    fontSize: Typography.sizes.base,
+    fontWeight: Typography.weights.medium,
   },
   selectorOptionTextSelected: {
-    color: '#D1FAE5',
-    fontWeight: '600',
+    color: Colors.primary,
+    fontWeight: Typography.weights.extraBold,
   },
   attachmentPreviewWrap: {
-    paddingHorizontal: 10,
-    paddingTop: 8,
-    gap: 8,
+    paddingHorizontal: Typography.spacing.xs,
+    paddingVertical: Typography.spacing.xs,
+    gap: Typography.spacing['2xs'],
   },
   attachmentItem: {
-    width: 82,
-    height: 82,
-    borderRadius: 10,
+    width: 88,
+    height: 88,
+    borderRadius: 14,
     borderWidth: 1,
-    borderColor: '#4B5563',
+    borderColor: Colors.border,
     overflow: 'hidden',
-    backgroundColor: '#2F3237',
+    backgroundColor: Colors.bgCard,
     position: 'relative',
   },
   attachmentImage: {
@@ -783,144 +857,157 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   fileBadgeText: {
-    color: '#D1D5DB',
-    fontSize: 10,
+    color: Colors.textDim,
+    fontSize: 11,
+    fontWeight: '600',
   },
   removeAttachmentButton: {
     position: 'absolute',
     top: 0,
     right: 0,
-    width: 20,
-    height: 20,
-    borderBottomLeftRadius: 8,
-    backgroundColor: 'rgba(0,0,0,0.6)',
+    width: 24,
+    height: 24,
+    borderBottomLeftRadius: 10,
+    backgroundColor: 'rgba(0,0,0,0.7)',
     justifyContent: 'center',
     alignItems: 'center',
   },
   removeAttachmentText: {
-    color: '#FFFFFF',
-    lineHeight: 18,
-    fontSize: 16,
+    color: Colors.white,
+    fontSize: 18,
+    fontWeight: 'bold',
   },
   actionIconButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 10,
+    width: 44,
+    height: 44,
+    borderRadius: 12,
     borderWidth: 1,
-    borderColor: '#4B5563',
-    backgroundColor: '#212121',
+    borderColor: Colors.border,
+    backgroundColor: Colors.bgDeep,
     justifyContent: 'center',
     alignItems: 'center',
   },
   uploadHint: {
     position: 'absolute',
-    top: 60,
-    right: 12,
+    top: 70,
+    right: 16,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
-    backgroundColor: '#111827',
+    gap: 10,
+    backgroundColor: Colors.bgSurface,
     borderWidth: 1,
-    borderColor: '#374151',
-    borderRadius: 8,
-    paddingHorizontal: 10,
-    paddingVertical: 7,
+    borderColor: Colors.primary,
+    borderRadius: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
   },
   uploadHintText: {
-    color: '#D1D5DB',
-    fontSize: 12,
+    color: Colors.primary,
+    fontSize: 13,
+    fontWeight: '700',
   },
   feedbackContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginTop: 8,
+    marginTop: Typography.spacing.xs,
     borderTopWidth: 1,
-    borderTopColor: '#374151',
-    paddingTop: 8,
-    gap: 15,
+    borderTopColor: Colors.border,
+    paddingTop: Typography.spacing['2xs'],
+    gap: 20,
   },
   feedbackButton: {
-    padding: 4,
+    padding: 6,
   },
   foldHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
-    marginBottom: 6,
+    gap: Typography.spacing['2xs'],
+    marginBottom: Typography.spacing['2xs'],
+    backgroundColor: Colors.bgDeep,
+    padding: Typography.spacing['2xs'],
+    borderRadius: 8,
   },
   foldHeaderText: {
-    color: '#D1D5DB',
-    fontSize: 13,
-    fontWeight: '600',
+    color: Colors.primary,
+    fontSize: Typography.sizes.xs,
+    fontWeight: Typography.weights.black,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
   },
   composerCollapsedBar: {
-    backgroundColor: '#212121',
+    backgroundColor: Colors.bgDeep,
     borderWidth: 1,
-    borderColor: '#4B5563',
-    borderRadius: 12,
-    paddingVertical: 10,
-    paddingHorizontal: 12,
+    borderColor: Colors.border,
+    borderRadius: 16,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: 10,
   },
   composerCollapsedText: {
-    color: '#9CA3AF',
-    fontSize: 14,
+    color: Colors.textMuted,
+    fontSize: 15,
+    fontWeight: '500',
   },
   attachmentSheet: {
-    backgroundColor: '#212121',
-    borderTopLeftRadius: 16,
-    borderTopRightRadius: 16,
-    borderColor: '#374151',
+    backgroundColor: Colors.bgSurface,
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    borderColor: Colors.border,
     borderWidth: 1,
-    paddingHorizontal: 12,
-    paddingTop: 12,
-    paddingBottom: 20,
-    gap: 10,
+    paddingHorizontal: 16,
+    paddingTop: 16,
+    paddingBottom: 32,
+    gap: 12,
   },
   attachmentSheetAction: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
-    paddingVertical: 12,
-    paddingHorizontal: 10,
-    borderRadius: 10,
-    backgroundColor: '#2F3237',
+    gap: 12,
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    borderRadius: 14,
+    backgroundColor: Colors.bgDeep,
     borderWidth: 1,
-    borderColor: '#374151',
+    borderColor: Colors.border,
   },
   attachmentSheetActionText: {
-    color: '#F3F4F6',
-    fontSize: 15,
-    fontWeight: '500',
+    color: Colors.textMain,
+    fontSize: 16,
+    fontWeight: '600',
   },
   attachmentSheetCancel: {
-    marginTop: 6,
+    marginTop: 8,
     alignItems: 'center',
-    paddingVertical: 10,
+    paddingVertical: 12,
   },
   attachmentSheetCancelText: {
-    color: '#9CA3AF',
-    fontSize: 14,
+    color: Colors.error,
+    fontSize: 16,
+    fontWeight: '700',
   },
 });
 
 const markdownStyles = {
   body: {
-    color: '#E5E7EB',
-    fontSize: 16,
+    color: Colors.textMain,
+    fontSize: Typography.sizes.base,
+    fontFamily: Typography.fonts.sans,
+    lineHeight: Typography.sizes.base * Typography.lineHeights.normal,
   },
   code_inline: {
-    backgroundColor: '#111827',
+    backgroundColor: Colors.bgDeep,
     padding: 2,
     borderRadius: 4,
-    fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace',
+    fontFamily: Typography.fonts.mono,
+    fontSize: Typography.sizes.sm,
   },
   fence: {
-    backgroundColor: '#111827',
+    backgroundColor: Colors.bgDeep,
     padding: 10,
     borderRadius: 8,
-    fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace',
+    fontFamily: Typography.fonts.mono,
+    fontSize: Typography.sizes.sm,
   },
 };
