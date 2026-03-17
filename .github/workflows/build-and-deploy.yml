@@ -96,7 +96,9 @@ jobs:
           - language: python
             path: './server'
           - language: javascript
-            path: './app'
+            path: './app/web'
+          - language: javascript
+            path: './app/mobile'
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
