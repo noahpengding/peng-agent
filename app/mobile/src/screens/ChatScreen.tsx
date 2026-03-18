@@ -377,147 +377,150 @@ export default function ChatScreen() {
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
-      <Animated.View layout={LinearTransition} style={styles.configPanel}>
-        <Pressable style={styles.configToggleButton} onPress={() => setIsConfigExpanded((prev) => !prev)}>
-          <Text style={styles.configToggleText}>Chat Configuration</Text>
-          <MaterialCommunityIcons name={isConfigExpanded ? 'chevron-up' : 'chevron-down'} size={20} color="#D1D5DB" />
-        </Pressable>
-
-        {isConfigExpanded && (
-          <Animated.View entering={FadeInUp} exiting={FadeOut} style={{ gap: 8 }}>
-            <View style={styles.configRow}>
-              <Pressable
-                style={styles.selectorButton}
-                onPress={() => {
-                  setSelectorType('baseModel');
-                  setSelectorVisible(true);
-                }}
-              >
-                <Text style={styles.selectorLabel}>Base Model</Text>
-                <Text style={styles.selectorValue} numberOfLines={1}>{baseModel}</Text>
-              </Pressable>
-
-              <Pressable
-                style={styles.selectorButton}
-                onPress={() => {
-                  setSelectorType('knowledgeBase');
-                  setSelectorVisible(true);
-                }}
-              >
-                <Text style={styles.selectorLabel}>Knowledge Base</Text>
-                <Text style={styles.selectorValue} numberOfLines={1}>{knowledgeBase}</Text>
-              </Pressable>
-            </View>
-
-            <View style={styles.toolRowHeader}>
-              <Text style={styles.toolRowTitle}>Tools</Text>
-              {toolsLoading ? <ActivityIndicator size="small" color="#10B981" /> : null}
-            </View>
-
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.toolChipWrap}>
-              {availableTools.map((tool) => {
-                const selected = selectedToolNames.includes(tool.name);
-                return (
-                  <Pressable
-                    key={tool.id || tool.name}
-                    style={[styles.toolChip, selected && styles.toolChipSelected]}
-                    onPress={() => handleToggleTool(tool.name)}
-                  >
-                    <Text style={[styles.toolChipText, selected && styles.toolChipTextSelected]}>{tool.name}</Text>
-                  </Pressable>
-                );
-              })}
-            </ScrollView>
-          </Animated.View>
-        )}
-      </Animated.View>
-
-      {error ? (
-        <Animated.View entering={FadeInDown} exiting={FadeOut} style={styles.errorBar}>
-          <MaterialCommunityIcons name="alert-circle-outline" size={16} color="#FCA5A5" />
-          <Text style={styles.errorText}>{error}</Text>
-        </Animated.View>
-      ) : null}
-
-      <AnimatedFlatList
-        ref={flatListRef}
-        data={messages}
-        keyExtractor={(_, index) => index.toString()}
-        renderItem={renderItem}
-        contentContainerStyle={styles.listContent}
-        itemLayoutAnimation={LinearTransition}
-        onContentSizeChange={() => flatListRef.current?.scrollToEnd({ animated: true })}
-        onLayout={() => flatListRef.current?.scrollToEnd({ animated: true })}
-      />
-
-      {uploadedImages.length > 0 ? (
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.attachmentPreviewWrap}>
-          {uploadedImages.map((file, index) => (
-            <Animated.View 
-              key={`${file.path}-${index}`} 
-              entering={ZoomIn} 
-              exiting={FadeOut}
-              layout={LinearTransition}
-              style={styles.attachmentItem}
-            >
-              {file.contentType.startsWith('image/') ? (
-                <Image source={{ uri: file.preview }} style={styles.attachmentImage} />
-              ) : (
-                <View style={styles.fileBadge}>
-                  <MaterialCommunityIcons name="file-pdf-box" size={24} color="#F97316" />
-                  <Text style={styles.fileBadgeText} numberOfLines={1}>{file.fileName}</Text>
-                </View>
-              )}
-              <Pressable style={styles.removeAttachmentButton} onPress={() => handleRemoveUpload(index)}>
-                <Text style={styles.removeAttachmentText}>×</Text>
-              </Pressable>
-            </Animated.View>
-          ))}
-        </ScrollView>
-      ) : null}
-
       <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        style={styles.inputContainer}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        style={{ flex: 1 }}
       >
-        <Animated.View layout={LinearTransition}>
-          {isComposerCollapsed ? (
-            <Pressable style={styles.composerCollapsedBar} onPress={() => setIsComposerCollapsed(false)}>
-              <MaterialCommunityIcons name="message-text-outline" size={18} color="#9CA3AF" />
-              <Text style={styles.composerCollapsedText}>
-                {uploadedImages.length > 0 ? `Continue message (${uploadedImages.length} image${uploadedImages.length > 1 ? 's' : ''})` : 'Tap to compose'}
-              </Text>
-            </Pressable>
-          ) : (
-            <Animated.View entering={FadeInUp} style={styles.inputRow}>
-              <Pressable
-                style={styles.actionIconButton}
-                onPress={() => setAttachmentMenuVisible(true)}
-                disabled={isUploading || isLoading}
-              >
-                <MaterialCommunityIcons name="camera-plus-outline" size={20} color="#D1D5DB" />
-              </Pressable>
+        <Animated.View layout={LinearTransition} style={styles.configPanel}>
+          <Pressable style={styles.configToggleButton} onPress={() => setIsConfigExpanded((prev) => !prev)}>
+            <Text style={styles.configToggleText}>Chat Configuration</Text>
+            <MaterialCommunityIcons name={isConfigExpanded ? 'chevron-up' : 'chevron-down'} size={20} color="#D1D5DB" />
+          </Pressable>
 
-              <TextInput
-                style={styles.input}
-                placeholder="Type a message..."
-                placeholderTextColor="#9CA3AF"
-                value={input}
-                onFocus={() => setIsComposerCollapsed(false)}
-                onChangeText={(text) => dispatch(setInput(text))}
-                multiline
-              />
+          {isConfigExpanded && (
+            <Animated.View entering={FadeInUp} exiting={FadeOut} style={{ gap: 8 }}>
+              <View style={styles.configRow}>
+                <Pressable
+                  style={styles.selectorButton}
+                  onPress={() => {
+                    setSelectorType('baseModel');
+                    setSelectorVisible(true);
+                  }}
+                >
+                  <Text style={styles.selectorLabel}>Base Model</Text>
+                  <Text style={styles.selectorValue} numberOfLines={1}>{baseModel}</Text>
+                </Pressable>
 
-              <TouchableOpacity
-                style={[styles.sendButton, !input.trim() && uploadedImages.length === 0 && styles.sendButtonDisabled]}
-                onPress={handleSend}
-                disabled={isLoading || isUploading || (!input.trim() && uploadedImages.length === 0)}
-              >
-                {isLoading ? <ActivityIndicator size="small" color="#FFFFFF" /> : <Text style={styles.sendButtonText}>Send</Text>}
-              </TouchableOpacity>
+                <Pressable
+                  style={styles.selectorButton}
+                  onPress={() => {
+                    setSelectorType('knowledgeBase');
+                    setSelectorVisible(true);
+                  }}
+                >
+                  <Text style={styles.selectorLabel}>Knowledge Base</Text>
+                  <Text style={styles.selectorValue} numberOfLines={1}>{knowledgeBase}</Text>
+                </Pressable>
+              </View>
+
+              <View style={styles.toolRowHeader}>
+                <Text style={styles.toolRowTitle}>Tools</Text>
+                {toolsLoading ? <ActivityIndicator size="small" color="#10B981" /> : null}
+              </View>
+
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.toolChipWrap}>
+                {availableTools.map((tool) => {
+                  const selected = selectedToolNames.includes(tool.name);
+                  return (
+                    <Pressable
+                      key={tool.id || tool.name}
+                      style={[styles.toolChip, selected && styles.toolChipSelected]}
+                      onPress={() => handleToggleTool(tool.name)}
+                    >
+                      <Text style={[styles.toolChipText, selected && styles.toolChipTextSelected]}>{tool.name}</Text>
+                    </Pressable>
+                  );
+                })}
+              </ScrollView>
             </Animated.View>
           )}
         </Animated.View>
+
+        {error ? (
+          <Animated.View entering={FadeInDown} exiting={FadeOut} style={styles.errorBar}>
+            <MaterialCommunityIcons name="alert-circle-outline" size={16} color="#FCA5A5" />
+            <Text style={styles.errorText}>{error}</Text>
+          </Animated.View>
+        ) : null}
+
+        <AnimatedFlatList
+          ref={flatListRef}
+          data={messages}
+          keyExtractor={(_, index) => index.toString()}
+          renderItem={renderItem}
+          style={{ flex: 1 }}
+          contentContainerStyle={styles.listContent}
+          itemLayoutAnimation={LinearTransition}
+          onContentSizeChange={() => flatListRef.current?.scrollToEnd({ animated: true })}
+          onLayout={() => flatListRef.current?.scrollToEnd({ animated: true })}
+        />
+
+        {uploadedImages.length > 0 ? (
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.attachmentPreviewWrap}>
+            {uploadedImages.map((file, index) => (
+              <Animated.View 
+                key={`${file.path}-${index}`} 
+                entering={ZoomIn} 
+                exiting={FadeOut}
+                layout={LinearTransition}
+                style={styles.attachmentItem}
+              >
+                {file.contentType.startsWith('image/') ? (
+                  <Image source={{ uri: file.preview }} style={styles.attachmentImage} />
+                ) : (
+                  <View style={styles.fileBadge}>
+                    <MaterialCommunityIcons name="file-pdf-box" size={24} color="#F97316" />
+                    <Text style={styles.fileBadgeText} numberOfLines={1}>{file.fileName}</Text>
+                  </View>
+                )}
+                <Pressable style={styles.removeAttachmentButton} onPress={() => handleRemoveUpload(index)}>
+                  <Text style={styles.removeAttachmentText}>×</Text>
+                </Pressable>
+              </Animated.View>
+            ))}
+          </ScrollView>
+        ) : null}
+
+        <View style={styles.inputContainer}>
+          <Animated.View layout={LinearTransition}>
+            {isComposerCollapsed ? (
+              <Pressable style={styles.composerCollapsedBar} onPress={() => setIsComposerCollapsed(false)}>
+                <MaterialCommunityIcons name="message-text-outline" size={18} color="#9CA3AF" />
+                <Text style={styles.composerCollapsedText}>
+                  {uploadedImages.length > 0 ? `Continue message (${uploadedImages.length} image${uploadedImages.length > 1 ? 's' : ''})` : 'Tap to compose'}
+                </Text>
+              </Pressable>
+            ) : (
+              <Animated.View entering={FadeInUp} style={styles.inputRow}>
+                <Pressable
+                  style={styles.actionIconButton}
+                  onPress={() => setAttachmentMenuVisible(true)}
+                  disabled={isUploading || isLoading}
+                >
+                  <MaterialCommunityIcons name="camera-plus-outline" size={20} color="#D1D5DB" />
+                </Pressable>
+
+                <TextInput
+                  style={styles.input}
+                  placeholder="Type a message..."
+                  placeholderTextColor="#9CA3AF"
+                  value={input}
+                  onFocus={() => setIsComposerCollapsed(false)}
+                  onChangeText={(text) => dispatch(setInput(text))}
+                  multiline
+                />
+
+                <TouchableOpacity
+                  style={[styles.sendButton, !input.trim() && uploadedImages.length === 0 && styles.sendButtonDisabled]}
+                  onPress={handleSend}
+                  disabled={isLoading || isUploading || (!input.trim() && uploadedImages.length === 0)}
+                >
+                  {isLoading ? <ActivityIndicator size="small" color="#FFFFFF" /> : <Text style={styles.sendButtonText}>Send</Text>}
+                </TouchableOpacity>
+              </Animated.View>
+            )}
+          </Animated.View>
+        </View>
       </KeyboardAvoidingView>
 
       <Modal animationType="slide" transparent visible={selectorVisible} onRequestClose={() => setSelectorVisible(false)}>
