@@ -363,12 +363,12 @@ jobs:
           cd app/mobile && bun install
 
       - name: Build Mobile App (Production)
-        run: cd app/mobile && eas build --platform android --profile production --non-interactive
+        run: cd app/mobile && eas build --platform android --profile production --local --non-interactive --output=./build.aab
         env:
           EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
 
       - name: Submitt to Google Play Console
-        run: cd app/mobile && eas submit --platform android --non-interactive
+        run: cd app/mobile && eas submit --platform android --path=./build.aab --non-interactive
         env:
           EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
       
