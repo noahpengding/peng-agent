@@ -156,7 +156,7 @@ class CustomOpenRouterCompletion(BaseChatModel):
                     tool_calls_name = tool_call.function.name
                 if tool_call.function.arguments:
                     tool_calls_args += tool_call.function.arguments
-            if choice.finish_reason == "tool_calls":
+            if choice.finish_reason == "tool_calls" and tool_calls_name != "":
                 message_chunk = AIMessageChunk(
                     content_blocks=[
                         {
