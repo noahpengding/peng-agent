@@ -1,4 +1,4 @@
-import { apiCall } from '../utils/apiUtils';
+import { apiCall } from '../utils/apiCall';
 import { storage } from '../utils/storage';
 import { buildApiUrl } from '../utils/apiBase';
 
@@ -16,9 +16,6 @@ interface ChatRequest {
 }
 
 type FeedbackValue = 'upvote' | 'downvote' | 'no_response';
-
-const isReactNativeRuntime =
-  typeof navigator !== 'undefined' && navigator.product === 'ReactNative';
 
 const createPayloadLineProcessor = (
   onChunk: (chunk: string, type: string, done: boolean) => void
@@ -39,18 +36,6 @@ const createPayloadLineProcessor = (
       return false;
     }
   };
-};
-
-const processBufferedLines = (payload: string, processPayloadLine: (line: string) => boolean): boolean => {
-  const lines = payload.split('\n');
-  let completed = false;
-
-  for (const line of lines) {
-    if (completed) break;
-    completed = processPayloadLine(line);
-  }
-
-  return completed;
 };
 
 const sendMessageWithXhr = (
@@ -119,7 +104,6 @@ const sendMessageWithXhr = (
     };
 
     xhr.open('POST', apiUrl, true);
-    xhr.withCredentials = true;
     xhr.setRequestHeader('Content-Type', 'application/json');
     if (token) {
       xhr.setRequestHeader('Authorization', `Bearer ${token}`);
@@ -144,74 +128,9 @@ export const ChatService = {
 
       const processPayloadLine = createPayloadLineProcessor(onChunk);
 
-      // React Native fetch may buffer stream chunks until request completion.
-      // Use XHR LOADING events to parse chunks incrementally for live rendering.
-      if (isReactNativeRuntime) {
-        await sendMessageWithXhr(apiUrl, request, token, processPayloadLine, onComplete, onError);
-        return;
-      }
-
-      const response = await fetch(apiUrl, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          ...(token ? { Authorization: `Bearer ${token}` } : {}),
-        },
-        body: JSON.stringify(request),
-        credentials: 'include', // Include cookies
-      });
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(`API error (${response.status}): ${errorText}`);
-      }
-
-      if (response.body && typeof response.body.getReader === 'function') {
-        const reader = response.body.getReader();
-        const decoder = new TextDecoder();
-
-        let buffer = '';
-        let isCompleted = false;
-
-        while (true) {
-          if (isCompleted) {
-            onComplete();
-            break;
-          }
-
-          const { done, value } = await reader.read();
-
-          if (done) {
-            // Flush any buffered final line before completing.
-            if (buffer.trim()) {
-              isCompleted = processBufferedLines(buffer, processPayloadLine);
-              buffer = '';
-            }
-            if (!isCompleted) {
-              isCompleted = true;
-              onComplete();
-            }
-            break;
-          }
-
-          buffer += decoder.decode(value, { stream: true });
-          const lines = buffer.split('\n');
-          buffer = lines.pop() || '';
-
-          for (const line of lines) {
-            if (isCompleted) break;
-            isCompleted = processPayloadLine(line);
-          }
-        }
-      } else {
-        // React Native may not expose a readable stream body; parse the full text payload instead.
-        const rawText = await response.text();
-        processBufferedLines(rawText, processPayloadLine);
-        // Let UI paint chunk updates before completion state cleanup/folding.
-        await new Promise<void>((resolve) => setTimeout(resolve, 0));
-
-        onComplete();
-      }
+      // React Native fetch buffers stream chunks until request completion.
+      // We use XHR with LOADING events for incremental parsing and live rendering.
+      await sendMessageWithXhr(apiUrl, request, token, processPayloadLine, onComplete, onError);
     } catch (error) {
       if (error instanceof Error) {
         onError(error);

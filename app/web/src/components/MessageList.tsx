@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Message } from '@share/types/ChatInterface.types';
+import { Message } from '@/types/ChatInterface.types';
 import { MessageItem } from './MessageItem';
 
 interface MessageListProps {

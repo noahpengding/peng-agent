@@ -10,8 +10,8 @@ import {
   ActivityIndicator,
   Alert,
 } from 'react-native';
-import { useUserApi, UserProfile } from '@share/hooks/UserAPI';
-import { ModelInfo } from '@share/types/ChatInterface.types';
+import { useUserApi, UserProfile } from '@/hooks/UserAPI';
+import { ModelInfo } from '@/types/ChatInterface.types';
 import { Colors } from '../utils/colors';
 
 export default function UserProfileModal({ 

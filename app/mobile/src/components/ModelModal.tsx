@@ -11,7 +11,7 @@ import {
   ActivityIndicator,
   Alert,
 } from 'react-native';
-import { useModelApi, Model } from '@share/hooks/ModelAPI';
+import { useModelApi, Model } from '@/hooks/ModelAPI';
 import { Colors } from '../utils/colors';
 import { Typography } from '../utils/typography';
 import { MaterialCommunityIcons } from '@expo/vector-icons';

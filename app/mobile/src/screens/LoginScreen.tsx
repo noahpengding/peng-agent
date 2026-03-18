@@ -19,8 +19,8 @@ import Animated, {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useDispatch } from 'react-redux';
-import { login as loginAction } from '@share/store/slices/authSlice';
-import { login as loginApi } from '@share/utils/authUtils';
+import { login as loginAction } from '@/store/slices/authSlice';
+import { login as loginApi } from '@/utils/authUtils';
 import { Colors } from '../utils/colors';
 import { Typography } from '../utils/typography';
 

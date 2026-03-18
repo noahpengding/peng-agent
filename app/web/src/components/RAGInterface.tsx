@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { useRAGApi, RAGDocument } from '@share/hooks/RAGAPI';
+import { useRAGApi, RAGDocument } from '@/hooks/RAGAPI';
 import { useNavigate } from 'react-router-dom';
-import { UploadService } from '@share/services/uploadService';
+import { UploadService } from '@/services/uploadService';
 import './RAGInterface.css';
 
 const RAGInterface: React.FC = () => {

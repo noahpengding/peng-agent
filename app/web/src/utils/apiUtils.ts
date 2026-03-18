@@ -47,11 +47,8 @@ export const apiCall = async (method: string, endpoint: string, data?: Record<st
       if (error.response?.status === 401) {
         // Clear the token
         await storage.removeItem('access_token');
-        // Redirect to login page if we're in a browser environment
-        const isReactNative = typeof navigator !== 'undefined' && navigator.product === 'ReactNative';
-        if (typeof window !== 'undefined' && !isReactNative) {
-          window.location.href = '/login';
-        }
+        // Redirect to login page
+        window.location.href = '/login';
       }
 
       const errorMessage = error.response?.data?.message || `API error: ${error.response?.status} ${error.response?.statusText}`;

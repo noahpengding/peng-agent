@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ModelInfo } from '@share/types/ChatInterface.types';
-import { useUserApi, UserProfile } from '@share/hooks/UserAPI';
+import { ModelInfo } from '@/types/ChatInterface.types';
+import { useUserApi, UserProfile } from '@/hooks/UserAPI';
 import './UserProfilePopup.css';
 
 interface UserProfilePopupProps {

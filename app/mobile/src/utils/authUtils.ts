@@ -1,0 +1,36 @@
+import { apiCall } from './apiCall';
+import { jwtDecode } from 'jwt-decode';
+import { storage } from './storage';
+
+// Login function that calls the backend API
+export const login = async (username: string, password: string) => {
+  const response = await apiCall('POST', '/login', { username, password });
+  return response;
+};
+
+// Check if token is valid and not expired
+export const isTokenValid = (token: string | null): boolean => {
+  if (!token) return false;
+
+  try {
+    const decodedToken: { exp: number } = jwtDecode(token);
+    const currentTime = Date.now() / 1000;
+
+    // Check if token is expired
+    return decodedToken.exp > currentTime;
+  } catch {
+    return false;
+  }
+};
+
+// Helper to get token from storage
+export const getToken = async (): Promise<string | null> => {
+  const token = await storage.getItem('access_token');
+  return token;
+};
+
+// Add token to API requests
+export const getAuthHeader = async () => {
+  const token = await getToken();
+  return token ? { Authorization: `Bearer ${token}` } : {};
+};

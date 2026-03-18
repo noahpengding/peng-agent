@@ -12,8 +12,8 @@ import {
 } from 'react-native';
 import * as DocumentPicker from 'expo-document-picker';
 import * as FileSystem from 'expo-file-system';
-import { useRAGApi, RAGDocument } from '@share/hooks/RAGAPI';
-import { UploadService } from '@share/services/uploadService';
+import { useRAGApi, RAGDocument } from '@/hooks/RAGAPI';
+import { UploadService } from '@/services/uploadService';
 import { Colors } from '../utils/colors';
 import { Typography } from '../utils/typography';
 

@@ -2,16 +2,16 @@ import React from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { Provider } from 'react-redux';
-import { store } from '@share/store'; // Shared store
+import { store } from '@/store'; // Shared store
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { useDispatch, useSelector } from 'react-redux';
 import * as SecureStore from 'expo-secure-store';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import TabNavigator from './src/navigation/TabNavigator';
 import LoginScreen from './src/screens/LoginScreen';
-import { setStorageAdapter } from '@share/utils/storage';
-import { setToken } from '@share/store/slices/authSlice';
-import { RootState } from '@share/store';
+import { setStorageAdapter } from '@/utils/storage';
+import { setToken } from '@/store/slices/authSlice';
+import { RootState } from '@/store';
 import { getApiUrl } from './src/utils/apiUtils';
 
 const Stack = createNativeStackNavigator();

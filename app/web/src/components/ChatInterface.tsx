@@ -1,9 +1,9 @@
 import React, { useState, useEffect, useRef, useCallback, lazy, Suspense } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useDispatch, useSelector } from 'react-redux';
-import { RootState, AppDispatch } from '@share/store';
-import { fetchBaseModels } from '@share/store/slices/modelSlice';
-import { fetchTools, updateTools } from '@share/store/slices/toolSlice';
+import { RootState, AppDispatch } from '@/store';
+import { fetchBaseModels } from '@/store/slices/modelSlice';
+import { fetchTools, updateTools } from '@/store/slices/toolSlice';
 import {
   setInput,
   setSidebarHidden,
@@ -17,13 +17,13 @@ import {
   sendMessage,
   setError,
   submitMessageFeedback,
-} from '@share/store/slices/chatSlice';
+} from '@/store/slices/chatSlice';
 import './ChatInterface.css';
-import { Message, UploadedImage } from '@share/types/ChatInterface.types';
+import { Message, UploadedImage } from '@/types/ChatInterface.types';
 import { InputArea } from './InputArea';
 import { MessageList } from './MessageList';
-import { Memory } from '@share/hooks/MemoryAPI';
-import { useRAGApi } from '@share/hooks/RAGAPI';
+import { Memory } from '@/hooks/MemoryAPI';
+import { useRAGApi } from '@/hooks/RAGAPI';
 
 // Code split heavy components
 const UserProfilePopup = lazy(() => import('./UserProfilePopup'));
@@ -80,6 +80,38 @@ const ChatbotUI = () => {
       isMounted = false;
     };
   }, [dispatch]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Handle mobile keyboard with Visual Viewport API
+  useEffect(() => {
+    if (!window.visualViewport) return;
+
+    const handleResize = () => {
+      const viewport = window.visualViewport;
+      if (!viewport) return;
+      
+      // Update root height to match visual viewport height
+      const root = document.getElementById('root');
+      if (root) {
+        root.style.height = `${viewport.height}px`;
+      }
+      window.scrollTo(0, 0);
+    };
+
+    window.visualViewport.addEventListener('resize', handleResize);
+    window.visualViewport.addEventListener('scroll', handleResize);
+    
+    // Initial call
+    handleResize();
+    
+    return () => {
+      window.visualViewport?.removeEventListener('resize', handleResize);
+      window.visualViewport?.removeEventListener('scroll', handleResize);
+      const root = document.getElementById('root');
+      if (root) {
+        root.style.height = '100vh';
+      }
+    };
+  }, []);
 
   const displayError = error || toolsError || collectionsError;
 

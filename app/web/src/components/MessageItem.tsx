@@ -7,7 +7,7 @@ import rehypeKatex from 'rehype-katex';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { vscDarkPlus } from 'react-syntax-highlighter/dist/esm/styles/prism';
 import 'katex/dist/katex.min.css';
-import { Message } from '@share/types/ChatInterface.types';
+import { Message } from '@/types/ChatInterface.types';
 
 interface CodeBlockProps extends React.HTMLAttributes<HTMLElement> {
   inline?: boolean;

@@ -1,5 +1,3 @@
-const isReactNative = typeof navigator !== 'undefined' && navigator.product === 'ReactNative';
-
 const trimTrailingSlash = (value: string) => value.replace(/\/+$/, '');
 
 export const getApiBase = (): string => {
@@ -8,11 +6,7 @@ export const getApiBase = (): string => {
     return trimTrailingSlash(globalBase);
   }
 
-  if (isReactNative) {
-    return trimTrailingSlash(process.env.API_URL || 'http://localhost:8080');
-  }
-
-  return '/proxy';
+  return trimTrailingSlash(process.env.API_URL || 'http://localhost:8080');
 };
 
 export const buildApiUrl = (path: string): string => {

@@ -1,5 +1,5 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
-import { ModelInfo } from '@share/types/ChatInterface.types';
+import { ModelInfo } from '@/types/ChatInterface.types';
 import { ModelService } from '../../services/modelService';
 import { UserService } from '../../services/userService';
 

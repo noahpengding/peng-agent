@@ -1,5 +1,5 @@
 import { createSlice, createAsyncThunk, PayloadAction } from '@reduxjs/toolkit';
-import { Message, UploadedImage } from '@share/types/ChatInterface.types';
+import { Message, UploadedImage } from '@/types/ChatInterface.types';
 import { ChatService } from '../../services/chatService';
 import { fetchBaseModels } from './modelSlice';
 

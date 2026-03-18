@@ -248,8 +248,7 @@ jobs:
 
       - name: Install dependencies
         run: |
-          cd app/share && bun install
-          cd ../mobile && bun install
+          cd app/mobile && bun install
 
       - name: Build Mobile App (Preview)
         run: cd app/mobile && eas build --platform android --profile preview --local --non-interactive --output=./build-preview.apk
@@ -361,8 +360,7 @@ jobs:
 
       - name: Install dependencies
         run: |
-          cd app/share && bun install
-          cd ../mobile && bun install
+          cd app/mobile && bun install
 
       - name: Build Mobile App (Production)
         run: cd app/mobile && eas build --platform android --profile production --non-interactive

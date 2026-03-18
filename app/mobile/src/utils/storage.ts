@@ -20,9 +20,8 @@ class MemoryStorage implements StorageInterface {
   }
 }
 
-const isBrowser = typeof window !== 'undefined' && typeof window.localStorage !== 'undefined';
-
-export let storage: StorageInterface = isBrowser ? window.localStorage : new MemoryStorage();
+// Default to MemoryStorage, will be overridden by setStorageAdapter in App.tsx
+export let storage: StorageInterface = new MemoryStorage();
 
 export const setStorageAdapter = (newStorage: StorageInterface) => {
   storage = newStorage;

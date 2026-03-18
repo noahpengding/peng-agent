@@ -2,8 +2,8 @@ import React, { useState } from 'react';
 import { motion, AnimatePresence, Variants } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { useDispatch } from 'react-redux';
-import { login } from '@share/store/slices/authSlice';
-import { login as apiLogin } from '@share/utils/authUtils';
+import { login } from '@/store/slices/authSlice';
+import { login as apiLogin } from '@/utils/authUtils';
 import './Login.css';
 
 const EyeIcon: React.FC<{ open: boolean }> = ({ open }) =>

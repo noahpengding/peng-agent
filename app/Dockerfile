@@ -2,11 +2,8 @@ FROM dhi.io/bun:1-debian13-dev AS builder
 
 WORKDIR /app
 
-COPY share share
 COPY web web
 COPY docker-entrypoint.sh .
-
-RUN cd share && bun install --frozen-lockfile
 
 RUN cd web && bun install --frozen-lockfile
 

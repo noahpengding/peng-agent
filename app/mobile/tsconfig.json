@@ -3,7 +3,7 @@
   "compilerOptions": {
     "strict": false,
     "paths": {
-      "@share/*": ["../share/src/*"]
+      "@/*": ["./src/*"]
     }
   }
 }

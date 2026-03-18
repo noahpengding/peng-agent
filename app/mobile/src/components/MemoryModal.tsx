@@ -11,11 +11,11 @@ import {
   Alert,
   Switch,
 } from 'react-native';
-import { useMemoryApi, Memory } from '@share/hooks/MemoryAPI';
+import { useMemoryApi, Memory } from '@/hooks/MemoryAPI';
 import { useSelector, useDispatch } from 'react-redux';
-import { RootState } from '@share/store';
-import { setShortTermMemory, setMessages } from '@share/store/slices/chatSlice';
-import { Message } from '@share/types/ChatInterface.types';
+import { RootState } from '@/store';
+import { setShortTermMemory, setMessages } from '@/store/slices/chatSlice';
+import { Message } from '@/types/ChatInterface.types';
 import { Colors } from '../utils/colors';
 import { Typography } from '../utils/typography';
 

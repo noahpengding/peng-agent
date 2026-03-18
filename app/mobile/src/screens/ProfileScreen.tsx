@@ -2,9 +2,9 @@ import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, Text, View, ScrollView, Linking } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useDispatch, useSelector } from 'react-redux';
-import { logout } from '@share/store/slices/authSlice';
-import { UserService } from '@share/services/userService';
-import { RootState } from '@share/store';
+import { logout } from '@/store/slices/authSlice';
+import { UserService } from '@/services/userService';
+import { RootState } from '@/store';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { Colors } from '../utils/colors';
 import { Typography } from '../utils/typography';
@@ -13,7 +13,7 @@ import UserProfileModal from '../components/UserProfileModal';
 import ModelModal from '../components/ModelModal';
 import RAGModal from '../components/RAGModal';
 import MemoryModal from '../components/MemoryModal';
-import { setError } from '@share/store/slices/chatSlice';
+import { setError } from '@/store/slices/chatSlice';
 
 export default function ProfileScreen() {
   const dispatch = useDispatch();

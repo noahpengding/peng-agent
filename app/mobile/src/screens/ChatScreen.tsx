@@ -27,9 +27,9 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useSelector, useDispatch } from 'react-redux';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
-import { AppDispatch, RootState } from '@share/store';
-import { fetchBaseModels } from '@share/store/slices/modelSlice';
-import { fetchTools } from '@share/store/slices/toolSlice';
+import { AppDispatch, RootState } from '@/store';
+import { fetchBaseModels } from '@/store/slices/modelSlice';
+import { fetchTools } from '@/store/slices/toolSlice';
 import {
   addUserMessage,
   sendMessage,
@@ -40,10 +40,10 @@ import {
   setSelectedToolNames,
   submitMessageFeedback,
   setUploadedImages,
-} from '@share/store/slices/chatSlice';
-import { Message, UploadedImage } from '@share/types/ChatInterface.types';
-import { useRAGApi } from '@share/hooks/RAGAPI';
-import { UploadService } from '@share/services/uploadService';
+} from '@/store/slices/chatSlice';
+import { Message, UploadedImage } from '@/types/ChatInterface.types';
+import { useRAGApi } from '@/hooks/RAGAPI';
+import { UploadService } from '@/services/uploadService';
 import Markdown from 'react-native-markdown-display';
 import { Colors } from '../utils/colors';
 import { Typography } from '../utils/typography';
@@ -150,7 +150,7 @@ export default function ChatScreen() {
   const user = useSelector((state: RootState) => state.auth.user);
   const allMessages = useSelector((state: RootState) => state.chat.messages);
   const messages = useMemo(
-    () => allMessages.filter((m) => m.type !== 'tool_output' && m.type !== 'tool_calls' && m.type !== 'reasoning_summary'),
+    () => allMessages.filter((m) => m.type !== 'tool_output'),
     [allMessages]
   );
   const input = useSelector((state: RootState) => state.chat.input);
@@ -158,6 +158,7 @@ export default function ChatScreen() {
   const baseModel = useSelector((state: RootState) => state.chat.baseModel);
   const knowledgeBase = useSelector((state: RootState) => state.chat.knowledgeBase);
   const selectedToolNames = useSelector((state: RootState) => state.chat.selectedToolNames);
+  const shortTermMemory = useSelector((state: RootState) => state.chat.shortTermMemory);
   const uploadedImages = useSelector((state: RootState) => state.chat.uploadedImages);
   const error = useSelector((state: RootState) => state.chat.error);
   const availableBaseModels = useSelector((state: RootState) => state.models.availableBaseModels);
@@ -225,7 +226,7 @@ export default function ChatScreen() {
         operator,
         base_model: baseModel,
         tools_name: selectedToolNames,
-        short_term_memory: [],
+        short_term_memory: shortTermMemory,
       },
     };
 
@@ -382,7 +383,8 @@ export default function ChatScreen() {
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
       <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
         style={{ flex: 1 }}
       >
         <Animated.View layout={LinearTransition} style={styles.configPanel}>
@@ -512,6 +514,8 @@ export default function ChatScreen() {
                   onFocus={() => setIsComposerCollapsed(false)}
                   onChangeText={(text) => dispatch(setInput(text))}
                   multiline
+                  blurOnSubmit={true}
+                  onSubmitEditing={handleSend}
                 />
 
                 <TouchableOpacity
