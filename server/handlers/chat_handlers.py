@@ -172,7 +172,8 @@ def _chunk_message_process(chunk: str, math_flag: bool):
         chunk = chunk.replace("\\", "")
     if math_flag:
         chunk = chunk.replace("\n", "")
-    chunk = chunk.replace("\\,", "").replace("\\;", "").replace("\n\n", "\n")
+        chunk = chunk.replace("\\,", "").replace("\\;", "")
+    chunk = chunk.replace("\n\n", "\n")
     return chunk, math_flag
 
 def _save_chat_response(chat_id: int, message_type: str, content: str, mysql_conn: MysqlConnect = None, **kwargs):
