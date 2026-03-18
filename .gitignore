@@ -1,3 +1,8 @@
+*/.idea/*
+.idea/*
+.gemini/*
+
+
 */server/test/*
 
 */config/config.json

@@ -1,0 +1,231 @@
+/* ── Keyframes ─────────────────────────────────────────── */
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(18px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* ── Page wrapper ──────────────────────────────────────── */
+.login-page {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  background: var(--color-bg-deep);
+  background-image: 
+    radial-gradient(at 0% 0%, var(--color-primary-soft) 0px, transparent 50%),
+    radial-gradient(at 100% 100%, oklch(0.6 0.25 300 / 0.1) 0px, transparent 50%);
+  position: relative;
+  overflow: hidden;
+  box-sizing: border-box;
+}
+
+/* ── Ambient glow blobs ────────────────────────────────── */
+.login-bg-blobs {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background-image:
+    radial-gradient(circle at 20% 30%, oklch(0.65 0.2 160 / 0.1) 0%, transparent 50%),
+    radial-gradient(circle at 80% 70%, oklch(0.6 0.25 300 / 0.08) 0%, transparent 50%);
+}
+
+/* ── Animated container ────────────────────────────────── */
+.login-container {
+  position: relative;
+  width: 100%;
+  max-width: 380px;
+  animation: fadeInUp 0.4s ease-out;
+}
+
+/* ── Brand / logo section ──────────────────────────────── */
+.login-brand {
+  text-align: center;
+  margin-bottom: 28px;
+}
+
+.login-logo {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 60px;
+  height: 60px;
+  border-radius: 18px;
+  margin-bottom: 14px;
+  background: var(--color-primary);
+  box-shadow: 0 8px 28px oklch(0.65 0.2 160 / 0.4);
+}
+
+.login-title {
+  color: var(--color-primary);
+  font-size: 28px;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  margin: 0;
+}
+
+.login-subtitle {
+  color: var(--color-text-dim);
+  font-size: 14px;
+  font-weight: 500;
+  margin-top: 8px;
+  margin-bottom: 0;
+}
+
+/* ── Card ──────────────────────────────────────────────── */
+.login-card {
+  border-radius: 24px;
+  padding: 40px;
+  background: var(--color-bg-card);
+  border: 1px solid var(--color-border);
+  backdrop-filter: blur(20px);
+  box-shadow: 0 30px 60px oklch(0 0 0 / 0.4);
+}
+
+/* ── Form ──────────────────────────────────────────────── */
+.login-form {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+/* ── Field label ───────────────────────────────────────── */
+.login-label {
+  display: block;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--color-primary);
+  margin-bottom: 10px;
+}
+
+/* ── Text / password input ─────────────────────────────── */
+.login-input {
+  display: block;
+  width: 100%;
+  border-radius: 12px;
+  border: 1px solid var(--color-border);
+  background: var(--color-bg-deep);
+  padding: 12px 16px;
+  font-size: 15px;
+  color: var(--color-text-main);
+  outline: none;
+  transition: all 0.2s ease;
+  box-sizing: border-box;
+}
+
+.login-input::placeholder {
+  color: var(--color-text-muted);
+}
+
+.login-input:hover:not(:focus) {
+  border-color: var(--color-text-muted);
+}
+
+.login-input:focus {
+  border-color: var(--color-primary);
+  background: var(--color-bg-hover);
+  box-shadow: 0 0 0 3px var(--color-primary-soft);
+}
+
+.login-input--password {
+  padding-right: 44px;
+}
+
+/* ── Password wrapper ──────────────────────────────────── */
+.login-password-wrapper {
+  position: relative;
+}
+
+/* ── Eye toggle button ─────────────────────────────────── */
+.login-eye-btn {
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  line-height: 0;
+  color: var(--color-text-muted);
+  transition: color 0.15s;
+}
+
+.login-eye-btn:hover {
+  color: var(--color-primary);
+}
+
+/* ── Error banner ──────────────────────────────────────── */
+.login-error {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  border-radius: 12px;
+  padding: 12px 16px;
+  font-size: 13px;
+  background: oklch(0.65 0.2 25 / 0.15);
+  border: 1px solid var(--color-error);
+  color: var(--color-error);
+  font-weight: 600;
+}
+
+.login-error-icon {
+  width: 16px;
+  height: 16px;
+  margin-top: 1px;
+  flex-shrink: 0;
+}
+
+/* ── Submit button ─────────────────────────────────────── */
+.login-submit {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border-radius: 12px;
+  padding: 14px 20px;
+  margin-top: 8px;
+  font-size: 15px;
+  font-weight: 700;
+  color: #fff;
+  border: none;
+  cursor: pointer;
+  background: var(--color-primary);
+  box-shadow: 0 8px 25px oklch(0.65 0.2 160 / 0.3);
+  transition: all 0.2s ease;
+}
+
+.login-submit:hover:not(:disabled) {
+  box-shadow: 0 12px 30px oklch(0.65 0.2 160 / 0.4);
+  transform: translateY(-2px);
+  filter: brightness(1.1);
+}
+
+.login-submit:disabled {
+  cursor: not-allowed;
+  background: var(--color-text-muted);
+  box-shadow: none;
+  opacity: 0.6;
+}
+
+/* ── Loading spinner ───────────────────────────────────── */
+.login-spinner {
+  width: 16px;
+  height: 16px;
+  animation: spin 0.8s linear infinite;
+}

@@ -1,0 +1,59 @@
+import axios from 'axios';
+import { storage } from './storage';
+import { buildApiUrl } from './apiBase';
+
+/**
+ * Make an API call with the specified method and endpoint
+ */
+export const apiCall = async (method: string, endpoint: string, data?: Record<string, unknown>) => {
+  const url = buildApiUrl(endpoint);
+
+  // Get token from storage for authenticated requests
+  const token = await storage.getItem('access_token');
+
+  try {
+    const response = await axios({
+      method,
+      url,
+      data: method === 'POST' || method === 'PUT' || method === 'PATCH' ? data : undefined,
+      params: method === 'GET' ? data : undefined,
+      headers: {
+        'Content-Type': 'application/json',
+        // Add Authorization header if token exists
+        ...(token
+          ? {
+              Authorization: `Bearer ${token}`,
+              Authentication: token,
+            }
+          : {}),
+      },
+      withCredentials: true, // Equivalent to credentials: 'include'
+      timeout: 300000,
+    });
+
+    // Axios automatically throws errors for non-2xx status codes
+    // and automatically parses JSON responses
+
+    // For HTTP 204 No Content, return null
+    if (response.status === 204) {
+      return null;
+    }
+
+    return response.data;
+  } catch (error) {
+    // Extract error message from axios error object
+    if (axios.isAxiosError(error)) {
+      // Handle authentication errors (401 Unauthorized)
+      if (error.response?.status === 401) {
+        // Clear the token
+        await storage.removeItem('access_token');
+        // Mobile apps handle navigation via state, no window.location here
+      }
+
+      const errorMessage = error.response?.data?.message || `API error: ${error.response?.status} ${error.response?.statusText}`;
+      throw new Error(errorMessage);
+    }
+
+    throw error;
+  }
+};

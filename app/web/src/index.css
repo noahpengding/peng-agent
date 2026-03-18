@@ -1,0 +1,101 @@
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,200..800;1,200..800&family=JetBrains+Mono:ital,wght@0,100..800;1,100..800&display=swap');
+
+@import "tailwindcss/preflight";
+@tailwind utilities;
+
+:root {
+  /* Brand Colors - OKLCH for perceptually uniform lightness */
+  --color-primary: oklch(0.6 0.18 250);      /* Electric Blue (#3b82f6) */
+  --color-primary-soft: oklch(0.6 0.18 250 / 0.15);
+  --color-secondary: oklch(0.75 0.15 190);    /* Soft Cyan */
+  --color-accent: oklch(0.85 0.15 90);        /* Pale Gold */
+
+  /* Semantic Colors */
+  --color-success: oklch(0.7 0.15 150);      /* Fresh Mint */
+  --color-error: oklch(0.65 0.2 25);         /* Vibrant Red-Pink */
+  --color-warning: oklch(0.8 0.18 85);       /* Golden Amber */
+  --color-info: oklch(0.7 0.15 250);         /* Azure Blue */
+
+  
+  /* Surface Colors ... */
+  --color-bg-deep: oklch(0.18 0.01 260);     /* Deep Charcoal with slight cool tint */
+  --color-bg-surface: oklch(0.25 0.01 260);  /* Slightly lighter surface */
+  --color-bg-card: oklch(0.3 0.02 260);      /* Card surface */
+  --color-bg-hover: oklch(0.35 0.02 260);    /* Interaction state */
+  
+  /* Border & Text */
+  --color-border: oklch(0.35 0.02 260 / 0.4);
+  --color-text-main: oklch(0.95 0.01 260);
+  --color-text-dim: oklch(0.75 0.01 260);
+  --color-text-muted: oklch(0.6 0.01 260);
+
+  /* Typography System - 1.25 Modular Scale (Major Third) */
+  --font-sans: "Plus Jakarta Sans", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+
+  --text-xs: clamp(0.64rem, 0.05vw + 0.63rem, 0.67rem);
+  --text-sm: clamp(0.8rem, 0.17vw + 0.76rem, 0.89rem);
+  --text-base: clamp(1rem, 0.34vw + 0.91rem, 1.19rem);
+  --text-lg: clamp(1.25rem, 0.61vw + 1.1rem, 1.58rem);
+  --text-xl: clamp(1.56rem, 1.0vw + 1.31rem, 2.11rem);
+  --text-2xl: clamp(1.95rem, 1.56vw + 1.56rem, 2.81rem);
+  --text-3xl: clamp(2.44rem, 2.38vw + 1.85rem, 3.75rem);
+
+  --leading-tight: 1.1;
+  --leading-snug: 1.3;
+  --leading-normal: 1.5;
+  --leading-relaxed: 1.7;
+
+  /* Spacing System - 4px Base (8-point grid principle) */
+  --space-3xs: 0.25rem; /* 4px */
+  --space-2xs: 0.5rem;  /* 8px */
+  --space-xs: 0.75rem;  /* 12px */
+  --space-sm: 1rem;     /* 16px */
+  --space-md: 1.5rem;   /* 24px */
+  --space-lg: 2rem;     /* 32px */
+  --space-xl: 3rem;     /* 48px */
+  --space-2xl: 4rem;    /* 64px */
+  --space-3xl: 6rem;    /* 96px */
+
+  /* Z-Index Scale */
+  --z-below: -1;
+  --z-base: 0;
+  --z-dropdown: 1000;
+  --z-sticky: 1100;
+  --z-overlay: 1200;
+  --z-modal: 1300;
+  --z-popover: 1400;
+  --z-tooltip: 1500;
+
+  /* Shadows */
+  --shadow-sm: 0 1px 2px oklch(0 0 0 / 0.1);
+  --shadow-md: 0 4px 6px -1px oklch(0 0 0 / 0.1), 0 2px 4px -2px oklch(0 0 0 / 0.1);
+  --shadow-lg: 0 10px 15px -3px oklch(0 0 0 / 0.1), 0 4px 6px -4px oklch(0 0 0 / 0.1);
+  --shadow-xl: 0 20px 25px -5px oklch(0 0 0 / 0.1), 0 8px 10px -6px oklch(0 0 0 / 0.1);
+
+  /* Letter-spacing for "tracking-tight" (matches common conventions like Tailwind) */
+  --tracking-tight: -0.025em;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  background-color: var(--color-bg-deep);
+  color: var(--color-text-main);
+  font-family: var(--font-sans);
+  font-size: var(--text-base);
+  line-height: var(--leading-normal);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  line-height: var(--leading-tight);
+  letter-spacing: var(--tracking-tight);
+  font-weight: 800;
+}
+
+#root {
+  height: 100vh;
+  width: 100vw;
+}
