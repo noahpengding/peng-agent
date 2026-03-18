@@ -148,7 +148,11 @@ export default function ChatScreen() {
   const { getCollections } = useRAGApi();
 
   const user = useSelector((state: RootState) => state.auth.user);
-  const messages = useSelector((state: RootState) => state.chat.messages);
+  const allMessages = useSelector((state: RootState) => state.chat.messages);
+  const messages = useMemo(
+    () => allMessages.filter((m) => m.type !== 'tool_output' && m.type !== 'tool_calls' && m.type !== 'reasoning_summary'),
+    [allMessages]
+  );
   const input = useSelector((state: RootState) => state.chat.input);
   const isLoading = useSelector((state: RootState) => state.chat.isLoading);
   const baseModel = useSelector((state: RootState) => state.chat.baseModel);
