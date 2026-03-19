@@ -19,17 +19,27 @@ export default {
       "expo-document-picker",
       "expo-file-system",
       "expo-image-picker",
+      "expo-camera",
       "expo-secure-store"
     ],
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "infoPlist": {
+        "NSCameraUsageDescription": "This app uses the camera to take photos and upload them to the chat.",
+        "NSPhotoLibraryUsageDescription": "This app accesses your photos to upload them to the chat."
+      }
     },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"
       },
-      "package": "com.noahpengding.pengagent"
+      "package": "com.noahpengding.pengagent",
+      "permissions": [
+        "CAMERA",
+        "READ_EXTERNAL_STORAGE",
+        "WRITE_EXTERNAL_STORAGE"
+      ]
     },
     "web": {
       "favicon": "./assets/favicon.png"
