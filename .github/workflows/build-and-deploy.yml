@@ -251,15 +251,14 @@ jobs:
           cd app/mobile && bun install
 
       - name: Build Mobile App (Preview)
-        run: cd app/mobile && eas build --platform android --profile preview --local --non-interactive --output=./build-preview.apk
+        run: cd app/mobile && eas build --platform android --profile preview --local --output=./${{ env.VERSION }}-android-preview.aab --non-interactive
         env:
           EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
 
-      - name: Upload build artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: ${{ env.VERSION }}-android-preview
-          path: app/mobile/build-preview.apk
+      - name: Submitt to Google Play Console (Preview)
+        run: cd app/mobile && eas submit --platform android --path=./${{ env.VERSION }}-android-preview.aab --non-interactive
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
 
   # Production builds for main branch
   server:
@@ -363,12 +362,12 @@ jobs:
           cd app/mobile && bun install
 
       - name: Build Mobile App (Production)
-        run: cd app/mobile && eas build --platform android --profile production --non-interactive
+        run: cd app/mobile && eas build --platform android --profile production --output=./${{ env.VERSION }}-android.aab --non-interactive
         env:
           EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
 
       - name: Submitt to Google Play Console
-        run: cd app/mobile && eas submit --platform android --non-interactive
+        run: cd app/mobile && eas submit --platform android --path=./${{ env.VERSION }}-android.aab --non-interactive
         env:
           EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
       
