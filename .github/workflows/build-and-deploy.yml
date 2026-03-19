@@ -251,14 +251,15 @@ jobs:
           cd app/mobile && bun install
 
       - name: Build Mobile App (Preview)
-        run: cd app/mobile && eas build --platform android --profile preview --local --output=./${{ env.VERSION }}-android-preview.aab --non-interactive
+        run: cd app/mobile && eas build --platform android --profile preview --local --output=./${{ env.VERSION }}-android-preview.apk --non-interactive
         env:
           EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
 
-      - name: Submitt to Google Play Console (Preview)
-        run: cd app/mobile && eas submit --platform android --path=./${{ env.VERSION }}-android-preview.aab --non-interactive
-        env:
-          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ env.VERSION }}-android-preview.apk
+          path: app/mobile/${{ env.VERSION }}-android-preview.apk
 
   # Production builds for main branch
   server:
@@ -362,15 +363,15 @@ jobs:
           cd app/mobile && bun install
 
       - name: Build Mobile App (Production)
-        run: cd app/mobile && eas build --platform android --profile production --output=./${{ env.VERSION }}-android.aab --non-interactive
+        run: cd app/mobile && eas build --platform android --profile production --local --output=./${{ env.VERSION }}-android.apk --non-interactive
         env:
           EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
 
-      - name: Submitt to Google Play Console
-        run: cd app/mobile && eas submit --platform android --path=./${{ env.VERSION }}-android.aab --non-interactive
-        env:
-          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
-      
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ env.VERSION }}-android.apk
+          path: app/mobile/${{ env.VERSION }}-android.apk
 
   publish-release:
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
@@ -379,6 +380,15 @@ jobs:
     permissions:
       contents: write
     steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Download mobile build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ env.VERSION }}-android.apk
+          path: ./artifacts
+
       - name: Publish GitHub release
         uses: softprops/action-gh-release@v2
         with:
@@ -387,3 +397,4 @@ jobs:
           target_commitish: ${{ github.sha }}
           generate_release_notes: true
           make_latest: true
+          files: ./artifacts/${{ env.VERSION }}-android.apk
