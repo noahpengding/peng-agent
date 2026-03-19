@@ -117,6 +117,13 @@ export default function ProfileScreen() {
                 <MaterialCommunityIcons name="github" size={20} color="#9CA3AF" />
                 <Text style={styles.externalLinkText}>GitHub Repository</Text>
             </Pressable>
+            <Pressable
+              style={styles.externalLink}
+              onPress={() => void Linking.openURL('https://noahpengding.com/privacy-policy')}
+            >
+                <MaterialCommunityIcons name="shield-lock-outline" size={20} color="#9CA3AF" />
+                <Text style={styles.externalLinkText}>Privacy Policy</Text>
+            </Pressable>
         </View>
 
         <Pressable style={styles.logoutButton} onPress={() => dispatch(logout())}>
