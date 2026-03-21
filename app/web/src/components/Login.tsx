@@ -156,6 +156,8 @@ const Login: React.FC = () => {
                   exit={{ opacity: 0, scale: 0.95 }}
                   transition={{ type: 'spring', stiffness: 500, damping: 30 }}
                   className="login-error"
+                  role="alert"
+                  aria-live="assertive"
                 >
                   <svg className="login-error-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                     <circle cx="12" cy="12" r="10" />
