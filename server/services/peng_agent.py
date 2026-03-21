@@ -73,7 +73,7 @@ class PengAgent:
         )
 
     async def truncate_tool_message(self, observation: str) -> str:
-        if self.operator in ["gemini", "grok"]:
+        if self.operator in ["gemini", "grok", "openai_response", "anthropic"]:
             max_length = 1000000 * 0.7 / self.total_tool_calls
         else:
             max_length = 200000 * 0.7 / self.total_tool_calls
@@ -112,9 +112,10 @@ class PengAgent:
         output_log(f"Node: Call Model. Current state {state}", "DEBUG")
         writer = get_stream_writer()
         await self._ensure_tools()
-        if not hasattr(self, "_llm_instance") or self._llm_instance is None:
-            self._llm_instance = get_model_instance(self.model)
-        llm = self._llm_instance
+        llm = get_model_instance(self.model)
+        if llm is None:
+            output_log(f"Failed to create model instance for model {self.model}.", "error")
+            raise ValueError(f"Failed to create model instance for model {self.model}.")
         llm = llm.bind_tools(list(self.tools.values()))
         final_response = ""
         final_reasoning = ""

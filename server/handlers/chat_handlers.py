@@ -282,7 +282,19 @@ async def chat_completions_handler(
         tools=chat_config.tools_name,
         user_name=user_name,
     )
-    responses = await agent.ainvoke(AgentState(messages=prompt))
+    try:
+        responses = await agent.ainvoke(AgentState(messages=prompt))
+    except Exception as e:
+        output_log(f"Error during chat completion: {e}", "error")
+        return {
+            "content": [
+                {
+                    "type": "text",
+                    "text": f"Error: {str(e)}",
+                }
+            ],
+            "type": "ai"
+        }
     _invoke_message_storage(chat_id, responses, mysql)
     return responses["messages"]
 
