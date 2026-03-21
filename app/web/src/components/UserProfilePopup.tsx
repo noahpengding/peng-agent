@@ -153,7 +153,7 @@ const UserProfilePopup: React.FC<UserProfilePopupProps> = ({ isOpen, onClose, av
               {loading ? (
                 <div className="loading-indicator">Loading profile...</div>
               ) : error ? (
-                <div className="error-message">{error}</div>
+                <div className="error-message" role="alert" aria-live="assertive">{error}</div>
               ) : profile ? (
                 <div className="profile-form">
                   <div className="form-group">

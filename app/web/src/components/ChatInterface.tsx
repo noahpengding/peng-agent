@@ -394,6 +394,8 @@ const ChatbotUI = () => {
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -20 }}
             className="error-message"
+            role="alert"
+            aria-live="assertive"
           >
             {displayError}
           </motion.div>
