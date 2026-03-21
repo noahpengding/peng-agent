@@ -14,15 +14,6 @@ import {
   KeyboardAvoidingView,
   Platform,
 } from 'react-native';
-import Animated, { 
-  FadeIn, 
-  FadeOut, 
-  FadeInDown, 
-  FadeInUp,
-  SlideInRight,
-  LinearTransition,
-  ZoomIn
-} from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useSelector, useDispatch } from 'react-redux';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
@@ -50,8 +41,6 @@ import { Typography } from '../utils/typography';
 
 type SelectorType = 'baseModel' | 'knowledgeBase';
 
-const AnimatedFlatList = Animated.createAnimatedComponent(FlatList);
-
 const MessageItem = React.memo(({ 
   item, 
   index, 
@@ -76,9 +65,7 @@ const MessageItem = React.memo(({
   };
 
   return (
-    <Animated.View 
-      entering={isUser ? SlideInRight : FadeInUp}
-      layout={LinearTransition}
+    <View 
       style={[
         styles.messageWrapper,
         isUser ? styles.messageWrapperUser : styles.messageWrapperAssistant
@@ -101,7 +88,7 @@ const MessageItem = React.memo(({
               </Pressable>
             )}
             {!isFolded && (
-              <Animated.View entering={FadeIn} layout={LinearTransition}>
+              <View>
                 <Markdown style={markdownStyles}>
                   {item.content}
                 </Markdown>
@@ -132,14 +119,14 @@ const MessageItem = React.memo(({
                     {item.feedbackUpdating && <ActivityIndicator size="small" color="#10B981" style={{ marginLeft: 5 }} />}
                   </View>
                 )}
-              </Animated.View>
+              </View>
             )}
           </>
         ) : (
           <Text style={styles.userText}>{item.content}</Text>
         )}
       </View>
-    </Animated.View>
+    </View>
   );
 });
 
@@ -387,14 +374,14 @@ export default function ChatScreen() {
         keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
         style={{ flex: 1 }}
       >
-        <Animated.View layout={LinearTransition} style={styles.configPanel}>
+        <View style={styles.configPanel}>
           <Pressable style={styles.configToggleButton} onPress={() => setIsConfigExpanded((prev) => !prev)}>
             <Text style={styles.configToggleText}>Chat Configuration</Text>
             <MaterialCommunityIcons name={isConfigExpanded ? 'chevron-up' : 'chevron-down'} size={20} color="#D1D5DB" />
           </Pressable>
 
           {isConfigExpanded && (
-            <Animated.View entering={FadeInUp} exiting={FadeOut} style={{ gap: 8 }}>
+            <View style={{ gap: 8 }}>
               <View style={styles.configRow}>
                 <Pressable
                   style={styles.selectorButton}
@@ -438,25 +425,24 @@ export default function ChatScreen() {
                   );
                 })}
               </ScrollView>
-            </Animated.View>
+            </View>
           )}
-        </Animated.View>
+        </View>
 
         {error ? (
-          <Animated.View entering={FadeInDown} exiting={FadeOut} style={styles.errorBar}>
+          <View style={styles.errorBar}>
             <MaterialCommunityIcons name="alert-circle-outline" size={16} color="#FCA5A5" />
             <Text style={styles.errorText}>{error}</Text>
-          </Animated.View>
+          </View>
         ) : null}
 
-        <AnimatedFlatList
+        <FlatList
           ref={flatListRef}
           data={messages}
           keyExtractor={(_, index) => index.toString()}
           renderItem={renderItem}
           style={{ flex: 1 }}
           contentContainerStyle={styles.listContent}
-          itemLayoutAnimation={LinearTransition}
           onContentSizeChange={() => flatListRef.current?.scrollToEnd({ animated: true })}
           onLayout={() => flatListRef.current?.scrollToEnd({ animated: true })}
         />
@@ -464,11 +450,8 @@ export default function ChatScreen() {
         {uploadedImages.length > 0 ? (
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.attachmentPreviewWrap}>
             {uploadedImages.map((file, index) => (
-              <Animated.View 
+              <View 
                 key={`${file.path}-${index}`} 
-                entering={ZoomIn} 
-                exiting={FadeOut}
-                layout={LinearTransition}
                 style={styles.attachmentItem}
               >
                 {file.contentType.startsWith('image/') ? (
@@ -482,13 +465,13 @@ export default function ChatScreen() {
                 <Pressable style={styles.removeAttachmentButton} onPress={() => handleRemoveUpload(index)}>
                   <Text style={styles.removeAttachmentText}>×</Text>
                 </Pressable>
-              </Animated.View>
+              </View>
             ))}
           </ScrollView>
         ) : null}
 
         <View style={styles.inputContainer}>
-          <Animated.View layout={LinearTransition}>
+          <View>
             {isComposerCollapsed ? (
               <Pressable style={styles.composerCollapsedBar} onPress={() => setIsComposerCollapsed(false)}>
                 <MaterialCommunityIcons name="message-text-outline" size={18} color="#9CA3AF" />
@@ -497,7 +480,7 @@ export default function ChatScreen() {
                 </Text>
               </Pressable>
             ) : (
-              <Animated.View entering={FadeInUp} style={styles.inputRow}>
+              <View style={styles.inputRow}>
                 <Pressable
                   style={styles.actionIconButton}
                   onPress={() => setAttachmentMenuVisible(true)}
@@ -525,9 +508,9 @@ export default function ChatScreen() {
                 >
                   {isLoading ? <ActivityIndicator size="small" color="#FFFFFF" /> : <Text style={styles.sendButtonText}>Send</Text>}
                 </TouchableOpacity>
-              </Animated.View>
+              </View>
             )}
-          </Animated.View>
+          </View>
         </View>
       </KeyboardAvoidingView>
 
@@ -568,10 +551,10 @@ export default function ChatScreen() {
       </Modal>
 
       {(isUploading || baseModelsLoading) && (
-        <Animated.View entering={FadeIn} exiting={FadeOut} style={styles.uploadHint}>
+        <View style={styles.uploadHint}>
           <ActivityIndicator size="small" color="#10B981" />
           <Text style={styles.uploadHintText}>{isUploading ? 'Uploading file...' : 'Loading base models...'}</Text>
-        </Animated.View>
+        </View>
       )}
     </SafeAreaView>
   );

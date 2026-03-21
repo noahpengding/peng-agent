@@ -1,5 +1,4 @@
 import React, { useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import remarkMath from 'remark-math';
@@ -42,33 +41,18 @@ const CodeBlock = ({ inline, className, children, ...rest }: CodeBlockProps) => 
   }
 
   return (
-    <motion.div
-      layout
-      initial={{ opacity: 0, y: 10 }}
-      animate={{ opacity: 1, y: 0 }}
-      className="relative group my-4"
-    >
-      <motion.button
-        whileHover={{ scale: 1.1 }}
-        whileTap={{ scale: 0.9 }}
+    <div className="relative group my-4">
+      <button
         type="button"
         className="absolute top-2 right-2 z-10 p-1.5 rounded bg-gray-700 text-gray-300 opacity-0 group-hover:opacity-100 transition-opacity focus:opacity-100 hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-gray-500"
         onClick={handleCopy}
         aria-label={isCopied ? 'Copied to clipboard' : 'Copy code'}
         title={isCopied ? 'Copied!' : 'Copy code'}
       >
-        <AnimatePresence mode="wait">
-          <motion.span
-            key={isCopied ? 'check' : 'copy'}
-            initial={{ opacity: 0, scale: 0.5 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 0.5 }}
-            transition={{ duration: 0.15 }}
-          >
-            {isCopied ? '✓' : '📋'}
-          </motion.span>
-        </AnimatePresence>
-      </motion.button>
+        <span>
+          {isCopied ? '✓' : '📋'}
+        </span>
+      </button>
       <SyntaxHighlighter
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         style={vscDarkPlus as any}
@@ -79,7 +63,7 @@ const CodeBlock = ({ inline, className, children, ...rest }: CodeBlockProps) => 
       >
         {String(children).replace(/\n$/, '')}
       </SyntaxHighlighter>
-    </motion.div>
+    </div>
   );
 };
 
@@ -114,8 +98,7 @@ export const MessageItem = React.memo(({ message, index, isFolded, onToggleFold,
   };
 
   return (
-    <motion.div
-      layout
+    <div
       className={`message ${messageClass} ${isFoldable && isFolded ? 'folded-clickable' : ''}`}
       ref={(el) => setRef(el, index)}
       onClick={() => {
@@ -136,13 +119,17 @@ export const MessageItem = React.memo(({ message, index, isFolded, onToggleFold,
           aria-expanded={!isFolded}
           aria-label={isFolded ? `Expand ${message.type?.replace('_', ' ')}` : `Collapse ${message.type?.replace('_', ' ')}`}
         >
-          <motion.span
-            animate={{ rotate: isFolded ? 0 : 90 }}
+          <span
             className="fold-arrow"
             aria-hidden="true"
+            style={{ 
+              display: 'inline-block',
+              transition: 'transform 0.2s',
+              transform: isFolded ? 'rotate(0deg)' : 'rotate(90deg)' 
+            }}
           >
             ⇨
-          </motion.span>
+          </span>
           <strong>
             {message.type === 'tool_calls'
               ? 'Tool Call'
@@ -156,92 +143,77 @@ export const MessageItem = React.memo(({ message, index, isFolded, onToggleFold,
       )}
 
       {/* Show content unless folded */}
-      <AnimatePresence mode="wait">
-        {!isFolded && (
-          <motion.div
-            key="content"
-            initial={{ opacity: 0, height: 0 }}
-            animate={{ opacity: 1, height: 'auto' }}
-            exit={{ opacity: 0, height: 0 }}
-            transition={{ duration: 0.2, ease: "easeOut" }}
-            style={{ overflow: 'hidden' }}
-          >
-            {message.images && message.images.length > 0 && (
-              <div className="message-images-container">
-                {message.images.map((imgSrc, imgIndex) => (
-                  <motion.div
-                    key={imgIndex}
-                    initial={{ opacity: 0, scale: 0.9 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    transition={{ delay: imgIndex * 0.1 }}
-                    className="message-image-container"
-                  >
-                    <img src={imgSrc} alt="Message attachment" className="message-image" />
-                  </motion.div>
-                ))}
-              </div>
-            )}
-            <div className="message-text markdown-content">
-              <ReactMarkdown
-                remarkPlugins={[remarkGfm, remarkMath]}
-                rehypePlugins={[rehypeKatex]}
-                components={{
-                  p: ({ ...props }) => <p className="tight-paragraph" {...props} />,
-                  li: ({ ...props }) => <li className="tight-list-item" {...props} />,
-                  code: CodeBlock,
-                }}
-              >
-                {message.content}
-              </ReactMarkdown>
+      {!isFolded && (
+        <div
+          key="content"
+          style={{ overflow: 'hidden' }}
+        >
+          {message.images && message.images.length > 0 && (
+            <div className="message-images-container">
+              {message.images.map((imgSrc, imgIndex) => (
+                <div
+                  key={imgIndex}
+                  className="message-image-container"
+                >
+                  <img src={imgSrc} alt="Message attachment" className="message-image" />
+                </div>
+              ))}
             </div>
-            {canShowFeedback && (
-              <div className="message-feedback-actions">
-                {isFeedbackLocked ? (
-                  <motion.button
-                    initial={{ scale: 0.8 }}
-                    animate={{ scale: 1 }}
+          )}
+          <div className="message-text markdown-content">
+            <ReactMarkdown
+              remarkPlugins={[remarkGfm, remarkMath]}
+              rehypePlugins={[rehypeKatex]}
+              components={{
+                p: ({ ...props }) => <p className="tight-paragraph" {...props} />,
+                li: ({ ...props }) => <li className="tight-list-item" {...props} />,
+                code: CodeBlock,
+              }}
+            >
+              {message.content}
+            </ReactMarkdown>
+          </div>
+          {canShowFeedback && (
+            <div className="message-feedback-actions">
+              {isFeedbackLocked ? (
+                <button
+                  type="button"
+                  className="feedback-button selected locked"
+                  disabled
+                  title={message.feedback === 'upvote' ? 'Upvoted' : 'Downvoted'}
+                  aria-label={message.feedback === 'upvote' ? 'Upvoted response' : 'Downvoted response'}
+                >
+                  {message.feedback === 'upvote' ? '👍' : '👎'}
+                </button>
+              ) : (
+                <>
+                  <button
                     type="button"
-                    className="feedback-button selected locked"
-                    disabled
-                    title={message.feedback === 'upvote' ? 'Upvoted' : 'Downvoted'}
-                    aria-label={message.feedback === 'upvote' ? 'Upvoted response' : 'Downvoted response'}
+                    className={`feedback-button ${message.feedbackUpdating ? 'is-submitting' : ''}`}
+                    onClick={() => handleFeedbackClick('upvote')}
+                    disabled={message.feedbackUpdating}
+                    title="Upvote"
+                    aria-label="Upvote response"
                   >
-                    {message.feedback === 'upvote' ? '👍' : '👎'}
-                  </motion.button>
-                ) : (
-                  <>
-                    <motion.button
-                      whileHover={{ scale: 1.1, backgroundColor: 'rgba(255, 255, 255, 0.1)' }}
-                      whileTap={{ scale: 0.9 }}
-                      type="button"
-                      className={`feedback-button ${message.feedbackUpdating ? 'is-submitting' : ''}`}
-                      onClick={() => handleFeedbackClick('upvote')}
-                      disabled={message.feedbackUpdating}
-                      title="Upvote"
-                      aria-label="Upvote response"
-                    >
-                      👍
-                    </motion.button>
-                    <motion.button
-                      whileHover={{ scale: 1.1, backgroundColor: 'rgba(255, 255, 255, 0.1)' }}
-                      whileTap={{ scale: 0.9 }}
-                      type="button"
-                      className={`feedback-button ${message.feedbackUpdating ? 'is-submitting' : ''}`}
-                      onClick={() => handleFeedbackClick('downvote')}
-                      disabled={message.feedbackUpdating}
-                      title="Downvote"
-                      aria-label="Downvote response"
-                    >
-                      👎
-                    </motion.button>
-                  </>
-                )}
-              </div>
-            )}
-          </motion.div>
-        )}
-      </AnimatePresence>
-    </motion.div>
+                    👍
+                  </button>
+                  <button
+                    type="button"
+                    className={`feedback-button ${message.feedbackUpdating ? 'is-submitting' : ''}`}
+                    onClick={() => handleFeedbackClick('downvote')}
+                    disabled={message.feedbackUpdating}
+                    title="Downvote"
+                    aria-label="Downvote response"
+                  >
+                    👎
+                  </button>
+                </>
+              )}
+            </div>
+          )}
+        </div>
+      )}
+    </div>
   );
 });
 

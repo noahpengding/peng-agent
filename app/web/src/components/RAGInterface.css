@@ -51,7 +51,7 @@
   font-weight: 700;
   margin-bottom: var(--space-xl);
   cursor: pointer;
-  transition: all 0.2s ease;
+  /* Transition and animation removed */
   font-family: var(--font-sans);
   text-decoration: none;
 }
@@ -59,7 +59,7 @@
 .home-button:hover {
   background-color: var(--color-primary);
   color: white;
-  transform: translateY(-1px);
+  /* Effect removed */
 }
 
 .sidebar-title {
@@ -92,7 +92,7 @@
   border-radius: 10px;
   background-color: var(--color-bg-deep);
   color: var(--color-text-main);
-  transition: all 0.2s ease;
+  /* Transition and animation removed */
   font-size: var(--text-sm);
 }
 
@@ -120,7 +120,7 @@
   border-radius: 10px;
   cursor: pointer;
   font-weight: 600;
-  transition: all 0.2s ease;
+  /* Transition and animation removed */
   font-size: var(--text-sm);
 }
 
@@ -164,7 +164,7 @@
   font-weight: 700;
   margin-top: var(--space-md);
   box-shadow: 0 4px 12px oklch(0.6 0.18 250 / 0.2);
-  transition: all 0.2s ease;
+  /* Transition and animation removed */
   width: 100%;
   text-transform: uppercase;
   letter-spacing: 0.05em;
@@ -172,7 +172,7 @@
 
 .index-button:hover:not(:disabled) {
   filter: brightness(1.1);
-  transform: translateY(-1px);
+  /* Effect removed */
   box-shadow: 0 6px 15px oklch(0.6 0.18 250 / 0.3);
 }
 
@@ -239,7 +239,7 @@
   border-radius: 10px;
   cursor: pointer;
   font-weight: 700;
-  transition: all 0.2s ease;
+  /* Transition and animation removed */
   font-size: var(--text-sm);
 }
 

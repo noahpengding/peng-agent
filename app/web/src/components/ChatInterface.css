@@ -38,7 +38,7 @@
   background: var(--color-bg-surface);
   color: var(--color-text-dim);
   cursor: pointer;
-  transition: all 0.2s ease;
+  /* Transition and animation removed */
 }
 
 .sidebar-toggle:hover {
@@ -84,7 +84,7 @@
   resize: none; /* we handle resizing programmatically */
   overflow-y: hidden; /* hidden while under max height */
   max-height: 240px; /* keep in sync with MAX_TEXTAREA_HEIGHT */
-  transition: height 0.08s ease;
+  /* Transition and animation removed */
 }
 
 .char-counter {
@@ -126,7 +126,7 @@
   font-size: 0.9rem;
   padding: 0.3rem 0.6rem;
   border-radius: 0.25rem;
-  transition: background-color 0.2s;
+  /* Transition and animation removed */
 }
 
 .nav-links a:hover {
@@ -204,7 +204,7 @@
   background-color: var(--color-bg-deep);
   color: var(--color-text-main);
   font-size: var(--text-sm);
-  transition: all 0.2s ease;
+  /* Transition and animation removed */
 }
 
 .form-select:focus {
@@ -249,7 +249,7 @@
   font-weight: 600;
   color: var(--color-primary);
   text-decoration: none;
-  transition: all 0.2s ease;
+  /* Transition and animation removed */
 }
 
 .memory-link:hover {
@@ -338,7 +338,7 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  transition: all 0.2s ease;
+  /* Transition and animation removed */
 }
 
 .menu-button:hover {
@@ -457,7 +457,7 @@
   justify-content: center;
   cursor: pointer;
   opacity: 0.7;
-  transition: opacity 0.2s;
+  /* Transition and animation removed */
 }
 .tool-remove-button:hover {
   opacity: 1;
@@ -520,12 +520,7 @@
   border-radius: 0.375rem;
   padding: 0.2rem 0.45rem;
   cursor: pointer;
-  transition:
-    background-color 0.15s ease,
-    border-color 0.15s ease,
-    color 0.15s ease,
-    transform 0.12s ease,
-    box-shadow 0.2s ease;
+  /* Transition and animation removed */
 }
 
 .feedback-button:hover:not(:disabled) {
@@ -607,8 +602,6 @@
 }
 
 .input-form:focus-within {
-  transform: translateY(-2px);
-  box-shadow: 0 25px 50px -12px oklch(0 0 0 / 0.4);
   border-color: var(--color-primary);
 }
 
@@ -641,7 +634,7 @@
   color: var(--color-text-main);
   font-size: 1rem;
   line-height: 1.5;
-  transition: all 0.2s ease;
+  /* Transition and animation removed */
 }
 
 .input-textarea:focus {
@@ -672,7 +665,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: all 0.2s ease;
+  /* Transition and animation removed */
 }
 
 .upload-button:hover {
@@ -693,13 +686,12 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: all 0.2s ease;
+  /* Transition and animation removed */
   box-shadow: 0 4px 12px oklch(0.65 0.2 160 / 0.3);
 }
 
 .send-button:hover:not(:disabled) {
-  transform: translateY(-2px);
-  box-shadow: 0 6px 15px oklch(0.65 0.2 160 / 0.4);
+  background-color: var(--color-primary-hover); /* I should check if this var exists, if not just filter: brightness(1.1) is fine but user said remove extraordinary effects */
   filter: brightness(1.1);
 }
 
@@ -1019,7 +1011,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: background-color 0.2s;
+  /* Transition and animation removed */
 }
 
 .tool-add-button:hover {
@@ -1112,13 +1104,11 @@
   font-size: 0.9rem;
   font-weight: 700;
   cursor: pointer;
-  transition: all 0.2s ease;
+  /* Transition and animation removed */
 }
 
 .update-button:hover:not(:disabled) {
   filter: brightness(1.1);
-  transform: translateY(-1px);
-  box-shadow: 0 4px 12px var(--color-primary-soft);
 }
 
 .update-button:disabled {
@@ -1138,7 +1128,7 @@
   align-items: center;
   justify-content: center;
   border-radius: 10px;
-  transition: all 0.2s ease;
+  /* Transition and animation removed */
 }
 
 .close-button:hover {
@@ -1177,7 +1167,7 @@
   border-radius: 12px;
   padding: 1rem;
   background-color: var(--color-bg-deep);
-  transition: all 0.2s ease;
+  /* Transition and animation removed */
 }
 
 .tool-item:hover {

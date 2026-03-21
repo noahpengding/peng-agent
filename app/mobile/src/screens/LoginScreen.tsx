@@ -10,12 +10,6 @@ import {
   TextInput,
   View,
 } from 'react-native';
-import Animated, { 
-  FadeInDown, 
-  FadeIn,
-  Layout,
-  SlideInUp
-} from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useDispatch } from 'react-redux';
@@ -55,23 +49,20 @@ export default function LoginScreen() {
   return (
     <SafeAreaView style={styles.safeArea}>
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={styles.container}>
-        <Animated.View entering={FadeIn.duration(1500)} style={styles.backgroundTopGlow} />
-        <Animated.View entering={FadeIn.duration(1500)} style={styles.backgroundBottomGlow} />
+        <View style={styles.backgroundTopGlow} />
+        <View style={styles.backgroundBottomGlow} />
 
-        <Animated.View entering={SlideInUp.delay(200)} style={styles.heroWrap}>
+        <View style={styles.heroWrap}>
           <Image source={HERO_IMAGE} style={styles.heroImage} resizeMode="cover" />
-        </Animated.View>
+        </View>
 
-        <Animated.View 
-          entering={FadeInDown.springify().damping(20).stiffness(90)} 
-          style={styles.card}
-        >
-          <Animated.View entering={FadeInDown.delay(400)}>
+        <View style={styles.card}>
+          <View>
             <Text style={styles.title}>Peng Agent</Text>
             <Text style={styles.subtitle}>Sign in to continue</Text>
-          </Animated.View>
+          </View>
 
-          <Animated.View entering={FadeInDown.delay(500)} style={styles.inputGroup}>
+          <View style={styles.inputGroup}>
             <Text style={styles.label}>Username</Text>
             <TextInput
               value={username}
@@ -82,9 +73,9 @@ export default function LoginScreen() {
               autoCapitalize="none"
               autoCorrect={false}
             />
-          </Animated.View>
+          </View>
 
-          <Animated.View entering={FadeInDown.delay(600)} style={styles.inputGroup}>
+          <View style={styles.inputGroup}>
             <Text style={styles.label}>Password</Text>
             <View style={styles.passwordInputWrap}>
               <TextInput
@@ -101,18 +92,18 @@ export default function LoginScreen() {
                 <MaterialCommunityIcons name={showPassword ? 'eye-off-outline' : 'eye-outline'} size={20} color="#CBD5E1" />
               </Pressable>
             </View>
-          </Animated.View>
+          </View>
 
-          <Animated.View layout={Layout.springify()}>
+          <View>
             {error ? (
-              <Animated.View entering={FadeInDown} style={styles.errorWrap}>
+              <View style={styles.errorWrap}>
                 <MaterialCommunityIcons name="alert-circle-outline" size={16} color="#FCA5A5" />
                 <Text style={styles.errorText}>{error}</Text>
-              </Animated.View>
+              </View>
             ) : null}
-          </Animated.View>
+          </View>
 
-          <Animated.View entering={FadeInDown.delay(700)}>
+          <View>
             <Pressable 
               style={[styles.submitButton, !canSubmit && styles.submitButtonDisabled]} 
               onPress={handleLogin} 
@@ -124,8 +115,8 @@ export default function LoginScreen() {
                 <Text style={styles.submitText}>Sign in</Text>
               )}
             </Pressable>
-          </Animated.View>
-        </Animated.View>
+          </View>
+        </View>
       </KeyboardAvoidingView>
     </SafeAreaView>
   );
