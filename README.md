@@ -120,7 +120,19 @@ This starts:
 - MySQL
 - Redis
 
-### 2. Start backend
+### 2. Run unit tests (optional)
+
+From the repository root:
+
+```bash
+cd server
+uv run --with coverage coverage run -m unittest discover test
+uv run --with coverage coverage report
+```
+
+Current backend unit test coverage is **~60%**. We aim to maintain a coverage budget of at least **50%**.
+
+### 3. Start backend
 
 From the repository root:
 
