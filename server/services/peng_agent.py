@@ -112,7 +112,9 @@ class PengAgent:
         output_log(f"Node: Call Model. Current state {state}", "DEBUG")
         writer = get_stream_writer()
         await self._ensure_tools()
-        llm = get_model_instance(self.model)
+        if not hasattr(self, "_llm_instance") or self._llm_instance is None:
+            self._llm_instance = get_model_instance(self.model)
+        llm = self._llm_instance
         if llm is None:
             output_log(f"Failed to create model instance for model {self.model}.", "error")
             raise ValueError(f"Failed to create model instance for model {self.model}.")

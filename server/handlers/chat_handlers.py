@@ -267,7 +267,7 @@ def _invoke_message_storage(chat_id, responses, mysql: MysqlConnect):
 
 async def chat_completions_handler(
     user_name: str, message: str, knowledge_base: str, image: List[str], chat_config: ChatConfig
-) -> str:
+):
     output_log(
         f"Chat Completion for User: {user_name}, Base: {knowledge_base}, Message: {message}, Image: {image}, Config: {chat_config}",
         "debug",
@@ -286,15 +286,16 @@ async def chat_completions_handler(
         responses = await agent.ainvoke(AgentState(messages=prompt))
     except Exception as e:
         output_log(f"Error during chat completion: {e}", "error")
-        return {
-            "content": [
-                {
-                    "type": "text",
-                    "text": f"Error: {str(e)}",
-                }
-            ],
-            "type": "ai"
-        }
+        return [
+            AIMessage(
+                content_blocks=[
+                    {
+                        "type": "text",
+                        "text": f"Error: occurred during chat completion.",
+                    }
+                ]
+            )
+        ]
     _invoke_message_storage(chat_id, responses, mysql)
     return responses["messages"]
 

@@ -691,7 +691,7 @@
 }
 
 .send-button:hover:not(:disabled) {
-  background-color: var(--color-primary-hover); /* I should check if this var exists, if not just filter: brightness(1.1) is fine but user said remove extraordinary effects */
+  background-color: var(--color-primary);
   filter: brightness(1.1);
 }
 
