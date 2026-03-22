@@ -291,7 +291,7 @@ async def chat_completions_handler(
                 content_blocks=[
                     {
                         "type": "text",
-                        "text": f"Error: occurred during chat completion.",
+                        "text": "Error: occurred during chat completion.",
                     }
                 ]
             )
