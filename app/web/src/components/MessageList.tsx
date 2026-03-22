@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
 import { Message } from '@/types/ChatInterface.types';
 import { MessageItem } from './MessageItem';
 
@@ -46,69 +45,38 @@ export const MessageList: React.FC<MessageListProps> = React.memo(({ messages, i
 
   if (messages.length === 0 && !isLoading) {
     return (
-      <motion.div
-        initial={{ opacity: 0, y: 10 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="empty-chat"
-      >
+      <div className="empty-chat">
         <p>Start a conversation by typing a message below.</p>
-      </motion.div>
+      </div>
     );
   }
 
   return (
     <div className="messages-list">
-      <AnimatePresence mode="popLayout" initial={false}>
-        {messages.map((message, index) => {
-          const isFolded = foldedMessages[index] ?? message.folded ?? false;
+      {messages.map((message, index) => {
+        const isFolded = foldedMessages[index] ?? message.folded ?? false;
 
-          return (
-            <motion.div
-              key={message.messageId || `msg-${index}`}
-              layout
-              initial={{ opacity: 0, y: 20, scale: 0.95 }}
-              animate={{ opacity: 1, y: 0, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.95 }}
-              transition={{
-                type: 'spring',
-                stiffness: 400,
-                damping: 30,
-                mass: 0.8,
-              }}
-            >
-              <MessageItem
-                message={message}
-                index={index}
-                isFolded={isFolded}
-                onToggleFold={toggleFolded}
-                setRef={setRef}
-                onSubmitFeedback={onSubmitFeedback}
-              />
-            </motion.div>
-          );
-        })}
-      </AnimatePresence>
-      {isLoading && (
-        <motion.div
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="message assistant-message"
-        >
-          <div className="thinking-indicator">
-            <motion.span
-              animate={{ opacity: [0.4, 1, 0.4] }}
-              transition={{ repeat: Infinity, duration: 1.4, times: [0, 0.5, 1] }}
-            >●</motion.span>
-            <motion.span
-              animate={{ opacity: [0.4, 1, 0.4] }}
-              transition={{ repeat: Infinity, duration: 1.4, times: [0, 0.5, 1], delay: 0.2 }}
-            >●</motion.span>
-            <motion.span
-              animate={{ opacity: [0.4, 1, 0.4] }}
-              transition={{ repeat: Infinity, duration: 1.4, times: [0, 0.5, 1], delay: 0.4 }}
-            >●</motion.span>
+        return (
+          <div key={message.messageId || `msg-${index}`}>
+            <MessageItem
+              message={message}
+              index={index}
+              isFolded={isFolded}
+              onToggleFold={toggleFolded}
+              setRef={setRef}
+              onSubmitFeedback={onSubmitFeedback}
+            />
           </div>
-        </motion.div>
+        );
+      })}
+      {isLoading && (
+        <div className="message assistant-message">
+          <div className="thinking-indicator">
+            <span>●</span>
+            <span>●</span>
+            <span>●</span>
+          </div>
+        </div>
       )}
     </div>
   );

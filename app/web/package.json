@@ -1,7 +1,7 @@
 {
   "name": "peng-agent-web",
   "private": true,
-  "version": "2.4.2",
+  "version": "2.4.3",
   "type": "module",
   "scripts": {
     "dev": "bun --env-file=../../test/front.env run vite",
@@ -18,7 +18,6 @@
     "axios": "^1.13.6",
     "caniuse-lite": "^1.0.30001776",
     "eslint-plugin-prettier": "^5.5.5",
-    "framer-motion": "^12.37.0",
     "jwt-decode": "^4.0.0",
     "react": "^19.2.4",
     "react-dom": "^19.2.4",

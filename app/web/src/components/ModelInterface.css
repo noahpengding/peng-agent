@@ -50,7 +50,7 @@
   font-weight: 700;
   margin-bottom: var(--space-md); /* Reduced from var(--space-xl) */
   cursor: pointer;
-  transition: all 0.2s ease;
+  /* Transition and animation removed */
   font-family: var(--font-sans);
   text-decoration: none;
 }
@@ -58,7 +58,7 @@
 .home-button:hover {
   background-color: var(--color-primary);
   color: white;
-  transform: translateY(-1px);
+  /* Effect removed */
 }
 
 .filter-title {
@@ -84,7 +84,7 @@
   color: var(--color-text-main);
   appearance: auto;
   cursor: pointer;
-  transition: all 0.2s ease;
+  /* Transition and animation removed */
   font-size: var(--text-sm);
 }
 
@@ -138,7 +138,7 @@
   border: 1px solid var(--color-border);
   cursor: pointer;
   font-weight: 700;
-  transition: all 0.2s ease;
+  /* Transition and animation removed */
 }
 
 .search-button:hover {
@@ -153,13 +153,13 @@
   border: none;
   font-weight: 700;
   cursor: pointer;
-  transition: all 0.2s ease;
+  /* Transition and animation removed */
   box-shadow: 0 4px 12px oklch(0.6 0.18 250 / 0.2);
 }
 
 .refresh-button:hover {
   filter: brightness(1.1);
-  transform: translateY(-1px);
+  /* Effect removed */
   box-shadow: 0 6px 15px oklch(0.6 0.18 250 / 0.3);
 }
 
@@ -230,7 +230,7 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  transition: all 0.2s ease;
+  /* Transition and animation removed */
   vertical-align: middle;
 }
 
@@ -269,7 +269,7 @@
   background-color: transparent;
   color: var(--color-text-muted);
   cursor: pointer;
-  transition: all 0.2s ease;
+  /* Transition and animation removed */
 }
 
 .modality-icon {

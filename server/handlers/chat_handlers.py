@@ -165,7 +165,7 @@ async def chat_handler(
 def _chunk_message_process(chunk: str, math_flag: bool):
     if chunk.find("[\n") != -1 or chunk.find("]\n") != -1:
         math_flag = not math_flag
-        chunk = chunk.replace("[\n", "\$\n").replace("]\n", "\$\n")
+        chunk = chunk.replace("[\n", r"\$\n").replace("]\n", r"\$\n")
     if chunk.find("$") != -1 or chunk.find("$$") != -1:
         math_flag = not math_flag
     if not math_flag:
@@ -267,7 +267,7 @@ def _invoke_message_storage(chat_id, responses, mysql: MysqlConnect):
 
 async def chat_completions_handler(
     user_name: str, message: str, knowledge_base: str, image: List[str], chat_config: ChatConfig
-) -> str:
+):
     output_log(
         f"Chat Completion for User: {user_name}, Base: {knowledge_base}, Message: {message}, Image: {image}, Config: {chat_config}",
         "debug",
@@ -282,7 +282,20 @@ async def chat_completions_handler(
         tools=chat_config.tools_name,
         user_name=user_name,
     )
-    responses = await agent.ainvoke(AgentState(messages=prompt))
+    try:
+        responses = await agent.ainvoke(AgentState(messages=prompt))
+    except Exception as e:
+        output_log(f"Error during chat completion: {e}", "error")
+        return [
+            AIMessage(
+                content_blocks=[
+                    {
+                        "type": "text",
+                        "text": "Error: occurred during chat completion.",
+                    }
+                ]
+            )
+        ]
     _invoke_message_storage(chat_id, responses, mysql)
     return responses["messages"]
 

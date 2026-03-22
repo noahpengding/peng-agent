@@ -7,13 +7,13 @@ env:
   REGISTRY: ghcr.io
   SERVER_IMAGE: ghcr.io/${{ github.repository }}/server
   WEB_IMAGE: ghcr.io/${{ github.repository }}/front
-  VERSION: v2.4.2
+  VERSION: v2.4.3
   GITHUB_REPOSITORY: ${{ github.repository }}
   GITHUB_COMMIT_SHA: ${{ github.sha }}
 
 jobs:
-  # Code quality check - runs on all branches
-  ruff-check:
+  # Backend CI (Lint and Test) - runs on all branches
+  backend-ci:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
@@ -39,6 +39,12 @@ jobs:
 
       - name: Run ruff check
         run: uv tool run ruff check
+        working-directory: ./server
+
+      - name: Run unit tests with coverage
+        run: |
+          uv run --with coverage coverage run -m unittest discover test
+          uv run --with coverage coverage report
         working-directory: ./server
 
   # Web frontend lint check
@@ -156,7 +162,7 @@ jobs:
   # Test builds for non-main branches (PRs)
   test-server-x64:
     if: github.ref != 'refs/heads/main'
-    needs: [ruff-check, codeql-analysis]
+    needs: [backend-ci, codeql-analysis]
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -264,7 +270,7 @@ jobs:
   # Production builds for main branch
   server:
     if: github.ref == 'refs/heads/main'
-    needs: [ruff-check, codeql-analysis]
+    needs: [backend-ci, codeql-analysis]
     runs-on: ubuntu-latest
     permissions:
       contents: read

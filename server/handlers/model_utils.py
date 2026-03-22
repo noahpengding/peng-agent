@@ -29,7 +29,7 @@ def get_model_instance(model_name: str = "", operator_name: str = None):
             f"Operator {operator_name} not found in the database.",
             "error",
         )
-        return None
+        raise ValueError(f"Operator {operator_name} not found.")
     if operator.runtime == "openai_response":
         from services.chat_models.openai_response import CustomOpenAIResponse
 
@@ -105,6 +105,12 @@ def get_model_instance(model_name: str = "", operator_name: str = None):
             ),
         )
         base_model_ins = ChatHuggingFace(llm=llm)
+    else:
+        output_log(
+            f"Cannot create model instance. Runtime {operator.runtime} not supported.",
+            "error",
+        )
+        raise ValueError(f"Runtime {operator.runtime} not supported.")
     return base_model_ins
 
 

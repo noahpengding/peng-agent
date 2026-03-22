@@ -1,5 +1,4 @@
 import React, { useState } from 'react';
-import { motion, AnimatePresence, Variants } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { useDispatch } from 'react-redux';
 import { login } from '@/store/slices/authSlice';
@@ -62,46 +61,18 @@ const Login: React.FC = () => {
     }
   };
 
-  const containerVariants: Variants = {
-    hidden: { opacity: 0, y: 20 },
-    visible: {
-      opacity: 1,
-      y: 0,
-      transition: {
-        duration: 0.6,
-        staggerChildren: 0.1,
-        ease: "easeOut",
-      },
-    },
-  };
-
-  const itemVariants: Variants = {
-    hidden: { opacity: 0, y: 15 },
-    visible: { opacity: 1, y: 0 },
-  };
-
   return (
     <div className="login-page">
-      <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 0.6 }}
-        transition={{ duration: 1.5 }}
-        className="login-bg-blobs"
-      />
+      <div className="login-bg-blobs" />
 
-      <motion.div
-        variants={containerVariants}
-        initial="hidden"
-        animate="visible"
-        className="login-container"
-      >
-        <motion.div variants={itemVariants} className="login-brand">
+      <div className="login-container">
+        <div className="login-brand">
           <h1 className="login-title">Peng Agent</h1>
           <p className="login-subtitle">Sign in to continue</p>
-        </motion.div>
-        <motion.div variants={itemVariants} className="login-card">
+        </div>
+        <div className="login-card">
           <form className="login-form" onSubmit={handleSubmit}>
-            <motion.div variants={itemVariants}>
+            <div>
               <label htmlFor="username" className="login-label">
                 Username
               </label>
@@ -117,9 +88,9 @@ const Login: React.FC = () => {
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
               />
-            </motion.div>
+            </div>
 
-            <motion.div variants={itemVariants}>
+            <div>
               <label htmlFor="password" className="login-label">
                 Password
               </label>
@@ -145,57 +116,48 @@ const Login: React.FC = () => {
                   <EyeIcon open={showPassword} />
                 </button>
               </div>
-            </motion.div>
+            </div>
 
-            <AnimatePresence mode="wait">
-              {error && (
-                <motion.div
-                  key="error"
-                  initial={{ opacity: 0, x: -10 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  exit={{ opacity: 0, scale: 0.95 }}
-                  transition={{ type: 'spring', stiffness: 500, damping: 30 }}
-                  className="login-error"
-                >
-                  <svg className="login-error-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <circle cx="12" cy="12" r="10" />
-                    <line x1="12" y1="8" x2="12" y2="12" />
-                    <line x1="12" y1="16" x2="12.01" y2="16" />
-                  </svg>
-                  {error}
-                </motion.div>
-              )}
-            </AnimatePresence>
+            {error && (
+              <div
+                className="login-error"
+                role="alert"
+                aria-live="assertive"
+              >
+                <svg className="login-error-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <circle cx="12" cy="12" r="10" />
+                  <line x1="12" y1="8" x2="12" y2="12" />
+                  <line x1="12" y1="16" x2="12.01" y2="16" />
+                </svg>
+                {error}
+              </div>
+            )}
 
-            <motion.button
-              variants={itemVariants}
-              whileHover={{ scale: 1.01 }}
-              whileTap={{ scale: 0.98 }}
+            <button
               type="submit"
               className="login-submit"
               disabled={isLoading || !username || !password}
             >
               {isLoading ? (
                 <>
-                  <motion.svg
-                    animate={{ rotate: 360 }}
-                    transition={{ repeat: Infinity, duration: 1, ease: "linear" }}
+                  <svg
                     className="login-spinner"
                     viewBox="0 0 24 24"
                     fill="none"
+                    style={{ animation: 'spin 1s linear infinite' }}
                   >
                     <circle cx="12" cy="12" r="10" stroke="rgba(255,255,255,0.25)" strokeWidth="3" />
                     <path d="M12 2a10 10 0 0 1 10 10" stroke="white" strokeWidth="3" strokeLinecap="round" />
-                  </motion.svg>
+                  </svg>
                   Signing in…
                 </>
               ) : (
                 'Sign in'
               )}
-            </motion.button>
+            </button>
           </form>
-        </motion.div>
-      </motion.div>
+        </div>
+      </div>
     </div>
   );
 };

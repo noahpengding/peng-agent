@@ -30,7 +30,7 @@
   font-size: var(--text-base);
   background-color: var(--color-bg-surface);
   color: var(--color-text-main);
-  transition: all 0.2s ease;
+  /* Transition and animation removed */
 }
 
 .search-input:focus {
@@ -59,7 +59,7 @@
   font-weight: 700;
   background-color: var(--color-primary);
   color: white;
-  transition: all 0.2s ease;
+  /* Transition and animation removed */
   box-shadow: 0 4px 12px oklch(0.6 0.18 250 / 0.2);
   font-family: var(--font-sans);
   font-size: var(--text-sm);
@@ -67,7 +67,7 @@
 
 .primary-button:hover {
   filter: brightness(1.1);
-  transform: translateY(-1px);
+  /* Effect removed */
   box-shadow: 0 6px 15px oklch(0.6 0.18 250 / 0.3);
 }
 
