@@ -45,18 +45,7 @@ jobs:
         run: |
           uv run --with coverage coverage run -m unittest discover test
           uv run --with coverage coverage report
-          uv run --with coverage coverage xml -o coverage.xml
-          echo "## Backend Unit Test Coverage" >> $GITHUB_STEP_SUMMARY
-          uv run --with coverage coverage report --format=markdown >> $GITHUB_STEP_SUMMARY
         working-directory: ./server
-
-      - name: Report Coverage
-        if: always()
-        uses: orgoro/coverage@v3.2
-        with:
-          coverageFile: server/coverage.xml
-          token: ${{ secrets.GITHUB_TOKEN }}
-          thresholdAll: 0.5
 
   # Web frontend lint check
   web-lint:

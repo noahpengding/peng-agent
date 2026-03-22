@@ -1,5 +1,5 @@
 import unittest
-from unittest.mock import patch, MagicMock, AsyncMock
+from unittest.mock import patch, MagicMock
 from handlers.auth_handlers import authenticate_user, create_access_token, authenticate_request
 from fastapi import HTTPException
 import jwt

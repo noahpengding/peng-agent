@@ -56,7 +56,7 @@ class TestModelHandlers(unittest.TestCase):
     @patch('handlers.model_handlers.update_table_record')
     def test_update_reasoning_effect(self, mock_update, mock_get):
         mock_get.return_value = {"model_name": "m1"}
-        result = update_reasoning_effect("m1", "new_effect")
+        _ = update_reasoning_effect("m1", "new_effect")
         mock_update.assert_called_once()
 
     @patch('handlers.model_handlers.get_table_records')

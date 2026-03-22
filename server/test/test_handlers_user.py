@@ -1,5 +1,5 @@
 import unittest
-from unittest.mock import patch, MagicMock
+from unittest.mock import patch
 from handlers.user_handlers import get_user_profile, update_user_profile
 from models.user_models import UserUpdate
 from fastapi import HTTPException

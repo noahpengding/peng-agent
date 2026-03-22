@@ -1,5 +1,5 @@
 import unittest
-from unittest.mock import patch, MagicMock
+from unittest.mock import patch
 from services.redis_service import get_table_record, get_table_records, create_table_record, update_table_record
 
 class TestRedisService(unittest.TestCase):

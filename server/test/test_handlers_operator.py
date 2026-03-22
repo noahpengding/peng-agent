@@ -1,5 +1,5 @@
 import unittest
-from unittest.mock import patch, MagicMock
+from unittest.mock import patch
 from handlers.operator_handlers import get_operator, get_all_operators
 
 class TestOperatorHandlers(unittest.TestCase):

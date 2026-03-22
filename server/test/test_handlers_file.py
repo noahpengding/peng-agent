@@ -1,5 +1,5 @@
 import unittest
-from unittest.mock import patch, MagicMock
+from unittest.mock import patch
 from handlers.file_handlers import file_uploader, file_upload_frontend_with_name, _safe_file_name, _extension_from_content_type
 import base64
 

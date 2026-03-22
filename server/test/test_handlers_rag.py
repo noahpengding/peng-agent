@@ -1,5 +1,5 @@
 import unittest
-from unittest.mock import patch, MagicMock, AsyncMock
+from unittest.mock import patch, AsyncMock
 from handlers.rag_handlers import get_rag, get_collections, index_file
 
 class TestRagHandlers(unittest.IsolatedAsyncioTestCase):

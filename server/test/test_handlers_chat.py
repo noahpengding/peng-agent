@@ -22,14 +22,14 @@ class TestChatHandlers(unittest.IsolatedAsyncioTestCase):
         )
         
         self.assertEqual(chat_id, 123)
-        self.assertTrue(len(prompt) > 0)
+        self.assertGreater(len(prompt), 0)
         mock_mysql.create_record.assert_called()
 
     @patch('handlers.chat_handlers.MysqlConnect')
     @patch('handlers.chat_handlers.PengAgent')
     @patch('handlers.chat_handlers._generate_prompt_params')
     async def test_chat_handler(self, mock_gen_params, mock_agent_class, mock_mysql_class):
-        mock_mysql = mock_mysql_class.return_value
+        _ = mock_mysql_class.return_value
         mock_gen_params.return_value = ([{"role": "user", "content": "hi"}], 123)
         
         mock_agent = mock_agent_class.return_value

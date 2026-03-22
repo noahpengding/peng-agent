@@ -1,5 +1,5 @@
 import unittest
-from unittest.mock import patch, MagicMock
+from unittest.mock import patch
 from handlers.tool_handlers import get_all_tools, get_tool_by_name
 
 class TestToolHandlers(unittest.TestCase):
