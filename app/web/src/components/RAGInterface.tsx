@@ -131,7 +131,7 @@ const RAGInterface: React.FC = () => {
 
   return (
     <div className="rag-container">
-      {error && <div className="error-message">{error}</div>}
+      {error && <div className="error-message" role="alert" aria-live="assertive">{error}</div>}
 
       <div className="main-content">
         {/* Sidebar for controls */}
