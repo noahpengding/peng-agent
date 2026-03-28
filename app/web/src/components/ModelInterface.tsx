@@ -180,7 +180,7 @@ const ModelInterface: React.FC = () => {
 
   return (
     <div className="model-container">
-      {error && <div className="error-message">{error}</div>}
+      {error && <div className="error-message" role="alert" aria-live="assertive">{error}</div>}
 
       <div className="main-content">
         {/* Sidebar with filters */}
