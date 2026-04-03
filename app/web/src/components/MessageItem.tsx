@@ -15,7 +15,7 @@ interface CodeBlockProps extends React.HTMLAttributes<HTMLElement> {
 }
 
 // CodeBlock component with copy functionality
-const CodeBlock = ({ inline, className, children, ...rest }: CodeBlockProps) => {
+const CodeBlock = React.memo(({ inline, className, children, ...rest }: CodeBlockProps) => {
   const [isCopied, setIsCopied] = useState(false);
   const cls = className || '';
   const langToken = cls.split(' ').find((c) => c.startsWith('language-'));
@@ -65,7 +65,12 @@ const CodeBlock = ({ inline, className, children, ...rest }: CodeBlockProps) => 
       </SyntaxHighlighter>
     </div>
   );
-};
+}, (prevProps, nextProps) => {
+  return prevProps.className === nextProps.className &&
+    prevProps.inline === nextProps.inline &&
+    String(prevProps.children) === String(nextProps.children);
+});
+CodeBlock.displayName = 'CodeBlock';
 
 interface MessageItemProps {
   message: Message;
