@@ -246,7 +246,7 @@ jobs:
 
   mobile-preview:
     if: github.ref != 'refs/heads/main'
-    needs: [mobile-lint, codeql-analysis]
+    needs: [mobile-lint, codeql-analysis, test-server-x64, test-web-x64]
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository

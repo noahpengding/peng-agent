@@ -60,7 +60,7 @@ class TestSshTools(unittest.TestCase):
         mock_minio.file_download.assert_called_once_with(
             "keys/homelab",
             "temp_private_key",
-            bucket_name="peng-agent",
+            bucket_name="test",
         )
         mock_remove.assert_called_once_with("temp_private_key")
         fake_ssh.set_missing_host_key_policy.assert_called_once_with(policy)
