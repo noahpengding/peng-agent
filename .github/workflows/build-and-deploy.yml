@@ -47,6 +47,12 @@ jobs:
           uv run --with coverage coverage report
         working-directory: ./server
 
+      - name: Upload coverage reports to Datadog
+        uses: DataDog/coverage-upload-github-action@v1
+        with:
+          api_key: ${{ secrets.DD_API_KEY }}
+          site: us5.datadoghq.com
+
   # Web frontend lint check
   web-lint:
     runs-on: ubuntu-latest
@@ -158,6 +164,7 @@ jobs:
         with:
           category: "/language:${{ matrix.language }}"
           upload: true
+  
 
   # Test builds for non-main branches (PRs)
   test-server-x64:
