@@ -5,4 +5,6 @@ Since Redux Toolkit uses Immer under the hood, we can directly mutate `state.mes
 Since the array is just mutated, Immer will handle the structural sharing optimally, reducing garbage collection pressure and main thread blocking during fast streaming.
 We can use a simple backward loop `for (let i = state.messages.length - 1; i >= 0; i--)` to find the messages matching `messageId` and modify them directly, breaking early if we know we've processed all messages for this turn. (Or since we just want to update all for `messageId`, a backward loop is fast enough).
 
-**Action:** Replace `state.messages = state.messages.map(...)` with a backwards iteration that mutates the elements directly in `handleChunk`, `finishMessage`, `attachChatIdToMessage` and `submitMessageFeedback` extraReducers.
+**Action:** Replace `state.messages = state.messages.map(...)` with a backwards iteration that mutates the elements directly in `handleChunk`, `finishMessage`, `attachChatIdToMessage` and `submitMessageFeedback` extraReducers.## 2026-03-27 - [Frontend Streaming Optimization]
+**Learning:** ReactMarkdown generates new elements on every chunk during AI streaming, causing expensive components like `SyntaxHighlighter` inside `CodeBlock` to parse and render repeatedly. This leads to severe lag and UI jank when generating code blocks.
+**Action:** Wrap the `CodeBlock` component with `React.memo` and provide a custom equality function that ignores `react-markdown`'s internal AST `node` mutations, checking only if the stringified `children`, `inline`, and `className` props change.

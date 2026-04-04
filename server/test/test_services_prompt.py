@@ -1,6 +1,6 @@
 import unittest
 from unittest.mock import patch, MagicMock
-from services.prompt_generator import system_prompt, add_human_message_to_prompt, add_image_to_prompt
+from services.prompt_generator import system_prompt, add_human_message_to_prompt, add_image_to_prompt, MARKDOWN_FORMAT_INSTRUCTION
 from langchain_core.messages import SystemMessage, HumanMessage
 
 class TestPromptGenerator(unittest.TestCase):
@@ -15,7 +15,7 @@ class TestPromptGenerator(unittest.TestCase):
         
         self.assertEqual(len(result), 2)
         self.assertIsInstance(result[0], SystemMessage)
-        self.assertEqual(result[0].content, "You are a test bot.")
+        self.assertEqual(result[0].content, "You are a test bot." + MARKDOWN_FORMAT_INSTRUCTION)
         self.assertIn("likes python", result[1].content)
 
     def test_add_human_message_to_prompt(self):

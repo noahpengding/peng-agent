@@ -7,7 +7,7 @@ env:
   REGISTRY: ghcr.io
   SERVER_IMAGE: ghcr.io/${{ github.repository }}/server
   WEB_IMAGE: ghcr.io/${{ github.repository }}/front
-  VERSION: v2.4.3
+  VERSION: v2.4.4
   GITHUB_REPOSITORY: ${{ github.repository }}
   GITHUB_COMMIT_SHA: ${{ github.sha }}
 
@@ -41,11 +41,29 @@ jobs:
         run: uv tool run ruff check
         working-directory: ./server
 
+      - name: Configure Datadog Test Optimization
+        uses: datadog/test-visibility-github-action@v2
+        with:
+          languages: python
+          api_key: ${{secrets.DD_API_KEY}}
+          site: us5.datadoghq.com
+
       - name: Run unit tests with coverage
+        run: uv run python -m unittest discover -s test
+        working-directory: ./server
+
+      - name: Generate coverage report
         run: |
           uv run --with coverage coverage run -m unittest discover test
-          uv run --with coverage coverage report
+          uv run --with coverage coverage xml -o coverage.xml
         working-directory: ./server
+
+      - name: Upload coverage report to Datadog
+        uses: DataDog/coverage-upload-github-action@v1
+        with:
+          api_key: ${{ secrets.DD_API_KEY }}
+          site: us5.datadoghq.com
+          files: ./server/coverage.xml
 
   # Web frontend lint check
   web-lint:
@@ -158,6 +176,7 @@ jobs:
         with:
           category: "/language:${{ matrix.language }}"
           upload: true
+  
 
   # Test builds for non-main branches (PRs)
   test-server-x64:
@@ -229,7 +248,7 @@ jobs:
 
   mobile-preview:
     if: github.ref != 'refs/heads/main'
-    needs: [mobile-lint, codeql-analysis]
+    needs: [mobile-lint, codeql-analysis, test-server-x64, test-web-x64]
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository

@@ -101,7 +101,7 @@ const MemoryPage: React.FC = () => {
 
       {/* Loading and Error States */}
       {isLoading && <div className="loading-indicator">Loading memories...</div>}
-      {error && <div className="error-message">Error: {error}</div>}
+      {error && <div className="error-message" role="alert" aria-live="assertive">Error: {error}</div>}
 
       {/* Memories Table */}
       {!isLoading && !error && (

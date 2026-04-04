@@ -15,7 +15,7 @@ def _establish_ssh_connection(hostname: str):
     ssh_config = json.loads(BytesIO(ssh_data).read().decode("utf-8"))
     for entry in ssh_config:
         if entry["hostname"] == hostname:
-            minio.file_download(entry["private_key_path"], "temp_private_key")
+            minio.file_download(entry["private_key_path"], "temp_private_key", bucket_name=config.s3_bucket)
             file = ""
             with open("temp_private_key", "r") as f:
                 file = f.read()
@@ -33,58 +33,67 @@ def _establish_ssh_connection(hostname: str):
             return ssh
     return None
 
-
-def execute_ssh_command(hostname: str, command: str):
+def execute_ssh_command(hostname: str, command: str, stdin_data: str | None = None):
     ssh = _establish_ssh_connection(hostname)
     if ssh is None:
         return {"error": "SSH connection could not be established."}
     try:
-        stdin, stdout, stderr = ssh.exec_command(command)
+        stdin, stdout, stderr = ssh.exec_command("source ~/.zshrc\n" + command)
+        if stdin_data is not None:
+            stdin.write(stdin_data)
+            stdin.flush()
+            stdin.channel.shutdown_write()
         output = stdout.readlines()
         error = stderr.readlines()
         output = "".join(output).strip()
         error = "".join(error).strip()
-        ssh.close()
         if error:
             return {"error": error}
         return {"output": output}
     except Exception as e:
         return {"error": str(e)}
+    finally:
+        ssh.close()
 
 
-def get_ssh_tool(hostname: str) -> StructuredTool:
-    return StructuredTool.from_function(
-        func=lambda command: execute_ssh_command(hostname, command),
-        name=f"ssh_tool_{hostname}",
-        description=f"Execute shell commands on the remote server {hostname} via SSH. Use this tool to run commands and retrieve their output.",
-        args_schema={
-            "type": "object",
-            "properties": {
-                "command": {
-                    "type": "string",
-                    "description": "The shell command to execute on the remote server.",
-                },
+def code_execution_tool(language: str, code: str):
+    if language.lower() == "python":
+        result = execute_ssh_command(
+            "homelab", "uv run python -", stdin_data=code
+        )
+        return result["output"] if "output" in result else result["error"]
+    elif language.lower() == "r":
+        result = execute_ssh_command("homelab", "Rscript -", stdin_data=code)
+        return result["output"] if "output" in result else result["error"]
+    elif language.lower() == "bash":
+        result = execute_ssh_command("homelab", "bash -s", stdin_data=code)
+        return result["output"] if "output" in result else result["error"]
+    elif language.lower() == "javascript":
+        result = execute_ssh_command("homelab", "node -", stdin_data=code)
+        return result["output"] if "output" in result else result["error"]
+    else:
+        return f"Unsupported language: {language}. Supported languages are Python, R, Bash, and JavaScript."
+
+
+code_execution = StructuredTool.from_function(
+    func=code_execution_tool,
+    name="code_execution",
+    description='''Execute code in various programming languages (Python, R, Bash, JavaScript) on a remote server via SSH. Provide the language and the code to execute.
+    You need to be specific about the language. e.g. if you want to execute Python code, you need to set the language to 'python' instead of run it using 'bash'. 
+    ''',
+    args_schema={
+        "type": "object",
+        "properties": {
+            "language": {
+                "type": "string",
+                "description": "The programming language of the code (e.g., Python, R, Bash, JavaScript).",
             },
-            "required": ["command"],
-        },
-        return_direct=True,
-    )
-
-
-def get_general_ssh_tool(hostname) -> StructuredTool:
-    return StructuredTool.from_function(
-        func=lambda command: execute_ssh_command(hostname, command),
-        name="ssh_tool_general",
-        description="This is a general-purpose Linux Environment to run any SSH shell commands for calculation, code execution, or file manipulation. You are allowed to install any tools if needed. Use this tool to run commands and retrieve their output.",
-        args_schema={
-            "type": "object",
-            "properties": {
-                "command": {
-                    "type": "string",
-                    "description": "The shell command to execute on the remote server.",
-                },
+            "code": {
+                "type": "string",
+                "description": "The code to execute.",
             },
-            "required": ["command"],
         },
-        return_direct=True,
-    )
+        "required": ["language", "code"],
+    },
+    return_direct=False,
+)

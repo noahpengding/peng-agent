@@ -39,22 +39,10 @@ async def tools_routers(tools_name: List[str]):
 
             tools += create_sql_tool(tool_name)
 
-        elif tool_name == "General_ssh":
-            from services.tools.ssh_tools import get_general_ssh_tool
-            from handlers.tool_handlers import get_tool_by_name
+        elif tool_name == "code_execution":
+            from services.tools.ssh_tools import code_execution
 
-            tool_info = get_tool_by_name(tool_name)
-            tools += [get_general_ssh_tool(tool_info["url"])]
-
-        elif tool_name.endswith("_ssh"):
-            from services.tools.ssh_tools import get_ssh_tool
-            from handlers.tool_handlers import get_tool_by_name
-
-            tool_info = get_tool_by_name(tool_name)
-            if tool_info["url"]:
-                tools += [get_ssh_tool(tool_info["url"])]
-            else:
-                tools += [get_ssh_tool(tool_name[:-4])]
+            tools += [code_execution]
 
         elif tool_name.endswith("_mcp"):
             from services.tools.mcp_tools import create_mcp_tools

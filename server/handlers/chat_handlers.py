@@ -13,7 +13,7 @@ from typing import AsyncIterator
 
 
 def _generate_prompt_params(
-    user_name: str, message: str, knowledge_base: str, image: str,  chat_config: ChatConfig, mysql_conn: MysqlConnect = None
+    user_name: str, message: str, knowledge_base: str, image: List[str],  chat_config: ChatConfig, mysql_conn: MysqlConnect
 ):
     chat = mysql_conn.create_record(
         table="chat",
@@ -71,7 +71,6 @@ async def chat_handler(
 
     full_response = ""
     pre_chunk_type = ""
-    math_flag = False
     try:
         async for chunk in agent.astream(AgentState(messages=prompt)):
             output_log(f"Received chunk: {chunk}", "DEBUG")
@@ -134,8 +133,6 @@ async def chat_handler(
                     pre_chunk_type = chunk_type
                     full_response = ""
                 if isinstance(chunk_content, str):
-                    if chunk_type == "output_text":
-                        chunk_content, math_flag = _chunk_message_process(chunk_content, math_flag)
                     yield (
                         json.dumps(
                             {"chunk": chunk_content, "type": chunk_type, "done": False}
@@ -161,20 +158,6 @@ async def chat_handler(
             )
         mysql.close()
         yield json.dumps({"chunk": f"{chat_id}", "done": True}) + "\n"
-
-def _chunk_message_process(chunk: str, math_flag: bool):
-    if chunk.find("[\n") != -1 or chunk.find("]\n") != -1:
-        math_flag = not math_flag
-        chunk = chunk.replace("[\n", r"\$\n").replace("]\n", r"\$\n")
-    if chunk.find("$") != -1 or chunk.find("$$") != -1:
-        math_flag = not math_flag
-    if not math_flag:
-        chunk = chunk.replace("\\", "")
-    if math_flag:
-        chunk = chunk.replace("\n", "")
-        chunk = chunk.replace("\\,", "").replace("\\;", "")
-    chunk = chunk.replace("\n\n", "\n")
-    return chunk, math_flag
 
 def _save_chat_response(chat_id: int, message_type: str, content: str, mysql_conn: MysqlConnect = None, **kwargs):
     mysql = mysql_conn
@@ -216,7 +199,7 @@ def _save_chat_response(chat_id: int, message_type: str, content: str, mysql_con
         )
 
 def create_streaming_response(
-    user_name: str, message: str, knowledge_base: str, image: str, chat_config: ChatConfig
+    user_name: str, message: str, knowledge_base: str, image: List[str], chat_config: ChatConfig
 ) -> StreamingResponse:
     return StreamingResponse(
         chat_handler(user_name, message, knowledge_base, image, chat_config),

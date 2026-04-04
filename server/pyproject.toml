@@ -1,19 +1,19 @@
 [project]
 name = "Peng-Agent"
-version = "2.4.3"
+version = "2.4.4"
 description = "A LLM ongoing chat agent for learning"
 authors = [
     { name = "Noah Ding", email = "noah@dingyipeng.com" },
     { name = "Tena Walcott", email = "tw@tenawalcott.com" }
 ]
 dependencies = [
-    "aiohttp>=3.13.3",
+    "aiohttp>=3.13.4",
     "anthropic>=0.84.0",
     "bcrypt>=5.0.0",
     "boto3>=1.42.61",
     "brotli>=1.2.0",
     "bs4>=0.0.2",
-    "cryptography>=46.0.5",
+    "cryptography>=46.0.6",
     "ddtrace>=4.5.0",
     "email-to>=0.1.0",
     "fastapi>=0.135.1",
@@ -21,7 +21,7 @@ dependencies = [
     "google-genai>=1.66.0",
     "importlib>=1.0.4",
     "langchain-community>=0.4.1",
-    "langchain-core>=1.2.17",
+    "langchain-core>=1.2.22",
     "langchain-mcp-adapters>=0.2.1",
     "langchain-openai>=1.1.10",
     "langchain-qdrant>=1.1.0",
@@ -32,7 +32,7 @@ dependencies = [
     "mcp>=1.26.0",
     "mysql-connector-python>=9.6.0",
     "nest-asyncio>=1.6.0",
-    "nltk>=3.9.3",
+    "nltk>=3.9.4",
     "numpy>=2.4.2",
     "openai>=2.24.0",
     "openinference-instrumentation-langchain>=0.1.61",
@@ -50,7 +50,7 @@ dependencies = [
     "pymupdf>=1.27.1",
     "pymysql>=1.1.2",
     "pynacl>=1.6.2",
-    "pypdf>=6.9.1",
+    "pypdf>=6.9.2",
     "python-dotenv>=1.2.2",
     "python-multipart>=0.0.22",
     "qdrant-client>=1.17.0",
