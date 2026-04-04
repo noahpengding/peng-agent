@@ -19,7 +19,7 @@
     },
     "production": {
       "android": {
-        "buildType": "app-bundle"
+        "buildType": "apk"
       },
       "env": {
         "API_URL": "https://agent.tenawalcott.com/api"
