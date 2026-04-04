@@ -1,6 +1,7 @@
 import json
 import unittest
 from unittest.mock import MagicMock, mock_open, patch
+
 from services.tools.ssh_tools import (
     _establish_ssh_connection,
     code_execution_tool,
@@ -56,7 +57,11 @@ class TestSshTools(unittest.TestCase):
         result = _establish_ssh_connection("homelab")
 
         self.assertIs(result, fake_ssh)
-        mock_minio.file_download.assert_called_once_with("keys/homelab", "temp_private_key")
+        mock_minio.file_download.assert_called_once_with(
+            "keys/homelab",
+            "temp_private_key",
+            bucket_name="peng-agent",
+        )
         mock_remove.assert_called_once_with("temp_private_key")
         fake_ssh.set_missing_host_key_policy.assert_called_once_with(policy)
         fake_ssh.connect.assert_called_once_with(
@@ -87,6 +92,7 @@ class TestSshTools(unittest.TestCase):
         result = execute_ssh_command("homelab", "echo hello")
 
         self.assertEqual(result, {"output": "hello"})
+        fake_ssh.exec_command.assert_called_once_with("source ~/.zshrc \necho hello")
         fake_ssh.close.assert_called_once()
 
     @patch("services.tools.ssh_tools._establish_ssh_connection")
@@ -102,6 +108,7 @@ class TestSshTools(unittest.TestCase):
         result = execute_ssh_command("homelab", "cat /root/secret")
 
         self.assertEqual(result, {"error": "permission denied"})
+        fake_ssh.exec_command.assert_called_once_with("source ~/.zshrc \ncat /root/secret")
         fake_ssh.close.assert_called_once()
 
     @patch("services.tools.ssh_tools._establish_ssh_connection")
@@ -113,6 +120,7 @@ class TestSshTools(unittest.TestCase):
         result = execute_ssh_command("homelab", "bad")
 
         self.assertEqual(result, {"error": "boom"})
+        fake_ssh.exec_command.assert_called_once_with("source ~/.zshrc \nbad")
 
     @patch("services.tools.ssh_tools.execute_ssh_command")
     def test_code_execution_tool_python_command(self, mock_execute):
