@@ -153,7 +153,7 @@ class TestSshTools(unittest.TestCase):
 
         self.assertEqual(result, "1")
         mock_execute.assert_called_once_with(
-            "homelab", "uv run --python .venv/bin/python python -", stdin_data="print(1)"
+            "homelab", "uv run python -", stdin_data="print(1)"
         )
 
     @patch("services.tools.ssh_tools.execute_ssh_command")
