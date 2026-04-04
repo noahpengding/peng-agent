@@ -228,10 +228,22 @@ export const InputArea: React.FC<InputAreaProps> = ({
             <button
               type="submit"
               className="send-button"
-              aria-label="Send message"
+              aria-label={isLoading ? 'Sending message...' : 'Send message'}
               disabled={isLoading || isUploading || (!input.trim() && uploadedImages.length === 0 && s3PathsInput.trim().length === 0)}
             >
-              ➤
+              {isLoading ? (
+                <svg
+                  className="send-spinner"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  style={{ animation: 'spin 1s linear infinite', width: '20px', height: '20px' }}
+                >
+                  <circle cx="12" cy="12" r="10" stroke="rgba(255,255,255,0.25)" strokeWidth="3" />
+                  <path d="M12 2a10 10 0 0 1 10 10" stroke="white" strokeWidth="3" strokeLinecap="round" />
+                </svg>
+              ) : (
+                '➤'
+              )}
             </button>
           </div>
         </div>
