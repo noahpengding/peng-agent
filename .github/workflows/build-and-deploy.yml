@@ -49,7 +49,7 @@ jobs:
           site: us5.datadoghq.com
 
       - name: Run unit tests with coverage
-        run: uv run run -m unittest discover test
+        run: uv run python -m unittest discover test
 
       - name: Generate coverage report
         run: uv run --with coverage coverage xml -o coverage.xml

@@ -15,7 +15,7 @@ def _establish_ssh_connection(hostname: str):
     ssh_config = json.loads(BytesIO(ssh_data).read().decode("utf-8"))
     for entry in ssh_config:
         if entry["hostname"] == hostname:
-            minio.file_download(entry["private_key_path"], "temp_private_key", bucket_name="peng-agent")
+            minio.file_download(entry["private_key_path"], "temp_private_key", bucket_name=config.s3_bucket)
             file = ""
             with open("temp_private_key", "r") as f:
                 file = f.read()
