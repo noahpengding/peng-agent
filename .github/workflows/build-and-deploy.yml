@@ -54,7 +54,7 @@ jobs:
 
       - name: Generate coverage report
         run: |
-          uv run python -m unittest discover -s test
+          uv run --with coverage coverage run -m unittest discover test
           uv run --with coverage coverage xml -o coverage.xml
         working-directory: ./server
 
