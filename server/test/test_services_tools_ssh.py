@@ -82,17 +82,40 @@ class TestSshTools(unittest.TestCase):
     @patch("services.tools.ssh_tools._establish_ssh_connection")
     def test_execute_ssh_command_returns_output(self, mock_connect):
         fake_ssh = MagicMock()
+        stdin = MagicMock()
+        stdin.channel = MagicMock()
         stdout = MagicMock()
         stderr = MagicMock()
         stdout.readlines.return_value = ["hello", "\n"]
         stderr.readlines.return_value = []
-        fake_ssh.exec_command.return_value = (None, stdout, stderr)
+        fake_ssh.exec_command.return_value = (stdin, stdout, stderr)
         mock_connect.return_value = fake_ssh
 
         result = execute_ssh_command("homelab", "echo hello")
 
         self.assertEqual(result, {"output": "hello"})
-        fake_ssh.exec_command.assert_called_once_with("source ~/.zshrc \necho hello")
+        fake_ssh.exec_command.assert_called_once_with("source ~/.zshrc\necho hello")
+        stdin.write.assert_not_called()
+        fake_ssh.close.assert_called_once()
+
+    @patch("services.tools.ssh_tools._establish_ssh_connection")
+    def test_execute_ssh_command_writes_stdin_payload(self, mock_connect):
+        fake_ssh = MagicMock()
+        stdin = MagicMock()
+        stdin.channel = MagicMock()
+        stdout = MagicMock()
+        stderr = MagicMock()
+        stdout.readlines.return_value = ["done"]
+        stderr.readlines.return_value = []
+        fake_ssh.exec_command.return_value = (stdin, stdout, stderr)
+        mock_connect.return_value = fake_ssh
+
+        result = execute_ssh_command("homelab", "python -", stdin_data="print(1)")
+
+        self.assertEqual(result, {"output": "done"})
+        stdin.write.assert_called_once_with("print(1)")
+        stdin.flush.assert_called_once()
+        stdin.channel.shutdown_write.assert_called_once()
         fake_ssh.close.assert_called_once()
 
     @patch("services.tools.ssh_tools._establish_ssh_connection")
@@ -102,13 +125,13 @@ class TestSshTools(unittest.TestCase):
         stderr = MagicMock()
         stdout.readlines.return_value = ["ignored"]
         stderr.readlines.return_value = ["permission denied", "\n"]
-        fake_ssh.exec_command.return_value = (None, stdout, stderr)
+        fake_ssh.exec_command.return_value = (MagicMock(), stdout, stderr)
         mock_connect.return_value = fake_ssh
 
         result = execute_ssh_command("homelab", "cat /root/secret")
 
         self.assertEqual(result, {"error": "permission denied"})
-        fake_ssh.exec_command.assert_called_once_with("source ~/.zshrc \ncat /root/secret")
+        fake_ssh.exec_command.assert_called_once_with("source ~/.zshrc\ncat /root/secret")
         fake_ssh.close.assert_called_once()
 
     @patch("services.tools.ssh_tools._establish_ssh_connection")
@@ -120,7 +143,7 @@ class TestSshTools(unittest.TestCase):
         result = execute_ssh_command("homelab", "bad")
 
         self.assertEqual(result, {"error": "boom"})
-        fake_ssh.exec_command.assert_called_once_with("source ~/.zshrc \nbad")
+        fake_ssh.exec_command.assert_called_once_with("source ~/.zshrc\nbad")
 
     @patch("services.tools.ssh_tools.execute_ssh_command")
     def test_code_execution_tool_python_command(self, mock_execute):
@@ -129,7 +152,9 @@ class TestSshTools(unittest.TestCase):
         result = code_execution_tool("python", "print(1)")
 
         self.assertEqual(result, "1")
-        mock_execute.assert_called_once_with("homelab", "uv run python -c 'print(1)'")
+        mock_execute.assert_called_once_with(
+            "homelab", "uv run --python .venv/bin/python python -", stdin_data="print(1)"
+        )
 
     @patch("services.tools.ssh_tools.execute_ssh_command")
     def test_code_execution_tool_r_command(self, mock_execute):
@@ -138,7 +163,7 @@ class TestSshTools(unittest.TestCase):
         result = code_execution_tool("r", "print(2)")
 
         self.assertEqual(result, "2")
-        mock_execute.assert_called_once_with("homelab", "Rscript -e 'print(2)'")
+        mock_execute.assert_called_once_with("homelab", "Rscript -", stdin_data="print(2)")
 
     @patch("services.tools.ssh_tools.execute_ssh_command")
     def test_code_execution_tool_bash_command(self, mock_execute):
@@ -147,7 +172,7 @@ class TestSshTools(unittest.TestCase):
         result = code_execution_tool("bash", "echo ok")
 
         self.assertEqual(result, "ok")
-        mock_execute.assert_called_once_with("homelab", "echo ok")
+        mock_execute.assert_called_once_with("homelab", "bash -s", stdin_data="echo ok")
 
     @patch("services.tools.ssh_tools.execute_ssh_command")
     def test_code_execution_tool_javascript_command(self, mock_execute):
@@ -156,7 +181,7 @@ class TestSshTools(unittest.TestCase):
         result = code_execution_tool("javascript", "console.log(3)")
 
         self.assertEqual(result, "3")
-        mock_execute.assert_called_once_with("homelab", "node -e 'console.log(3)'")
+        mock_execute.assert_called_once_with("homelab", "node -", stdin_data="console.log(3)")
 
     @patch("services.tools.ssh_tools.execute_ssh_command")
     def test_code_execution_tool_returns_error_payload(self, mock_execute):

@@ -33,35 +33,43 @@ def _establish_ssh_connection(hostname: str):
             return ssh
     return None
 
-def execute_ssh_command(hostname: str, command: str):
+def execute_ssh_command(hostname: str, command: str, stdin_data: str | None = None):
     ssh = _establish_ssh_connection(hostname)
     if ssh is None:
         return {"error": "SSH connection could not be established."}
     try:
-        stdin, stdout, stderr = ssh.exec_command("source ~/.zshrc \n" + command)
+        stdin, stdout, stderr = ssh.exec_command("source ~/.zshrc\n" + command)
+        if stdin_data is not None:
+            stdin.write(stdin_data)
+            stdin.flush()
+            stdin.channel.shutdown_write()
         output = stdout.readlines()
         error = stderr.readlines()
         output = "".join(output).strip()
         error = "".join(error).strip()
-        ssh.close()
         if error:
             return {"error": error}
         return {"output": output}
     except Exception as e:
         return {"error": str(e)}
+    finally:
+        ssh.close()
+
 
 def code_execution_tool(language: str, code: str):
     if language.lower() == "python":
-        result = execute_ssh_command("homelab", f"uv run python -c '{code}'")
+        result = execute_ssh_command(
+            "homelab", "uv run python -", stdin_data=code
+        )
         return result["output"] if "output" in result else result["error"]
     elif language.lower() == "r":
-        result = execute_ssh_command("homelab", f"Rscript -e '{code}'")
+        result = execute_ssh_command("homelab", "Rscript -", stdin_data=code)
         return result["output"] if "output" in result else result["error"]
     elif language.lower() == "bash":
-        result = execute_ssh_command("homelab", code)
+        result = execute_ssh_command("homelab", "bash -s", stdin_data=code)
         return result["output"] if "output" in result else result["error"]
     elif language.lower() == "javascript":
-        result = execute_ssh_command("homelab", f"node -e '{code}'")
+        result = execute_ssh_command("homelab", "node -", stdin_data=code)
         return result["output"] if "output" in result else result["error"]
     else:
         return f"Unsupported language: {language}. Supported languages are Python, R, Bash, and JavaScript."
