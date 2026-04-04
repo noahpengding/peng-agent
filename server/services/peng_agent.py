@@ -3,6 +3,7 @@ from typing import (
     Sequence,
     TypedDict,
     Any,
+    AsyncGenerator,
 )
 from langchain_core.messages import (
     BaseMessage,
@@ -97,7 +98,7 @@ class PengAgent:
         return observation
 
 
-    async def astream(self, state: AgentState) -> Any:
+    async def astream(self, state: AgentState) -> AsyncGenerator[Any, None]:
         await self._ensure_tools()
         async for chunk in self.graph.astream(
             state,
