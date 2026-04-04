@@ -49,7 +49,8 @@ jobs:
           site: us5.datadoghq.com
 
       - name: Run unit tests with coverage
-        run: uv run python -m unittest discover test
+        run: uv run python -m unittest discover -s test
+        working-directory: ./server
 
       - name: Generate coverage report
         run: uv run --with coverage coverage xml -o coverage.xml
