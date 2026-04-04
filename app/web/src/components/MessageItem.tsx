@@ -67,6 +67,16 @@ const CodeBlock = ({ inline, className, children, ...rest }: CodeBlockProps) => 
   );
 };
 
+// ⚡ Bolt Optimization: Memoize the CodeBlock component to prevent it from re-rendering
+// during streaming if its contents haven't changed. ReactMarkdown generates new elements
+// on every chunk, causing SyntaxHighlighter (which is very expensive) to parse and render
+// repeatedly. We only re-render if the stringified children, inline, or className change.
+const MemoizedCodeBlock = React.memo(CodeBlock, (prev, next) => {
+  const prevChildrenString = Array.isArray(prev.children) ? prev.children.join('') : String(prev.children);
+  const nextChildrenString = Array.isArray(next.children) ? next.children.join('') : String(next.children);
+  return prev.className === next.className && prev.inline === next.inline && prevChildrenString === nextChildrenString;
+});
+
 interface MessageItemProps {
   message: Message;
   index: number;
@@ -167,7 +177,7 @@ export const MessageItem = React.memo(({ message, index, isFolded, onToggleFold,
               components={{
                 p: ({ ...props }) => <p className="tight-paragraph" {...props} />,
                 li: ({ ...props }) => <li className="tight-list-item" {...props} />,
-                code: CodeBlock,
+                code: MemoizedCodeBlock,
               }}
             >
               {message.content}
