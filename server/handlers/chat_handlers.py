@@ -71,7 +71,6 @@ async def chat_handler(
 
     full_response = ""
     pre_chunk_type = ""
-    math_flag = False
     try:
         async for chunk in agent.astream(AgentState(messages=prompt)):
             output_log(f"Received chunk: {chunk}", "DEBUG")

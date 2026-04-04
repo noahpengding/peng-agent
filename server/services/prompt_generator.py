@@ -9,11 +9,7 @@ from utils.log import output_log
 import base64
 import json
 
-
-def system_prompt(user_name, mysql_conn):
-    user_profile = mysql_conn.read_records("user", conditions={"user_name": user_name})
-    system_prompt = str(user_profile[0]["system_prompt"]) if user_profile and "system_prompt" in user_profile[0] else "You are a helpful assistant."
-    markdown_format = '''You MUST format all responses using GitHub Flavored Markdown (GFM) and LaTeX for mathematical formulas. Adhere to these specific rules to ensure the frontend renders your output correctly:
+MARKDOWN_FORMAT_INSTRUCTION = '''You MUST format all responses using GitHub Flavored Markdown (GFM) and LaTeX for mathematical formulas. Adhere to these specific rules to ensure the frontend renders your output correctly:
     1. General Text: Use standard Markdown for headers (# to ######), bold (**text**), italic (*text*), and blockquotes (>). Use GFM features like tables (| Col |), task lists (- [ ]), and strikethrough (~~text~~).
     2. Mathematical Formulas: 
         - Use **LaTeX** notation for all math. 
@@ -28,6 +24,11 @@ def system_prompt(user_name, mysql_conn):
         - Spacing: Keep paragraphs tight and avoid excessive empty lines between list items or headers.
         - Links: Use the [text](url) format or literal URLs which will be auto-linked.
     '''
+
+def system_prompt(user_name, mysql_conn):
+    user_profile = mysql_conn.read_records("user", conditions={"user_name": user_name})
+    system_prompt = str(user_profile[0]["system_prompt"]) if user_profile and "system_prompt" in user_profile[0] else "You are a helpful assistant."
+    markdown_format = MARKDOWN_FORMAT_INSTRUCTION
     lt_mem = json.loads(user_profile[0]["long_term_memory"]) if user_profile and "long_term_memory" in user_profile[0] and user_profile[0]["long_term_memory"] else []
     lt_mem_str = ";".join(lt_mem) if lt_mem != [] else "No background information about the user."
     return [
