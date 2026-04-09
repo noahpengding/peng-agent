@@ -35,9 +35,55 @@ import {
 import { Message, UploadedImage } from '@/types/ChatInterface.types';
 import { useRAGApi } from '@/hooks/RAGAPI';
 import { UploadService } from '@/services/uploadService';
-import Markdown from 'react-native-markdown-display';
+import Markdown, { 
+  ASTNode, 
+  RenderRules 
+} from 'react-native-markdown-display';
+import MarkdownIt from 'markdown-it';
+// @ts-ignore
+import markdownItKatex from 'markdown-it-katex';
+import Katex from 'react-native-katex';
 import { Colors } from '../utils/colors';
 import { Typography } from '../utils/typography';
+
+const md = new MarkdownIt({
+  typographer: true,
+}).use(markdownItKatex);
+
+const markdownRules: RenderRules = {
+  math_inline: (
+    node: ASTNode,
+    children: React.ReactNode[],
+    parent: ASTNode[],
+    styles: any,
+  ) => (
+    <Katex
+      key={node.key}
+      expression={node.content}
+      style={{
+        ...styles.math,
+        backgroundColor: 'transparent',
+      }}
+    />
+  ),
+  math_block: (
+    node: ASTNode,
+    children: React.ReactNode[],
+    parent: ASTNode[],
+    styles: any,
+  ) => (
+    <View key={node.key} style={styles.mathBlock}>
+      <Katex
+        expression={node.content}
+        displayMode={true}
+        style={{
+          ...styles.math,
+          backgroundColor: 'transparent',
+        }}
+      />
+    </View>
+  ),
+};
 
 type SelectorType = 'baseModel' | 'knowledgeBase';
 
@@ -89,7 +135,11 @@ const MessageItem = React.memo(({
             )}
             {!isFolded && (
               <View>
-                <Markdown style={markdownStyles}>
+                <Markdown 
+                  style={markdownStyles}
+                  markdownit={md}
+                  rules={markdownRules}
+                >
                   {item.content}
                 </Markdown>
                 {item.chatId && item.messageId && item.type === 'output_text' && (
@@ -123,7 +173,13 @@ const MessageItem = React.memo(({
             )}
           </>
         ) : (
-          <Text style={styles.userText}>{item.content}</Text>
+          <Markdown 
+            style={userMarkdownStyles}
+            markdownit={md}
+            rules={markdownRules}
+          >
+            {item.content}
+          </Markdown>
         )}
       </View>
     </View>
@@ -955,6 +1011,41 @@ const styles = StyleSheet.create({
   },
 });
 
+const userMarkdownStyles = {
+  body: {
+    color: Colors.white,
+    fontSize: Typography.sizes.base,
+    fontFamily: Typography.fonts.sans,
+    lineHeight: Typography.sizes.base * Typography.lineHeights.normal,
+  },
+  code_inline: {
+    backgroundColor: 'rgba(0, 0, 0, 0.2)',
+    paddingHorizontal: 4,
+    paddingVertical: 2,
+    borderRadius: 4,
+    fontFamily: Typography.fonts.mono,
+    fontSize: Typography.sizes.sm,
+    color: Colors.white,
+  },
+  fence: {
+    backgroundColor: 'rgba(0, 0, 0, 0.2)',
+    padding: 12,
+    borderRadius: 8,
+    fontFamily: Typography.fonts.mono,
+    fontSize: Typography.sizes.sm,
+    color: Colors.white,
+    marginVertical: Typography.spacing.xs,
+  },
+  link: {
+    color: Colors.white,
+    textDecorationLine: 'underline',
+  },
+  math: {
+    color: Colors.white,
+    height: 40,
+  },
+};
+
 const markdownStyles = {
   body: {
     color: Colors.textMain,
@@ -962,18 +1053,116 @@ const markdownStyles = {
     fontFamily: Typography.fonts.sans,
     lineHeight: Typography.sizes.base * Typography.lineHeights.normal,
   },
+  heading1: {
+    color: Colors.textMain,
+    fontSize: Typography.sizes['2xl'],
+    fontWeight: Typography.weights.bold,
+    marginVertical: Typography.spacing.xs,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.border,
+    paddingBottom: 4,
+  },
+  heading2: {
+    color: Colors.textMain,
+    fontSize: Typography.sizes.xl,
+    fontWeight: Typography.weights.bold,
+    marginVertical: Typography.spacing.xs,
+  },
+  heading3: {
+    color: Colors.textMain,
+    fontSize: Typography.sizes.lg,
+    fontWeight: Typography.weights.bold,
+    marginVertical: Typography.spacing.xs,
+  },
   code_inline: {
     backgroundColor: Colors.bgDeep,
-    padding: 2,
+    paddingHorizontal: 4,
+    paddingVertical: 2,
     borderRadius: 4,
     fontFamily: Typography.fonts.mono,
     fontSize: Typography.sizes.sm,
+    color: Colors.accent,
   },
   fence: {
     backgroundColor: Colors.bgDeep,
-    padding: 10,
+    padding: 12,
     borderRadius: 8,
     fontFamily: Typography.fonts.mono,
     fontSize: Typography.sizes.sm,
+    color: Colors.textMain,
+    marginVertical: Typography.spacing.xs,
+  },
+  bullet_list: {
+    marginVertical: Typography.spacing.xs,
+  },
+  ordered_list: {
+    marginVertical: Typography.spacing.xs,
+  },
+  list_item: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    marginVertical: 2,
+  },
+  bullet_list_icon: {
+    color: Colors.primary,
+    fontSize: 20,
+    marginRight: 10,
+    lineHeight: Typography.sizes.base * Typography.lineHeights.normal,
+  },
+  ordered_list_icon: {
+    color: Colors.primary,
+    fontSize: Typography.sizes.base,
+    fontWeight: Typography.weights.bold,
+    marginRight: 10,
+    lineHeight: Typography.sizes.base * Typography.lineHeights.normal,
+  },
+  blockquote: {
+    backgroundColor: Colors.bgCard,
+    borderLeftColor: Colors.primary,
+    borderLeftWidth: 4,
+    paddingLeft: 12,
+    paddingVertical: 8,
+    marginVertical: Typography.spacing.xs,
+    borderRadius: 4,
+  },
+  link: {
+    color: Colors.primary,
+    textDecorationLine: 'underline',
+  },
+  table: {
+    borderWidth: 1,
+    borderColor: Colors.border,
+    borderRadius: 8,
+    marginVertical: Typography.spacing.xs,
+    overflow: 'hidden',
+  },
+  thead: {
+    backgroundColor: Colors.bgDeep,
+  },
+  tr: {
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.border,
+    flexDirection: 'row',
+  },
+  th: {
+    flex: 1,
+    padding: 8,
+    fontWeight: Typography.weights.bold,
+    color: Colors.textMain,
+  },
+  td: {
+    flex: 1,
+    padding: 8,
+    color: Colors.textDim,
+  },
+  math: {
+    color: Colors.textMain,
+    height: 40,
+  },
+  mathBlock: {
+    marginVertical: Typography.spacing.xs,
+    alignItems: 'center',
+    width: '100%',
+    height: 60,
   },
 };
