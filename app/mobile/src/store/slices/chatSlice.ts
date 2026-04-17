@@ -197,16 +197,16 @@ const chatSlice = createSlice({
     },
     finishMessage: (state, action: PayloadAction<{ messageId: string }>) => {
       const { messageId } = action.payload;
-      state.messages = state.messages.map((m) => {
+      for (let i = state.messages.length - 1; i >= 0; i--) {
+        const m = state.messages[i];
         if (m.messageId === messageId) {
           if (m.type && m.type !== 'output_text' && m.type !== 'assistant' && m.type !== 'user') {
-            return { ...m, folded: true };
+            m.folded = true;
           } else if (m.type === 'output_text') {
-            return { ...m, content: m.content.replace(/\n\n+/g, '\n') };
+            m.content = m.content.replace(/\n\n+/g, '\n');
           }
         }
-        return m;
-      });
+      }
     },
 
     updateMemoryWithChatId: (state, action: PayloadAction<number>) => {
@@ -214,17 +214,15 @@ const chatSlice = createSlice({
     },
     attachChatIdToMessage: (state, action: PayloadAction<{ messageId: string; chatId: number }>) => {
       const { messageId, chatId } = action.payload;
-      state.messages = state.messages.map((message) => {
+      for (let i = state.messages.length - 1; i >= 0; i--) {
+        const message = state.messages[i];
         if (message.messageId === messageId && message.type === 'output_text') {
-          return {
-            ...message,
-            chatId,
-            feedback: message.feedback || 'no_response',
-            feedbackUpdating: false,
-          };
+          message.chatId = chatId;
+          message.feedback = message.feedback || 'no_response';
+          message.feedbackUpdating = false;
+          break; // Usually only one output_text per messageId
         }
-        return message;
-      });
+      }
     },
   },
   extraReducers: (builder) => {
@@ -249,30 +247,34 @@ const chatSlice = createSlice({
       })
       .addCase(submitMessageFeedback.pending, (state, action) => {
         const { messageId } = action.meta.arg;
-        state.messages = state.messages.map((message) => {
+        for (let i = state.messages.length - 1; i >= 0; i--) {
+          const message = state.messages[i];
           if (message.messageId === messageId && message.type === 'output_text') {
-            return { ...message, feedbackUpdating: true };
+            message.feedbackUpdating = true;
+            break;
           }
-          return message;
-        });
+        }
       })
       .addCase(submitMessageFeedback.fulfilled, (state, action) => {
         const { messageId, feedback } = action.payload;
-        state.messages = state.messages.map((message) => {
+        for (let i = state.messages.length - 1; i >= 0; i--) {
+          const message = state.messages[i];
           if (message.messageId === messageId && message.type === 'output_text') {
-            return { ...message, feedback, feedbackUpdating: false };
+            message.feedback = feedback;
+            message.feedbackUpdating = false;
+            break;
           }
-          return message;
-        });
+        }
       })
       .addCase(submitMessageFeedback.rejected, (state, action) => {
         const { messageId } = action.meta.arg;
-        state.messages = state.messages.map((message) => {
+        for (let i = state.messages.length - 1; i >= 0; i--) {
+          const message = state.messages[i];
           if (message.messageId === messageId && message.type === 'output_text') {
-            return { ...message, feedbackUpdating: false };
+            message.feedbackUpdating = false;
+            break;
           }
-          return message;
-        });
+        }
         state.error = action.payload as string;
       })
       .addCase(fetchBaseModels.fulfilled, (state, action) => {
