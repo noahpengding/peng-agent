@@ -6,3 +6,7 @@
 **Learning:** Regex `\w+` for language detection fails for languages with special characters like C++ or C#.
 **Action:** Use robust parsing (e.g., `split(' ')`) to ensure correct language identification in syntax highlighters.
 ## 2026-03-21 - Error Message Accessibility\n**Learning:** Error messages that appear dynamically (like after a failed login or failed API call) are often missed by screen readers unless they are focused or have an ARIA alert role.\n**Action:** Always add `role="alert"` and `aria-live="assertive"` to error message containers so they are immediately announced when they appear in the DOM.
+
+## 2023-10-27 - Keyboard Navigation & tabindex
+**Learning:** Adding `tabIndex={-1}` to interactive elements (like an icon button used to toggle password visibility) completely breaks keyboard accessibility by removing the element from the tab order.
+**Action:** Never use `tabIndex={-1}` on elements that users need to click or interact with. Rely on default tab ordering for standard semantic interactive elements (`<button>`, `<a>`, `<input>`, etc.).
