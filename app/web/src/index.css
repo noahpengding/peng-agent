@@ -99,3 +99,14 @@ h1, h2, h3, h4, h5, h6 {
   height: 100vh;
   width: 100vw;
 }
+
+/* Add global focus-visible styles for keyboard accessibility */
+button:focus-visible,
+a:focus-visible,
+input:focus-visible,
+textarea:focus-visible,
+select:focus-visible,
+[tabindex]:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
