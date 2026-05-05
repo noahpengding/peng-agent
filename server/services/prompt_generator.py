@@ -8,11 +8,13 @@ from utils.minio_connection import MinioStorage
 from utils.log import output_log
 import base64
 import json
+import os
 
 def system_prompt(user_name, mysql_conn):
     user_profile = mysql_conn.read_records("user", conditions={"user_name": user_name})
     system_prompt = str(user_profile[0]["system_prompt"]) if user_profile and "system_prompt" in user_profile[0] else "You are a helpful assistant."
-    with open("prompts/markdown_format.txt", "r") as f:
+    current_dir = os.path.dirname(os.path.abspath(__file__))
+    with open(os.path.join(current_dir, "prompts/markdown_format.md"), "r") as f:
         markdown_format = f.read()
     lt_mem = json.loads(user_profile[0]["long_term_memory"]) if user_profile and "long_term_memory" in user_profile[0] and user_profile[0]["long_term_memory"] else []
     lt_mem_str = ";".join(lt_mem) if lt_mem != [] else "No background information about the user."
