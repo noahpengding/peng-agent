@@ -15,6 +15,7 @@ from langgraph.graph.message import add_messages
 from langgraph.config import get_stream_writer
 from config.config import config
 from utils.log import output_log
+import os
 
 
 class AgentState(TypedDict):
@@ -82,7 +83,9 @@ class PengAgent:
         if len(observation) > max_length:
             from handlers.chat_handlers import chat_completions_handler
             from models.chat_config import ChatConfig
-            prompt = f"Tool observation is too long and needs to be truncated. The original observation is: {observation}. Please summarize it to be within {int(max_length)} characters while retaining the key information."
+            current_dir = os.path.dirname(os.path.abspath(__file__))
+            with open(os.path.join(current_dir, "prompts/tool_truncate.md"), "r") as f:
+                prompt = f.read().format(observation=observation, max_length=int(max_length))
             chat_config = ChatConfig(
                 operator=config.default_operator,
                 base_model=config.default_base_model,

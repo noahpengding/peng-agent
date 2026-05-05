@@ -29,21 +29,20 @@ export default function ProfileScreen() {
   const [ragVisible, setRagVisible] = useState(false);
   const [memoryVisible, setMemoryVisible] = useState(false);
 
-  const fetchProfile = async () => {
-    try {
-      const profile = await UserService.getProfile();
-      setUsername(profile.username || 'Unknown user');
-      setEmail(profile.email || 'No email set');
-    } catch {
-      dispatch(setError('Failed to fetch profile'));
-    } finally {
-      setLoading(false);
-    }
-  };
-
   useEffect(() => {
+    const fetchProfile = async () => {
+      try {
+        const profile = await UserService.getProfile();
+        setUsername(profile.username || 'Unknown user');
+        setEmail(profile.email || 'No email set');
+      } catch {
+        dispatch(setError('Failed to fetch profile'));
+      } finally {
+        setLoading(false);
+      }
+    };
     fetchProfile();
-  }, []);
+  }, [dispatch]);
 
   const menuItems: { title: string; icon: keyof typeof MaterialCommunityIcons.glyphMap; onPress: () => void; description: string }[] = [
     {
