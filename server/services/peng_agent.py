@@ -82,7 +82,8 @@ class PengAgent:
         if len(observation) > max_length:
             from handlers.chat_handlers import chat_completions_handler
             from models.chat_config import ChatConfig
-            prompt = f"Tool observation is too long and needs to be truncated. The original observation is: {observation}. Please summarize it to be within {int(max_length)} characters while retaining the key information."
+            with open("prompts/tool_truncate.md", "r") as f:
+                prompt = f.read().format(observation=observation, max_length=int(max_length))
             chat_config = ChatConfig(
                 operator=config.default_operator,
                 base_model=config.default_base_model,
