@@ -295,9 +295,12 @@ class CustomOpenAICompletion(BaseChatModel):
             if isinstance(message, AIMessage):
                 for m in message.content_blocks:
                     if m["type"] == "tool_call":
+                        last_mess = prompt_text[-1] if prompt_text else {}
                         prompt_text.append(
                             {
                                 "role": "assistant",
+                                "content": last_mess.get("content", "") if last_mess else "",
+                                "reasoning_content": last_mess.get("reasoning_content", "") if last_mess else "",
                                 "tool_calls": [{
                                     "id": m["id"],
                                     "type": "function",
@@ -309,10 +312,11 @@ class CustomOpenAICompletion(BaseChatModel):
                             }
                         )
                     elif m["type"] == "reasoning":
+                        last_content = prompt_text[-1]["content"] if prompt_text else ""
                         prompt_text.append(
                             {
                                 "role": "assistant",
-                                "content": m["reasoning"],
+                                "content": last_content,
                                 "reasoning_content": m["reasoning"],
                             }
                         )
