@@ -40,7 +40,7 @@ import Markdown, {
   RenderRules 
 } from 'react-native-markdown-display';
 import MarkdownIt from 'markdown-it';
-// @ts-ignore
+// @ts-expect-error - markdown-it-katex lacks types
 import markdownItKatex from 'markdown-it-katex';
 import Katex from 'react-native-katex';
 import { Colors } from '../utils/colors';
@@ -55,6 +55,7 @@ const markdownRules: RenderRules = {
     node: ASTNode,
     children: React.ReactNode[],
     parent: ASTNode[],
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     styles: any,
   ) => (
     <Katex
@@ -70,6 +71,7 @@ const markdownRules: RenderRules = {
     node: ASTNode,
     children: React.ReactNode[],
     parent: ASTNode[],
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     styles: any,
   ) => (
     <View key={node.key} style={styles.mathBlock}>
