@@ -7,6 +7,7 @@ import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { vscDarkPlus } from 'react-syntax-highlighter/dist/esm/styles/prism';
 import 'katex/dist/katex.min.css';
 import { Message } from '@/types/ChatInterface.types';
+import ImageModal from './ImageModal';
 
 interface CodeBlockProps extends React.HTMLAttributes<HTMLElement> {
   inline?: boolean;
@@ -87,6 +88,8 @@ interface MessageItemProps {
 }
 
 export const MessageItem = React.memo(({ message, index, isFolded, onToggleFold, setRef, onSubmitFeedback }: MessageItemProps) => {
+  const [selectedImage, setSelectedImage] = useState<string | null>(null);
+
   const messageClass =
     message.role === 'user'
       ? 'user-message'
@@ -163,12 +166,19 @@ export const MessageItem = React.memo(({ message, index, isFolded, onToggleFold,
               {message.images.map((imgSrc, imgIndex) => (
                 <div
                   key={imgIndex}
-                  className="message-image-container"
+                  className="message-image-container clickable"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setSelectedImage(imgSrc);
+                  }}
                 >
                   <img src={imgSrc} alt="Message attachment" className="message-image" />
                 </div>
               ))}
             </div>
+          )}
+          {selectedImage && (
+            <ImageModal src={selectedImage} onClose={() => setSelectedImage(null)} />
           )}
           <div className="message-text markdown-content">
             <ReactMarkdown

@@ -24,6 +24,7 @@ from langchain_core.runnables import Runnable
 from langchain_core.language_models import LanguageModelInput
 
 import ast
+import base64
 
 
 class CustomOpenAIResponse(BaseChatModel):
@@ -125,6 +126,22 @@ class CustomOpenAIResponse(BaseChatModel):
                 )
         generation = ChatGeneration(message=generate_message)
         return ChatResult(generations=[generation])
+    
+    def generate_image(
+        self,
+        prompt: str,
+        run_manager: Optional[CallbackManagerForLLMRun] = None,
+        **kwargs: Any,
+    ) -> str:
+        request_params = {
+            "model": self.model_name,
+            "prompt": prompt,
+        }
+        result = self.client.images.generate(**request_params)
+        if result.data and len(result.data) > 0:
+            image_base64 = result.data[0].b64_json
+            return base64.b64decode(image_base64)
+        return None
 
     def _stream(
         self,

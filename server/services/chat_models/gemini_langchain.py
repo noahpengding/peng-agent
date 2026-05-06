@@ -29,6 +29,8 @@ from langchain_core.language_models import LanguageModelInput
 import ast
 import json
 import uuid
+import base64
+import os
 
 
 class CustomGemini(BaseChatModel):
@@ -114,6 +116,22 @@ class CustomGemini(BaseChatModel):
             )
         generation = ChatGeneration(message=generate_message)
         return ChatResult(generations=[generation])
+    
+    def generate_image(
+        self,
+        prompt: str,
+        run_manager: Optional[CallbackManagerForLLMRun] = None,
+        **kwargs: Any,
+    ) -> str:
+        response = self.client.models.generate_content(
+            model=self.model_name,
+            contents=[types.Content(parts=[types.Part.from_text(text=prompt)])],
+        )
+        for part in response.parts:
+            if part.inline_data is not None:
+                image = part.inline_data.data
+                return image
+        return None
 
     def _stream(
         self,

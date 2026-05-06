@@ -8,7 +8,6 @@ TABLES_ID = {
     "operator":"operator", 
     "model":"model_name", 
     "user":"user_name", 
-    "tools":"name",
     "knowledge_base":"path"
 }
 

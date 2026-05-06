@@ -2,6 +2,7 @@ import { createSlice, createAsyncThunk, PayloadAction } from '@reduxjs/toolkit';
 import { Message, UploadedImage } from '@/types/ChatInterface.types';
 import { ChatService } from '../../services/chatService';
 import { fetchBaseModels } from './modelSlice';
+import { parsePythonBytes, binaryToDataUrl } from '../../utils/imageUtils';
 
 interface SendMessageArgs {
   user_name: string;
@@ -159,10 +160,19 @@ const chatSlice = createSlice({
     // Actions for streaming
     handleChunk: (state, action: PayloadAction<{ chunk: string; type: string; done: boolean; messageId: string }>) => {
       const { chunk, type, done, messageId } = action.payload;
-      const normalizedType = type?.trim() as Message['type'];
+      let normalizedType = type?.trim() as Message['type'];
 
       if (done && !chunk) return;
       if (!normalizedType || !SUPPORTED_CHUNK_TYPES.includes(normalizedType)) return;
+
+      const lastMessage = state.messages[state.messages.length - 1];
+
+      // Detect binary image in tool_output or continuation of a binary output reclassified as output_text
+      if (normalizedType === 'tool_output' && chunk.trim().startsWith("b'")) {
+        normalizedType = 'output_text';
+      } else if (lastMessage && lastMessage.type === 'output_text' && lastMessage.messageId === messageId && lastMessage.content.startsWith("b'")) {
+        normalizedType = 'output_text';
+      }
 
       if (normalizedType === 'output_text') {
         // Collapse intermediate chunks only after final text starts streaming.
@@ -175,7 +185,6 @@ const chatSlice = createSlice({
           }
         }
 
-        const lastMessage = state.messages[state.messages.length - 1];
         const isOutputContinuation = lastMessage && lastMessage.type === 'output_text' && lastMessage.messageId === messageId;
 
         if (isOutputContinuation) {
@@ -189,7 +198,6 @@ const chatSlice = createSlice({
           });
         }
       } else {
-        const lastMessage = state.messages[state.messages.length - 1];
         const isContinuation = lastMessage && lastMessage.type === normalizedType && lastMessage.messageId === messageId;
 
         if (isContinuation) {
@@ -210,6 +218,17 @@ const chatSlice = createSlice({
       for (let i = state.messages.length - 1; i >= 0; i--) {
         const m = state.messages[i];
         if (m.messageId === messageId) {
+          // Process binary tool output that was reclassified as output_text
+          if (m.type === 'output_text' && m.content.trim().startsWith("b'")) {
+            const bytes = parsePythonBytes(m.content);
+            if (bytes) {
+              const dataUrl = binaryToDataUrl(bytes);
+              m.images = m.images || [];
+              m.images.push(dataUrl);
+              m.content = ''; // Clear the raw binary string
+            }
+          }
+
           if (m.type && m.type !== 'output_text' && m.type !== 'assistant' && m.type !== 'user') {
             m.folded = true;
           } else if (m.type === 'output_text') {

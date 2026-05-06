@@ -37,6 +37,8 @@ class Config(BaseModel):
     jwt_secret_key: str
     admin_password: str
     tavily_api_key: str
+    image_model_operator: str
+    image_model: str
     web_search_max_results: int
     crawler4ai_url: str
     input_max_length: int
@@ -143,6 +145,12 @@ try:
         "tavily_api_key": os.environ.get("TAVILY_API_KEY")
         if os.environ.get("TAVILY_API_KEY")
         else "tavily_api_key",
+        "image_model_operator": os.environ.get("IMAGE_MODEL_OPERATOR")
+        if os.environ.get("IMAGE_MODEL_OPERATOR")
+        else "openai",
+        "image_model": os.environ.get("IMAGE_MODEL")
+        if os.environ.get("IMAGE_MODEL")
+        else "gpt-image-2",
         "web_search_max_results": int(os.environ.get("WEB_SEARCH_MAX_RESULTS"))
         if os.environ.get("WEB_SEARCH_MAX_RESULTS")
         else 5,

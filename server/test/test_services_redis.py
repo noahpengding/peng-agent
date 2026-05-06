@@ -39,13 +39,13 @@ class TestRedisService(unittest.TestCase):
     @patch('services.redis_service.mysql_client')
     @patch('services.redis_service.redis_cache')
     def test_create_table_record(self, mock_redis, mock_mysql):
-        mock_mysql.create_record.return_value = {"id": 1, "name": "new"}
+        mock_mysql.create_record.return_value = {"id": 1, "model_name": "new"}
         
-        result = create_table_record("tools", {"name": "new"}, redis_id="name")
+        result = create_table_record("model", {"model_name": "new"}, redis_id="model_name")
         
-        self.assertEqual(result["name"], "new")
+        self.assertEqual(result["model_name"], "new")
         mock_mysql.create_record.assert_called_once()
-        mock_redis.save_record.assert_called_once_with("tools", result, id="name")
+        mock_redis.save_record.assert_called_once_with("model", result, id="model_name")
 
     @patch('services.redis_service.mysql_client')
     @patch('services.redis_service.redis_cache')

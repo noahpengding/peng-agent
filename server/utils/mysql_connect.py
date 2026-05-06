@@ -15,7 +15,6 @@ from models.db_models import (
     UserInput,
     Operator,
     Model,
-    Tools,
     get_session_maker,
 )
 from utils.log import output_log
@@ -33,7 +32,6 @@ TABLE_MODEL_MAP = {
     "user_input": UserInput,
     "operator": Operator,
     "model": Model,
-    "tools": Tools,
 }
 
 

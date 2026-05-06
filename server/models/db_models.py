@@ -263,26 +263,6 @@ class User(Base):
             "modified_at": self.modified_at,
         }
 
-
-class Tools(Base):
-    __tablename__ = "tools"
-
-    id = Column(Integer, primary_key=True, autoincrement=True)
-    name = Column(String(64), unique=True, nullable=False)
-    type = Column(String(64))
-    url = Column(Text)
-    headers = Column(Text)
-
-    def to_dict(self):
-        return {
-            "id": self.id,
-            "name": self.name,
-            "type": self.type,
-            "url": self.url,
-            "headers": self.headers,
-        }
-
-
 # Database engine and session configuration
 def get_database_url():
     return f"mysql+mysqlconnector://{config.mysql_user}:{config.mysql_password}@{config.mysql_host}/{config.mysql_database}"
