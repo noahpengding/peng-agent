@@ -219,8 +219,8 @@ export const InputArea: React.FC<InputAreaProps> = ({
               type="button"
               onClick={() => fileInputRef.current?.click()}
               className="upload-button"
-              title="Upload image or PDF"
-              aria-label="Upload image or PDF"
+              title={isUploading ? 'Uploading...' : isLoading ? 'Please wait...' : 'Upload image or PDF'}
+              aria-label={isUploading ? 'Uploading...' : isLoading ? 'Please wait...' : 'Upload image or PDF'}
               disabled={isLoading || isUploading}
             >
               {isUploading ? '⏳' : '📎'}
@@ -228,7 +228,8 @@ export const InputArea: React.FC<InputAreaProps> = ({
             <button
               type="submit"
               className="send-button"
-              aria-label={isLoading ? 'Sending message...' : 'Send message'}
+              title={isLoading ? 'Sending message...' : isUploading ? 'Please wait for upload to finish' : (!input.trim() && uploadedImages.length === 0 && s3PathsInput.trim().length === 0) ? 'Type a message to send' : 'Send message'}
+              aria-label={isLoading ? 'Sending message...' : isUploading ? 'Please wait for upload to finish' : (!input.trim() && uploadedImages.length === 0 && s3PathsInput.trim().length === 0) ? 'Type a message to send' : 'Send message'}
               disabled={isLoading || isUploading || (!input.trim() && uploadedImages.length === 0 && s3PathsInput.trim().length === 0)}
             >
               {isLoading ? (
