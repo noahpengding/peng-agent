@@ -13,3 +13,7 @@
 ## 2025-02-23 - Async Action Accessibility
 **Learning:** Form submit buttons without explicit loading state fail to communicate that background processing is happening, especially problematic for screen readers.
 **Action:** Always provide a clear loading state (e.g. SVG spinner) and update the `aria-label` (e.g. "Sending message...") to ensure feedback for interactive processes.
+
+## 2026-05-09 - Disabled State Tooltips and Menu Accessibility
+**Learning:** Disabled buttons without clear tooltips confuse users. Dynamic `title` attributes based on the exact reason for the disabled state provide much better UX. Also, custom menus require `aria-expanded`, `aria-haspopup`, and `role="menuitem"` to be fully accessible to screen readers.
+**Action:** Always provide dynamic `title` and `aria-label` for buttons that can be disabled for multiple reasons. Always use correct ARIA roles and states for custom dropdown menus.
