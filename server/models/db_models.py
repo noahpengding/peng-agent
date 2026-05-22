@@ -1,5 +1,5 @@
 from datetime import datetime
-from sqlalchemy import Column, Integer, String, Text, Boolean, TIMESTAMP, create_engine, ForeignKey
+from sqlalchemy import Column, Integer, String, Text, TIMESTAMP, create_engine, ForeignKey
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.dialects.mysql import VARCHAR
@@ -9,74 +9,7 @@ import threading
 Base = declarative_base()
 
 
-class Operator(Base):
-    __tablename__ = "operator"
 
-    id = Column(Integer, primary_key=True, autoincrement=True)
-    operator = Column(String(64), unique=True, nullable=False)
-    runtime = Column(String(64))
-    endpoint = Column(Text)
-    api_key = Column(Text)
-    org_id = Column(Text)
-    project_id = Column(Text)
-    embedding_pattern = Column(Text)
-    image_pattern = Column(Text)
-    audio_pattern = Column(Text)
-    video_pattern = Column(Text)
-    chat_pattern = Column(Text)
-
-    def to_dict(self):
-        return {
-            "id": self.id,
-            "operator": self.operator,
-            "runtime": self.runtime,
-            "endpoint": self.endpoint,
-            "api_key": self.api_key,
-            "org_id": self.org_id,
-            "project_id": self.project_id,
-            "embedding_pattern": self.embedding_pattern,
-            "image_pattern": self.image_pattern,
-            "audio_pattern": self.audio_pattern,
-            "video_pattern": self.video_pattern,
-            "chat_pattern": self.chat_pattern,
-        }
-
-
-class Model(Base):
-    __tablename__ = "model"
-
-    id = Column(Integer, primary_key=True, autoincrement=True)
-    operator = Column(String(64), ForeignKey("operator.operator"))
-    type = Column(String(64))
-    model_name = Column(Text, nullable=False)
-    isAvailable = Column(Boolean, default=False)
-    input_text = Column(Boolean, default=True)
-    output_text = Column(Boolean, default=True)
-    input_image = Column(Boolean, default=False)
-    output_image = Column(Boolean, default=False)
-    input_audio = Column(Boolean, default=False)
-    output_audio = Column(Boolean, default=False)
-    input_video = Column(Boolean, default=False)
-    output_video = Column(Boolean, default=False)
-    reasoning_effect = Column(String(64), default="not a reasoning model")
-
-    def to_dict(self):
-        return {
-            "id": self.id,
-            "operator": self.operator,
-            "type": self.type,
-            "model_name": self.model_name,
-            "isAvailable": self.isAvailable,
-            "input_text": self.input_text,
-            "output_text": self.output_text,
-            "input_image": self.input_image,
-            "output_image": self.output_image,
-            "input_audio": self.input_audio,
-            "output_audio": self.output_audio,
-            "input_video": self.input_video,
-            "output_video": self.output_video,
-            "reasoning_effect": self.reasoning_effect,
-        }
 
 
 class Chat(Base):

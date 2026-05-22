@@ -71,19 +71,16 @@ class TestModelHandlers(unittest.TestCase):
 
     @patch('handlers.model_handlers.update_operator')
     @patch('handlers.model_handlers.get_model')
-    @patch('handlers.model_handlers._get_local_models')
     @patch('handlers.model_handlers.get_all_operators')
-    @patch('handlers.model_handlers._save_local_models')
     @patch('handlers.model_handlers.get_table_record')
-    @patch('handlers.model_handlers.update_table_record')
     @patch('handlers.model_handlers.create_table_record')
-    def test_refresh_models(self, mock_create, mock_update_record, mock_get_record, mock_save_local, mock_get_ops, mock_get_local, mock_get_model, mock_update_op):
+    def test_refresh_models(self, mock_create, mock_get_record, mock_get_ops, mock_get_model, mock_update_op):
         mock_get_model.return_value = []
-        mock_get_local.return_value = []
         
         op = MagicMock()
         op.operator = "op1"
         mock_get_ops.return_value = [op]
+        mock_get_record.return_value = None
         
         with patch('handlers.model_utils.get_model_instance') as mock_get_ins:
             mock_ins = mock_get_ins.return_value
@@ -91,8 +88,50 @@ class TestModelHandlers(unittest.TestCase):
             
             refresh_models()
             
-            self.assertTrue(mock_create.called or mock_update_record.called)
-            mock_save_local.assert_called_once()
+            self.assertEqual(mock_create.call_count, 2)
+            from models.model_config import ModelConfig
+            expected_model = ModelConfig(
+                operator="op1",
+                model_name="op1/gpt-4",
+                isAvailable=False,
+                reasoning_effect="not a reasoning model",
+            )
+            mock_create.assert_any_call(
+                "model",
+                expected_model.to_dict(),
+                redis_id="model_name",
+                db_backed=False
+            )
+
+
+    @patch('handlers.model_handlers.get_table_records')
+    @patch('handlers.model_handlers._save_local_models')
+    def test_save_models_to_s3(self, mock_save_local, mock_get_records):
+        mock_get_records.return_value = [
+            {"operator": "op1", "model_name": "op1/m1", "isAvailable": True, "reasoning_effect": "not a reasoning model"}
+        ]
+        from handlers.model_handlers import save_models_to_s3
+        save_models_to_s3()
+        mock_save_local.assert_called_once()
+
+    @patch('handlers.model_handlers._get_local_models')
+    @patch('handlers.model_handlers.get_table_record')
+    @patch('handlers.model_handlers.create_table_record')
+    def test_load_models_from_s3(self, mock_create, mock_get_record, mock_get_local):
+        from models.model_config import ModelConfig
+        mock_get_local.return_value = [
+            ModelConfig(operator="op1", model_name="op1/m1", isAvailable=True)
+        ]
+        mock_get_record.return_value = None
+        from handlers.model_handlers import load_models_from_s3
+        load_models_from_s3()
+        mock_create.assert_called_once_with(
+            "model",
+            mock_get_local.return_value[0].to_dict(),
+            redis_id="model_name",
+            db_backed=False
+        )
 
 if __name__ == '__main__':
     unittest.main()
+

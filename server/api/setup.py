@@ -15,6 +15,12 @@ def set_up():
         output_log("Database tables created successfully using SQLAlchemy", "info")
         setup_redis_cache()
         output_log("Redis cache setup completed", "info")
+        
+        from handlers.model_handlers import load_models_from_s3, refresh_models
+        load_models_from_s3()
+        refresh_models()
+        output_log("Operators and models loaded from S3 to Redis", "info")
+        
         update_tools()
         output_log("Initial tools loaded from S3 to Redis", "info")
     except Exception as e:

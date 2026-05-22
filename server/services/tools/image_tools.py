@@ -2,7 +2,6 @@ from langchain_core.tools import StructuredTool
 from config.config import config
 from datetime import datetime
 from utils.minio_connection import MinioStorage
-from utils.log import output_log
 
 
 def _image_generation_tool(prompt: str) -> str:

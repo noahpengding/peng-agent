@@ -5,10 +5,8 @@ from utils.mysql_connect import MysqlConnect
 from utils.redis import redis_cache
 
 TABLES_ID = {
-    "operator":"operator", 
-    "model":"model_name", 
-    "user":"user_name", 
-    "knowledge_base":"path"
+    "user": "user_name",
+    "knowledge_base": "path",
 }
 
 mysql_client = MysqlConnect()
@@ -35,8 +33,10 @@ def setup_redis_cache():
         output_log(f"Set up Redis cache for table {table}", "info")
 
 
-def get_table_records(table: str, force_refresh: bool = False) -> List[Dict[str, Any]]:
+def get_table_records(table: str, force_refresh: bool = False, db_backed: bool = True) -> List[Dict[str, Any]]:
     """Fetch all records for a table from Redis, optionally refreshing from MySQL."""
+    if not db_backed:
+        return redis_cache.get_records(table)
     _validate_table(table)
     if not force_refresh:
         cached = redis_cache.get_records(table)
@@ -46,9 +46,11 @@ def get_table_records(table: str, force_refresh: bool = False) -> List[Dict[str,
 
 
 def get_table_record(
-    table: str, record_id: str, force_refresh: bool = False
+    table: str, record_id: str, force_refresh: bool = False, db_backed: bool = True
 ) -> Optional[Dict[str, Any]]:
     """Fetch a single record by id, optionally refreshing from MySQL when missing."""
+    if not db_backed:
+        return redis_cache.get_record(table, record_id)
     _validate_table(table)
     if not force_refresh:
         cached = redis_cache.get_record(table, record_id)
@@ -63,15 +65,35 @@ def get_table_record(
     return records[0]
 
 
-def create_table_record(table: str, record: Dict[str, Any], redis_id: Optional[str] = "id") -> Dict[str, Any]:
-    """Create a new record in both MySQL and Redis."""
+def create_table_record(
+    table: str, record: Dict[str, Any], redis_id: Optional[str] = "id", db_backed: bool = True
+) -> Dict[str, Any]:
+    """Create a new record in Redis and optionally MySQL if db_backed is True."""
+    if not db_backed:
+        redis_cache.save_record(table, record, id=redis_id)
+        return record
     _validate_table(table)
     created_record = mysql_client.create_record(table, record)
     redis_cache.save_record(table, created_record, id=redis_id)
     return created_record
 
-def update_table_record(table: str, record: Dict[str, Any], conditions: Dict[str, Any], redis_id: Optional[str] = "id") -> int:
-    """Update records in both MySQL and Redis."""
+
+def update_table_record(
+    table: str,
+    record: Dict[str, Any],
+    conditions: Dict[str, Any],
+    redis_id: Optional[str] = "id",
+    db_backed: bool = True,
+) -> int:
+    """Update records in Redis and optionally MySQL if db_backed is True."""
+    if not db_backed:
+        record_id = conditions.get(redis_id) or record.get(redis_id)
+        if record_id:
+            existing = redis_cache.get_record(table, record_id) or {}
+            existing.update(record)
+            redis_cache.save_record(table, existing, id=redis_id)
+            return 1
+        return 0
     _validate_table(table)
     updated_count = mysql_client.update_record(table, record, conditions)
     if updated_count > 0:
@@ -84,9 +106,13 @@ def update_table_record(table: str, record: Dict[str, Any], conditions: Dict[str
     return updated_count
 
 
-def delete_table_record(table: str, record_id: str) -> None:
-    """Delete a cached record from Redis."""
+def delete_table_record(table: str, record_id: str, db_backed: bool = True) -> None:
+    """Delete a cached record from Redis and optionally MySQL if db_backed is True."""
+    if not db_backed:
+        redis_cache.delete_record(table, record_id)
+        return
     _validate_table(table)
     mysql_client.delete_record(table, {"id": record_id})
     redis_cache.delete_record(table, record_id)
+
 

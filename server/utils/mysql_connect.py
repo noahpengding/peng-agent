@@ -13,8 +13,6 @@ from models.db_models import (
     KnowledgeBase,
     User,
     UserInput,
-    Operator,
-    Model,
     get_session_maker,
 )
 from utils.log import output_log
@@ -30,8 +28,6 @@ TABLE_MODEL_MAP = {
     "knowledge_base": KnowledgeBase,
     "user": User,
     "user_input": UserInput,
-    "operator": Operator,
-    "model": Model,
 }
 
 
