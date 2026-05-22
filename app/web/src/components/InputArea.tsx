@@ -16,7 +16,10 @@ interface InputAreaProps {
   maxTextareaHeight?: number;
 }
 
-export const InputArea: React.FC<InputAreaProps> = ({
+// ⚡ Bolt Optimization: Memoize InputArea to avoid re-rendering on every incoming chunk during streaming.
+// Previously, any update to `chatSlice` state (e.g. `messages` due to chunks) in `ChatInterface`
+// would re-render `InputArea`, causing slow typing or janky animations.
+export const InputArea: React.FC<InputAreaProps> = React.memo(({
   input,
   setInput,
   s3PathsInput,
@@ -250,4 +253,6 @@ export const InputArea: React.FC<InputAreaProps> = ({
       </form>
     </div>
   );
-};
+});
+
+InputArea.displayName = 'InputArea';

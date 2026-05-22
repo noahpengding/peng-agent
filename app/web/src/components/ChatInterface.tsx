@@ -257,15 +257,15 @@ const ChatbotUI = () => {
     }
   };
 
-  const handleSetInput = (val: string) => dispatch(setInput(val));
-  const handleSetUploadedImages = (val: UploadedImage[] | ((prev: UploadedImage[]) => UploadedImage[])) => {
+  const handleSetInput = useCallback((val: string) => dispatch(setInput(val)), [dispatch]);
+  const handleSetUploadedImages = useCallback((val: UploadedImage[] | ((prev: UploadedImage[]) => UploadedImage[])) => {
     if (typeof val === 'function') {
       const newValue = val(uploadedImages);
       dispatch(setUploadedImages(newValue));
     } else {
       dispatch(setUploadedImages(val));
     }
-  };
+  }, [dispatch, uploadedImages]);
 
   // ⚡ Bolt Optimization: Memoize the feedback handler to keep its reference stable across renders.
   // This prevents the expensive MessageList component from re-rendering on every keystroke in the input area.
