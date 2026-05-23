@@ -116,9 +116,12 @@ const UserProfilePopup: React.FC<UserProfilePopupProps> = ({ isOpen, onClose, av
       <div
         className="popup-content user-profile-popup"
         onClick={(e) => e.stopPropagation()}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="profile-popup-title"
       >
         <div className="popup-header">
-          <h3>User Profile</h3>
+          <h3 id="profile-popup-title">User Profile</h3>
           <div className="popup-actions">
             <button
               className="update-button"

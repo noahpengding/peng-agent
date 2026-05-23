@@ -401,6 +401,7 @@ const ChatbotUI = () => {
               strokeWidth="2"
               strokeLinecap="round"
               strokeLinejoin="round"
+              aria-hidden="true"
             >
               <polyline points="15 18 9 12 15 6" />
               <rect x="3" y="4" width="18" height="16" rx="2" ry="2" />
@@ -433,6 +434,7 @@ const ChatbotUI = () => {
                   strokeWidth="2"
                   strokeLinecap="round"
                   strokeLinejoin="round"
+                  aria-hidden="true"
                 >
                   <rect x="3" y="4" width="18" height="16" rx="2" ry="2" />
                   <path d="M9 4v16" />
@@ -534,9 +536,12 @@ const ChatbotUI = () => {
           <div
             className="popup-content"
             onClick={(e) => e.stopPropagation()}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="tools-popup-title"
           >
             <div className="popup-header">
-              <h3>Select Tools</h3>
+              <h3 id="tools-popup-title">Select Tools</h3>
               <div className="popup-actions">
                 <button
                   className="update-button"
@@ -566,8 +571,9 @@ const ChatbotUI = () => {
                       key={tool.id}
                       className="tool-item"
                     >
-                      <label className="tool-checkbox-label">
+                      <label htmlFor={`tool-checkbox-${tool.name}`} className="tool-checkbox-label">
                         <input
+                          id={`tool-checkbox-${tool.name}`}
                           type="checkbox"
                           className="tool-checkbox"
                           checked={selectedToolNames.includes(tool.name)}

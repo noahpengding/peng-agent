@@ -220,6 +220,7 @@ const ModelInterface: React.FC = () => {
           <div className="models-header">
             <div className="search-box">
               <input
+                id="search-model-name"
                 type="text"
                 className="search-input"
                 placeholder="Search by model name..."
@@ -268,6 +269,7 @@ const ModelInterface: React.FC = () => {
                         <td className="modality-cell">{renderModalityButtons(model, 'output')}</td>
                         <td>
                           <select
+                            id={`reasoning-effect-${model.model_name}`}
                             className="reasoning-effect-select"
                             value={model.reasoning_effect}
                             onChange={(e) => handleModelReasoningEffect(model.model_name, e.target.value)}

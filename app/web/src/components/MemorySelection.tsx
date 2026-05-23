@@ -83,6 +83,7 @@ const MemoryPage: React.FC = () => {
       {/* Search Bar */}
       <div className="search-container">
         <input
+          id="search-memories"
           type="text"
           placeholder="Search memories..."
           className="search-input"
@@ -120,7 +121,7 @@ const MemoryPage: React.FC = () => {
                 filteredMemories.map((memory) => (
                   <tr key={memory.id}>
                     <td>
-                      <input type="checkbox" checked={selectedMemoryIds.includes(memory.id)} onChange={() => handleCheckboxChange(memory.id)} aria-label={`Select memory ${memory.id}`} />
+                      <input id={`memory-checkbox-${memory.id}`} type="checkbox" checked={selectedMemoryIds.includes(memory.id)} onChange={() => handleCheckboxChange(memory.id)} aria-label={`Select memory ${memory.id}`} />
                     </td>
                     <td>{memory.base_model}</td>
                     <td title={memory.human_input}>{truncateText(memory.human_input, 600)}</td>
