@@ -197,14 +197,18 @@ const chatSlice = createSlice({
     },
     finishMessage: (state, action: PayloadAction<{ messageId: string }>) => {
       const { messageId } = action.payload;
+      let hasSeen = false;
       for (let i = state.messages.length - 1; i >= 0; i--) {
         const m = state.messages[i];
         if (m.messageId === messageId) {
+          hasSeen = true;
           if (m.type && m.type !== 'output_text' && m.type !== 'assistant' && m.type !== 'user') {
             m.folded = true;
           } else if (m.type === 'output_text') {
             m.content = m.content.replace(/\n\n+/g, '\n');
           }
+        } else if (hasSeen) {
+          break;
         }
       }
     },

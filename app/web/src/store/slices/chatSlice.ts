@@ -165,22 +165,26 @@ const chatSlice = createSlice({
       if (!normalizedType || !SUPPORTED_CHUNK_TYPES.includes(normalizedType)) return;
 
       if (normalizedType === 'output_text') {
-        // Collapse intermediate chunks only after final text starts streaming.
-        for (let i = state.messages.length - 1; i >= 0; i--) {
-          const message = state.messages[i];
-          if (message.messageId === messageId) {
-            if (message.type === 'reasoning_summary' || message.type === 'tool_calls' || message.type === 'tool_output') {
-              message.folded = true;
-            }
-          }
-        }
-
         const lastMessage = state.messages[state.messages.length - 1];
         const isOutputContinuation = lastMessage && lastMessage.type === 'output_text' && lastMessage.messageId === messageId;
 
         if (isOutputContinuation) {
           lastMessage.content += chunk;
         } else {
+          // Collapse intermediate chunks only after final text starts streaming.
+          let hasSeen = false;
+          for (let i = state.messages.length - 1; i >= 0; i--) {
+            const message = state.messages[i];
+            if (message.messageId === messageId) {
+              hasSeen = true;
+              if (message.type === 'reasoning_summary' || message.type === 'tool_calls' || message.type === 'tool_output') {
+                message.folded = true;
+              }
+            } else if (hasSeen) {
+              break;
+            }
+          }
+
           state.messages.push({
             role: 'assistant',
             content: chunk,
@@ -207,14 +211,18 @@ const chatSlice = createSlice({
     },
     finishMessage: (state, action: PayloadAction<{ messageId: string }>) => {
       const { messageId } = action.payload;
+      let hasSeen = false;
       for (let i = state.messages.length - 1; i >= 0; i--) {
         const m = state.messages[i];
         if (m.messageId === messageId) {
+          hasSeen = true;
           if (m.type && m.type !== 'output_text' && m.type !== 'assistant' && m.type !== 'user') {
             m.folded = true;
           } else if (m.type === 'output_text') {
             m.content = m.content.replace(/\n\n+/g, '\n');
           }
+        } else if (hasSeen) {
+          break;
         }
       }
     },
