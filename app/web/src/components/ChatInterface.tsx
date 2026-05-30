@@ -330,6 +330,8 @@ const ChatbotUI = () => {
           className="menu-button"
           aria-label="Open menu"
           title="Menu"
+          aria-haspopup="menu"
+          aria-expanded={isMenuOpen}
           onClick={() => setIsMenuOpen((v) => !v)}
         >
           …
@@ -340,18 +342,19 @@ const ChatbotUI = () => {
             role="menu"
             aria-label="Navigation Menu"
           >
-            <a href="/memory" className="menu-item" onClick={() => setIsMenuOpen(false)}>
+            <a href="/memory" className="menu-item" role="menuitem" onClick={() => setIsMenuOpen(false)}>
               Memory
             </a>
-            <a href="/model" className="menu-item" onClick={() => setIsMenuOpen(false)}>
+            <a href="/model" className="menu-item" role="menuitem" onClick={() => setIsMenuOpen(false)}>
               Model
             </a>
-            <a href="/rag" className="menu-item" onClick={() => setIsMenuOpen(false)}>
+            <a href="/rag" className="menu-item" role="menuitem" onClick={() => setIsMenuOpen(false)}>
               RAG
             </a>
             <a
               href="https://us5.datadoghq.com/llm/applications?query=&fromUser=true&start=1770794053588&end=1770880453588&paused=false"
               className="menu-item external-link"
+              role="menuitem"
               target="_blank"
               rel="noreferrer"
               onClick={() => setIsMenuOpen(false)}
@@ -361,6 +364,7 @@ const ChatbotUI = () => {
             <a
               href="https://github.com/Noahdingpeng/peng-agent"
               className="menu-item external-link"
+              role="menuitem"
               target="_blank"
               rel="noreferrer"
               onClick={() => setIsMenuOpen(false)}
@@ -401,6 +405,7 @@ const ChatbotUI = () => {
               strokeWidth="2"
               strokeLinecap="round"
               strokeLinejoin="round"
+              aria-hidden="true"
             >
               <polyline points="15 18 9 12 15 6" />
               <rect x="3" y="4" width="18" height="16" rx="2" ry="2" />
@@ -433,6 +438,7 @@ const ChatbotUI = () => {
                   strokeWidth="2"
                   strokeLinecap="round"
                   strokeLinejoin="round"
+                  aria-hidden="true"
                 >
                   <rect x="3" y="4" width="18" height="16" rx="2" ry="2" />
                   <path d="M9 4v16" />
@@ -533,10 +539,13 @@ const ChatbotUI = () => {
         >
           <div
             className="popup-content"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="tool-popup-title"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="popup-header">
-              <h3>Select Tools</h3>
+              <h3 id="tool-popup-title">Select Tools</h3>
               <div className="popup-actions">
                 <button
                   className="update-button"
