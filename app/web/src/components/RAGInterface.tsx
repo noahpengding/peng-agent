@@ -26,6 +26,17 @@ const RAGInterface: React.FC = () => {
 
   const fileInputRef = React.useRef<HTMLInputElement>(null);
 
+  // Load all documents from API
+  const loadDocuments = async () => {
+    try {
+      const docs = await getAllRAGDocuments();
+      setDocuments(docs);
+      setFilteredDocuments(docs);
+    } catch (err) {
+      setError(`Failed to load RAG documents: ${err}`);
+    }
+  };
+
   // Load documents on component mount
   useEffect(() => {
     loadDocuments();
@@ -49,16 +60,6 @@ const RAGInterface: React.FC = () => {
     }
   }, [selectedKnowledgeBase, documents]);
 
-  // Load all documents from API
-  const loadDocuments = async () => {
-    try {
-      const docs = await getAllRAGDocuments();
-      setDocuments(docs);
-      setFilteredDocuments(docs);
-    } catch (err) {
-      setError(`Failed to load RAG documents: ${err}`);
-    }
-  };
 
   // Handle indexing a new document
   const handleIndexDocument = async (e: React.FormEvent) => {
