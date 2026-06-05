@@ -165,22 +165,26 @@ const chatSlice = createSlice({
       if (!normalizedType || !SUPPORTED_CHUNK_TYPES.includes(normalizedType)) return;
 
       if (normalizedType === 'output_text') {
-        // Collapse intermediate chunks only after final text starts streaming.
-        for (let i = state.messages.length - 1; i >= 0; i--) {
-          const message = state.messages[i];
-          if (message.messageId === messageId) {
-            if (message.type === 'reasoning_summary' || message.type === 'tool_calls' || message.type === 'tool_output') {
-              message.folded = true;
-            }
-          }
-        }
-
         const lastMessage = state.messages[state.messages.length - 1];
         const isOutputContinuation = lastMessage && lastMessage.type === 'output_text' && lastMessage.messageId === messageId;
 
         if (isOutputContinuation) {
           lastMessage.content += chunk;
         } else {
+          // Collapse intermediate chunks only after final text starts streaming.
+          // We only do this once when the first output_text chunk arrives, not on every chunk.
+          for (let i = state.messages.length - 1; i >= 0; i--) {
+            const message = state.messages[i];
+            if (message.messageId === messageId) {
+              if (message.type === 'reasoning_summary' || message.type === 'tool_calls' || message.type === 'tool_output') {
+                message.folded = true;
+              }
+            } else if (message.messageId && message.messageId !== messageId) {
+              // Optimization: stop checking once we hit messages from an older turn
+              break;
+            }
+          }
+
           state.messages.push({
             role: 'assistant',
             content: chunk,
@@ -215,6 +219,10 @@ const chatSlice = createSlice({
           } else if (m.type === 'output_text') {
             m.content = m.content.replace(/\n\n+/g, '\n');
           }
+        } else if (m.messageId && m.messageId !== messageId) {
+          // Optimization: messages from the same turn are sequential.
+          // Once we hit a different messageId, we can stop traversing.
+          break;
         }
       }
     },
