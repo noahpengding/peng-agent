@@ -13,3 +13,7 @@
 ## 2025-02-23 - Async Action Accessibility
 **Learning:** Form submit buttons without explicit loading state fail to communicate that background processing is happening, especially problematic for screen readers.
 **Action:** Always provide a clear loading state (e.g. SVG spinner) and update the `aria-label` (e.g. "Sending message...") to ensure feedback for interactive processes.
+
+## 2025-06-03 - Modal and Menu Accessibility
+**Learning:** Custom popups and menus often lack the ARIA attributes needed for screen reader accessibility, resulting in missing context.
+**Action:** Always add `role="dialog"` and `aria-modal="true"` to custom popups, and link their title using `aria-labelledby`. For custom dropdown menus, use `aria-expanded`, `aria-haspopup="menu"`, and `role="menuitem"` on the menu items.
