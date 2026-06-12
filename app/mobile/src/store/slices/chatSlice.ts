@@ -205,6 +205,9 @@ const chatSlice = createSlice({
           } else if (m.type === 'output_text') {
             m.content = m.content.replace(/\n\n+/g, '\n');
           }
+        } else if (m.messageId && m.messageId !== messageId) {
+          // ⚡ Bolt Optimization: Early break to avoid O(N) full array traversal
+          break;
         }
       }
     },
@@ -221,6 +224,9 @@ const chatSlice = createSlice({
           message.feedback = message.feedback || 'no_response';
           message.feedbackUpdating = false;
           break; // Usually only one output_text per messageId
+        } else if (message.messageId && message.messageId !== messageId) {
+          // ⚡ Bolt Optimization: Early break if we reach older messages
+          break;
         }
       }
     },

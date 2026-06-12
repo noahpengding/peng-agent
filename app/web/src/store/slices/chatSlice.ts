@@ -165,22 +165,27 @@ const chatSlice = createSlice({
       if (!normalizedType || !SUPPORTED_CHUNK_TYPES.includes(normalizedType)) return;
 
       if (normalizedType === 'output_text') {
-        // Collapse intermediate chunks only after final text starts streaming.
-        for (let i = state.messages.length - 1; i >= 0; i--) {
-          const message = state.messages[i];
-          if (message.messageId === messageId) {
-            if (message.type === 'reasoning_summary' || message.type === 'tool_calls' || message.type === 'tool_output') {
-              message.folded = true;
-            }
-          }
-        }
-
         const lastMessage = state.messages[state.messages.length - 1];
         const isOutputContinuation = lastMessage && lastMessage.type === 'output_text' && lastMessage.messageId === messageId;
 
         if (isOutputContinuation) {
           lastMessage.content += chunk;
         } else {
+          // ⚡ Bolt Optimization: Move collapsing intermediate chunks logic to the "first token"
+          // branch so it only runs once per message, instead of O(N) times per token chunk.
+          // Also added an early break to prevent full array traversal once we pass the current message's items.
+          for (let i = state.messages.length - 1; i >= 0; i--) {
+            const message = state.messages[i];
+            if (message.messageId === messageId) {
+              if (message.type === 'reasoning_summary' || message.type === 'tool_calls' || message.type === 'tool_output') {
+                message.folded = true;
+              }
+            } else if (message.messageId && message.messageId !== messageId) {
+              // We've moved past the messages for the current messageId
+              break;
+            }
+          }
+
           state.messages.push({
             role: 'assistant',
             content: chunk,
@@ -215,6 +220,9 @@ const chatSlice = createSlice({
           } else if (m.type === 'output_text') {
             m.content = m.content.replace(/\n\n+/g, '\n');
           }
+        } else if (m.messageId && m.messageId !== messageId) {
+          // ⚡ Bolt Optimization: Early break to avoid O(N) full array traversal
+          break;
         }
       }
     },
@@ -231,6 +239,9 @@ const chatSlice = createSlice({
           message.feedback = message.feedback || 'no_response';
           message.feedbackUpdating = false;
           break; // Usually only one output_text per messageId
+        } else if (message.messageId && message.messageId !== messageId) {
+          // ⚡ Bolt Optimization: Early break if we reach older messages
+          break;
         }
       }
     },
