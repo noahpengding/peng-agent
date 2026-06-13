@@ -136,6 +136,7 @@ const Login: React.FC = () => {
               type="submit"
               className="login-submit"
               disabled={isLoading || !username || !password}
+              title={isLoading ? 'Signing in...' : (!username || !password) ? 'Please enter both username and password' : 'Sign in'}
             >
               {isLoading ? (
                 <>
