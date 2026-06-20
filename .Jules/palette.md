@@ -13,3 +13,7 @@
 ## 2025-02-23 - Async Action Accessibility
 **Learning:** Form submit buttons without explicit loading state fail to communicate that background processing is happening, especially problematic for screen readers.
 **Action:** Always provide a clear loading state (e.g. SVG spinner) and update the `aria-label` (e.g. "Sending message...") to ensure feedback for interactive processes.
+
+## 2025-05-18 - Click Target Size for Table Actions
+**Learning:** Forcing users to click small checkboxes in data tables is poor usability. Making the entire row clickable provides a much larger hit area, adhering better to Fitts's Law.
+**Action:** Always make entire table rows clickable when they primarily function as a selection mechanism, taking care to prevent event bubbling issues from the inner inputs.
