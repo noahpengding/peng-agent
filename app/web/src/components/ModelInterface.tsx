@@ -18,11 +18,42 @@ const ModelInterface: React.FC = () => {
 
   const [error, setError] = useState<string>('');
 
+  const fetchModels = async () => {
+    try {
+      const fetchedModels = await getAllModels();
+      setModels(fetchedModels);
+    } catch (error) {
+      setError(`Failed to refresh models: ${error}`);
+    }
+  };
+
   // Load models on initial render
   useEffect(() => {
     fetchModels();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  const applyFilters = () => {
+    let result = [...models];
+
+    // Apply search filter
+    if (searchTerm) {
+      result = result.filter((model) => model.model_name.toLowerCase().includes(searchTerm.toLowerCase()));
+    }
+
+    // Apply operator filter
+    if (selectedOperator) {
+      result = result.filter((model) => model.operator === selectedOperator);
+    }
+
+    // Apply availability filter
+    if (availabilityFilter !== 'all') {
+      const isAvailable = availabilityFilter === 'available';
+      result = result.filter((model) => model.isAvailable === isAvailable);
+    }
+
+    setFilteredModels(result);
+  };
 
   // Apply filters when models or filter criteria change
   useEffect(() => {
@@ -39,14 +70,6 @@ const ModelInterface: React.FC = () => {
     }
   }, [models]);
 
-  const fetchModels = async () => {
-    try {
-      const fetchedModels = await getAllModels();
-      setModels(fetchedModels);
-    } catch (error) {
-      setError(`Failed to refresh models: ${error}`);
-    }
-  };
 
   const handleRefresh = async () => {
     try {
@@ -156,27 +179,6 @@ const ModelInterface: React.FC = () => {
     }
   };
 
-  const applyFilters = () => {
-    let result = [...models];
-
-    // Apply search filter
-    if (searchTerm) {
-      result = result.filter((model) => model.model_name.toLowerCase().includes(searchTerm.toLowerCase()));
-    }
-
-    // Apply operator filter
-    if (selectedOperator) {
-      result = result.filter((model) => model.operator === selectedOperator);
-    }
-
-    // Apply availability filter
-    if (availabilityFilter !== 'all') {
-      const isAvailable = availabilityFilter === 'available';
-      result = result.filter((model) => model.isAvailable === isAvailable);
-    }
-
-    setFilteredModels(result);
-  };
 
   return (
     <div className="model-container">
