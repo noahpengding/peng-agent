@@ -87,6 +87,49 @@ interface MessageItemProps {
   onSubmitFeedback: (messageId: string, chatId: number, feedback: 'upvote' | 'downvote' | 'no_response') => void;
 }
 
+interface MessageImageProps {
+  src: string;
+  onSelect: (src: string) => void;
+}
+
+const MessageImage = React.memo(({ src, onSelect }: MessageImageProps) => {
+  const [hasLoadError, setHasLoadError] = useState(false);
+
+  if (hasLoadError) {
+    return (
+      <div className="message-image-fallback" role="alert">
+        <span>Image failed to load.</span>
+        <a href={src} target="_blank" rel="noreferrer">
+          Open image
+        </a>
+      </div>
+    );
+  }
+
+  return (
+    <button
+      type="button"
+      className="message-image-container clickable"
+      onClick={(event) => {
+        event.stopPropagation();
+        onSelect(src);
+      }}
+      aria-label="Open message image"
+    >
+      <img
+        src={src}
+        alt="Message image"
+        className="message-image"
+        loading="lazy"
+        decoding="async"
+        onError={() => setHasLoadError(true)}
+      />
+    </button>
+  );
+});
+
+MessageImage.displayName = 'MessageImage';
+
 export const MessageItem = React.memo(({ message, index, isFolded, onToggleFold, setRef, onSubmitFeedback }: MessageItemProps) => {
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
 
@@ -164,16 +207,7 @@ export const MessageItem = React.memo(({ message, index, isFolded, onToggleFold,
           {message.images && message.images.length > 0 && (
             <div className="message-images-container">
               {message.images.map((imgSrc, imgIndex) => (
-                <div
-                  key={imgIndex}
-                  className="message-image-container clickable"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setSelectedImage(imgSrc);
-                  }}
-                >
-                  <img src={imgSrc} alt="Message attachment" className="message-image" />
-                </div>
+                <MessageImage key={`${imgSrc}-${imgIndex}`} src={imgSrc} onSelect={setSelectedImage} />
               ))}
             </div>
           )}

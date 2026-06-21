@@ -3,6 +3,7 @@ import { Message, UploadedImage } from '@/types/ChatInterface.types';
 import { ChatService } from '../../services/chatService';
 import { fetchBaseModels } from './modelSlice';
 import { parsePythonBytes, binaryToDataUrl } from '../../utils/imageUtils';
+import { extractGeneratedImageUrl, isImageGenerationToolCall } from '@/utils/generatedImageUtils';
 
 interface SendMessageArgs {
   user_name: string;
@@ -69,6 +70,18 @@ const extractChatIdFromChunk = (chunk: string): number | null => {
   if (!match) return null;
   const id = Number(match[0]);
   return Number.isInteger(id) ? id : null;
+};
+
+const buildStreamMessageKey = (
+  messageId: string,
+  type: Message['type'],
+  ordinal: number
+): string => `${messageId}:${type ?? 'assistant'}:${ordinal}`;
+
+const hasImageGenerationToolCall = (messages: Message[], messageId: string): boolean => {
+  return messages.some((message) => {
+    return message.messageId === messageId && message.type === 'tool_calls' && isImageGenerationToolCall(message.content);
+  });
 };
 
 // Async thunk for sending message
@@ -166,9 +179,13 @@ const chatSlice = createSlice({
       if (!normalizedType || !SUPPORTED_CHUNK_TYPES.includes(normalizedType)) return;
 
       const lastMessage = state.messages[state.messages.length - 1];
+      const isGeneratedImageToolOutput = normalizedType === 'tool_output' && hasImageGenerationToolCall(state.messages, messageId);
+      const generatedImageUrl = isGeneratedImageToolOutput ? extractGeneratedImageUrl(chunk) : null;
 
       // Detect binary image in tool_output or continuation of a binary output reclassified as output_text
       if (normalizedType === 'tool_output' && chunk.trim().startsWith("b'")) {
+        normalizedType = 'output_text';
+      } else if (isGeneratedImageToolOutput) {
         normalizedType = 'output_text';
       } else if (lastMessage && lastMessage.type === 'output_text' && lastMessage.messageId === messageId && lastMessage.content.startsWith("b'")) {
         normalizedType = 'output_text';
@@ -178,7 +195,12 @@ const chatSlice = createSlice({
         const isOutputContinuation = lastMessage && lastMessage.type === 'output_text' && lastMessage.messageId === messageId;
 
         if (isOutputContinuation) {
-          lastMessage.content += chunk;
+          if (generatedImageUrl) {
+            lastMessage.images = lastMessage.images || [];
+            lastMessage.images.push(generatedImageUrl);
+          } else {
+            lastMessage.content += chunk;
+          }
         } else {
           // Collapse only the trailing chunk block for this streamed turn.
           if (lastMessage?.messageId === messageId) {
@@ -195,9 +217,11 @@ const chatSlice = createSlice({
 
           state.messages.push({
             role: 'assistant',
-            content: chunk,
+            content: generatedImageUrl ? '' : chunk,
+            images: generatedImageUrl ? [generatedImageUrl] : undefined,
             type: 'output_text',
             messageId,
+            clientKey: buildStreamMessageKey(messageId, 'output_text', state.messages.length),
           });
         }
       } else {
@@ -212,6 +236,7 @@ const chatSlice = createSlice({
             type: normalizedType as Message['type'],
             folded: false,
             messageId,
+            clientKey: buildStreamMessageKey(messageId, normalizedType as Message['type'], state.messages.length),
           });
         }
       }
@@ -285,6 +310,7 @@ const chatSlice = createSlice({
           role: 'assistant',
           content: 'Sorry, I encountered an error.',
           type: 'output_text',
+          clientKey: `error:${state.messages.length}`,
         });
       })
       .addCase(submitMessageFeedback.pending, (state, action) => {

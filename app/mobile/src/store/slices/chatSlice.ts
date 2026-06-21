@@ -2,6 +2,7 @@ import { createSlice, createAsyncThunk, PayloadAction } from '@reduxjs/toolkit';
 import { Message, UploadedImage } from '@/types/ChatInterface.types';
 import { ChatService } from '../../services/chatService';
 import { fetchBaseModels } from './modelSlice';
+import { extractGeneratedImageUrl, isImageGenerationToolCall } from '@/utils/generatedImageUtils';
 
 interface SendMessageArgs {
   user_name: string;
@@ -75,6 +76,12 @@ const buildStreamMessageKey = (
   type: Message['type'],
   ordinal: number
 ): string => `${messageId}:${type ?? 'assistant'}:${ordinal}`;
+
+const hasImageGenerationToolCall = (messages: Message[], messageId: string): boolean => {
+  return messages.some((message) => {
+    return message.messageId === messageId && message.type === 'tool_calls' && isImageGenerationToolCall(message.content);
+  });
+};
 
 // Async thunk for sending message
 export const sendMessage = createAsyncThunk('chat/sendMessage', async (args: SendMessageArgs, { dispatch, rejectWithValue }) => {
@@ -168,17 +175,28 @@ const chatSlice = createSlice({
     // Actions for streaming
     handleChunk: (state, action: PayloadAction<{ chunk: string; type: string; done: boolean; messageId: string }>) => {
       const { chunk, type, done, messageId } = action.payload;
-      const normalizedType = type?.trim() as Message['type'];
+      let normalizedType = type?.trim() as Message['type'];
 
       if (done && !chunk) return;
       if (!normalizedType || !SUPPORTED_CHUNK_TYPES.includes(normalizedType)) return;
+
+      const isGeneratedImageToolOutput = normalizedType === 'tool_output' && hasImageGenerationToolCall(state.messages, messageId);
+      const generatedImageUrl = isGeneratedImageToolOutput ? extractGeneratedImageUrl(chunk) : null;
+      if (isGeneratedImageToolOutput) {
+        normalizedType = 'output_text';
+      }
 
       if (normalizedType === 'output_text') {
         const lastMessage = state.messages[state.messages.length - 1];
         const isOutputContinuation = lastMessage && lastMessage.type === 'output_text' && lastMessage.messageId === messageId;
 
         if (isOutputContinuation) {
-          lastMessage.content += chunk;
+          if (generatedImageUrl) {
+            lastMessage.images = lastMessage.images || [];
+            lastMessage.images.push(generatedImageUrl);
+          } else {
+            lastMessage.content += chunk;
+          }
         } else {
           if (lastMessage?.messageId === messageId) {
             for (let i = state.messages.length - 1; i >= 0; i--) {
@@ -195,7 +213,8 @@ const chatSlice = createSlice({
 
           state.messages.push({
             role: 'assistant',
-            content: chunk,
+            content: generatedImageUrl ? '' : chunk,
+            images: generatedImageUrl ? [generatedImageUrl] : undefined,
             type: 'output_text',
             messageId,
             clientKey: buildStreamMessageKey(messageId, 'output_text', state.messages.length),

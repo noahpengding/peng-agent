@@ -100,6 +100,51 @@ const markdownRules: RenderRules = {
 
 type SelectorType = 'baseModel' | 'knowledgeBase';
 
+const RemoteMessageImage = React.memo(({ uri }: { uri: string }) => {
+  const [hasLoadError, setHasLoadError] = useState(false);
+
+  if (hasLoadError) {
+    return (
+      <View style={styles.messageImageFallback}>
+        <MaterialCommunityIcons name="image-broken-variant" size={22} color={Colors.error} />
+        <Text style={styles.messageImageFallbackTitle}>Image failed to load.</Text>
+        <Text selectable numberOfLines={2} style={styles.messageImageFallbackUrl}>
+          {uri}
+        </Text>
+      </View>
+    );
+  }
+
+  return (
+    <View style={styles.messageImageFrame}>
+      <Image
+        source={{ uri }}
+        style={styles.messageImage}
+        resizeMode="contain"
+        onError={() => setHasLoadError(true)}
+      />
+    </View>
+  );
+});
+
+RemoteMessageImage.displayName = 'RemoteMessageImage';
+
+const MessageImages = React.memo(({ images }: { images?: string[] }) => {
+  if (!images || images.length === 0) {
+    return null;
+  }
+
+  return (
+    <View style={styles.messageImagesContainer}>
+      {images.map((uri, index) => (
+        <RemoteMessageImage key={`${uri}-${index}`} uri={uri} />
+      ))}
+    </View>
+  );
+});
+
+MessageImages.displayName = 'MessageImages';
+
 const MessageItem = React.memo(({ 
   item, 
   messageKey,
@@ -148,13 +193,16 @@ const MessageItem = React.memo(({
             )}
             {!isFolded && (
               <View>
-                <MemoizedMarkdown
-                  style={markdownStyles}
-                  markdownit={md}
-                  rules={markdownRules}
-                >
-                  {item.content}
-                </MemoizedMarkdown>
+                <MessageImages images={item.images} />
+                {item.content ? (
+                  <MemoizedMarkdown
+                    style={markdownStyles}
+                    markdownit={md}
+                    rules={markdownRules}
+                  >
+                    {item.content}
+                  </MemoizedMarkdown>
+                ) : null}
                 {item.chatId && item.messageId && item.type === 'output_text' && (
                   <View style={styles.feedbackContainer}>
                     <TouchableOpacity
@@ -186,13 +234,18 @@ const MessageItem = React.memo(({
             )}
           </>
         ) : (
-          <MemoizedMarkdown
-            style={userMarkdownStyles}
-            markdownit={md}
-            rules={markdownRules}
-          >
-            {item.content}
-          </MemoizedMarkdown>
+          <>
+            <MessageImages images={item.images} />
+            {item.content ? (
+              <MemoizedMarkdown
+                style={userMarkdownStyles}
+                markdownit={md}
+                rules={markdownRules}
+              >
+                {item.content}
+              </MemoizedMarkdown>
+            ) : null}
+          </>
         )}
       </View>
     </View>
@@ -1059,6 +1112,42 @@ const styles = StyleSheet.create({
     fontWeight: Typography.weights.black,
     textTransform: 'uppercase',
     letterSpacing: 0.5,
+  },
+  messageImagesContainer: {
+    gap: Typography.spacing.xs,
+    marginBottom: Typography.spacing.xs,
+  },
+  messageImageFrame: {
+    width: '100%',
+    height: 260,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    overflow: 'hidden',
+    backgroundColor: Colors.bgDeep,
+  },
+  messageImage: {
+    width: '100%',
+    height: '100%',
+  },
+  messageImageFallback: {
+    minHeight: 104,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    backgroundColor: Colors.bgDeep,
+    padding: Typography.spacing.xs,
+    justifyContent: 'center',
+    gap: Typography.spacing['3xs'],
+  },
+  messageImageFallbackTitle: {
+    color: Colors.error,
+    fontSize: Typography.sizes.sm,
+    fontWeight: Typography.weights.bold,
+  },
+  messageImageFallbackUrl: {
+    color: Colors.textDim,
+    fontSize: Typography.sizes.xs,
   },
   composerCollapsedBar: {
     backgroundColor: Colors.bgDeep,
