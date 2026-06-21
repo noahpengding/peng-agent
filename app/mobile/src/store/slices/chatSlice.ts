@@ -197,15 +197,17 @@ const chatSlice = createSlice({
     },
     finishMessage: (state, action: PayloadAction<{ messageId: string }>) => {
       const { messageId } = action.payload;
+      let hasSeenTargetMessage = false;
       for (let i = state.messages.length - 1; i >= 0; i--) {
         const m = state.messages[i];
         if (m.messageId === messageId) {
+          hasSeenTargetMessage = true;
           if (m.type && m.type !== 'output_text' && m.type !== 'assistant' && m.type !== 'user') {
             m.folded = true;
           } else if (m.type === 'output_text') {
             m.content = m.content.replace(/\n\n+/g, '\n');
           }
-        } else if (m.messageId !== messageId && m.type === 'user') {
+        } else if (hasSeenTargetMessage) {
           break;
         }
       }
@@ -216,13 +218,19 @@ const chatSlice = createSlice({
     },
     attachChatIdToMessage: (state, action: PayloadAction<{ messageId: string; chatId: number }>) => {
       const { messageId, chatId } = action.payload;
+      let hasSeenTargetMessage = false;
       for (let i = state.messages.length - 1; i >= 0; i--) {
         const message = state.messages[i];
-        if (message.messageId === messageId && message.type === 'output_text') {
-          message.chatId = chatId;
-          message.feedback = message.feedback || 'no_response';
-          message.feedbackUpdating = false;
-          break; // Usually only one output_text per messageId
+        if (message.messageId === messageId) {
+          hasSeenTargetMessage = true;
+          if (message.type === 'output_text') {
+            message.chatId = chatId;
+            message.feedback = message.feedback || 'no_response';
+            message.feedbackUpdating = false;
+            break; // Usually only one output_text per messageId
+          }
+        } else if (hasSeenTargetMessage) {
+          break;
         }
       }
     },
