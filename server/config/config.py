@@ -12,10 +12,12 @@ class Config(BaseModel):
     port: int
     s3_url: str
     s3_bucket: str
+    s3_public_bucket: str
     s3_access_key: str
     s3_secret_key: str
     s3_base_path: str
     s3_region: str
+    webdav_public_url: str
     qdrant_host: str
     qdrant_port: int
     default_operator: str
@@ -64,6 +66,12 @@ try:
         "s3_bucket": os.environ.get("S3_BUCKET")
         if os.environ.get("S3_BUCKET")
         else "test",
+        "s3_public_bucket": os.environ.get("S3_PUBLIC_BUCKET")
+        if os.environ.get("S3_PUBLIC_BUCKET")
+        else "test-public",
+        "webdav_public_url": os.environ.get("WEBDAV_PUBLIC_URL")
+        if os.environ.get("WEBDAV_PUBLIC_URL")
+        else "http://localhost:9000/test-public",
         "s3_access_key": os.environ.get("S3_ACCESS_KEY")
         if os.environ.get("S3_ACCESS_KEY")
         else "minioadmin",

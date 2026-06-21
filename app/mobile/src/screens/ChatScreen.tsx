@@ -3,6 +3,8 @@ import {
   ActivityIndicator,
   Image,
   Modal,
+  NativeScrollEvent,
+  NativeSyntheticEvent,
   Pressable,
   ScrollView,
   View,
@@ -40,7 +42,6 @@ import Markdown, {
   RenderRules 
 } from 'react-native-markdown-display';
 import MarkdownIt from 'markdown-it';
-// @ts-expect-error - markdown-it-katex lacks types
 import markdownItKatex from 'markdown-it-katex';
 import Katex from 'react-native-katex';
 import { Colors } from '../utils/colors';
@@ -51,6 +52,14 @@ const md = new MarkdownIt({
 }).use(markdownItKatex);
 
 const MemoizedMarkdown = React.memo(Markdown);
+
+const AUTO_SCROLL_THRESHOLD_PX = 120;
+const FLAT_LIST_INITIAL_RENDER_COUNT = 12;
+const FLAT_LIST_BATCH_RENDER_COUNT = 8;
+const FLAT_LIST_WINDOW_SIZE = 5;
+
+const getMessageKey = (item: Message, index: number): string =>
+  item.clientKey || `${item.messageId || item.type || item.role}-${index}`;
 
 const markdownRules: RenderRules = {
   math_inline: (
@@ -93,15 +102,15 @@ type SelectorType = 'baseModel' | 'knowledgeBase';
 
 const MessageItem = React.memo(({ 
   item, 
-  index, 
+  messageKey,
   isFolded, 
   onToggleFold, 
   onFeedback 
 }: { 
   item: Message; 
-  index: number; 
+  messageKey: string;
   isFolded: boolean; 
-  onToggleFold: (index: number, current: boolean) => void;
+  onToggleFold: (messageKey: string, current: boolean) => void;
   onFeedback: (mid: string, cid: number, f: 'upvote' | 'downvote') => void;
 }) => {
   const isFoldable = item.type === 'reasoning_summary' || item.type === 'tool_calls' || item.type === 'tool_output';
@@ -128,7 +137,7 @@ const MessageItem = React.memo(({
         {!isUser ? (
           <>
             {isFoldable && (
-              <Pressable style={styles.foldHeader} onPress={() => onToggleFold(index, isFolded)}>
+              <Pressable style={styles.foldHeader} onPress={() => onToggleFold(messageKey, isFolded)}>
                 <MaterialCommunityIcons
                   name={isFolded ? 'chevron-right' : 'chevron-down'}
                   size={16}
@@ -188,6 +197,32 @@ const MessageItem = React.memo(({
       </View>
     </View>
   );
+}, (prevProps, nextProps) => {
+  const prevItem = prevProps.item;
+  const nextItem = nextProps.item;
+
+  const prevImages = prevItem.images || [];
+  const nextImages = nextItem.images || [];
+  const imagesAreEqual =
+    prevImages.length === nextImages.length &&
+    prevImages.every((image, index) => image === nextImages[index]);
+
+  return (
+    prevProps.messageKey === nextProps.messageKey &&
+    prevProps.isFolded === nextProps.isFolded &&
+    prevProps.onToggleFold === nextProps.onToggleFold &&
+    prevProps.onFeedback === nextProps.onFeedback &&
+    prevItem.content === nextItem.content &&
+    prevItem.role === nextItem.role &&
+    prevItem.type === nextItem.type &&
+    prevItem.messageId === nextItem.messageId &&
+    prevItem.clientKey === nextItem.clientKey &&
+    prevItem.chatId === nextItem.chatId &&
+    prevItem.feedback === nextItem.feedback &&
+    prevItem.feedbackUpdating === nextItem.feedbackUpdating &&
+    prevItem.folded === nextItem.folded &&
+    imagesAreEqual
+  );
 });
 
 export default function ChatScreen() {
@@ -220,8 +255,11 @@ export default function ChatScreen() {
   const [isConfigExpanded, setIsConfigExpanded] = useState(false);
   const [isComposerCollapsed, setIsComposerCollapsed] = useState(false);
   const [attachmentMenuVisible, setAttachmentMenuVisible] = useState(false);
-  const [foldedMessages, setFoldedMessages] = useState<Record<number, boolean>>({});
+  const [foldedMessages, setFoldedMessages] = useState<Record<string, boolean>>({});
   const [isUploading, setIsUploading] = useState(false);
+  const isNearBottomRef = useRef(true);
+  const scrollFrameRef = useRef<number | null>(null);
+  const previousLoadingRef = useRef(isLoading);
 
   useEffect(() => {
     dispatch(fetchBaseModels());
@@ -249,15 +287,50 @@ export default function ChatScreen() {
     };
   }, [dispatch, getCollections, knowledgeBase]);
 
+  const scheduleScrollToEnd = useCallback((animated: boolean) => {
+    if (scrollFrameRef.current !== null) {
+      return;
+    }
+
+    scrollFrameRef.current = requestAnimationFrame(() => {
+      scrollFrameRef.current = null;
+      flatListRef.current?.scrollToEnd({ animated });
+    });
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      if (scrollFrameRef.current !== null) {
+        cancelAnimationFrame(scrollFrameRef.current);
+      }
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!previousLoadingRef.current && isLoading) {
+      isNearBottomRef.current = true;
+      scheduleScrollToEnd(false);
+    } else if (previousLoadingRef.current && !isLoading && isNearBottomRef.current) {
+      scheduleScrollToEnd(true);
+    }
+
+    previousLoadingRef.current = isLoading;
+  }, [isLoading, scheduleScrollToEnd]);
+
   const handleSend = () => {
     if (!input.trim() && uploadedImages.length === 0) {
       return;
     }
 
+    const turnMessageId = Math.random().toString(36).substring(2) + Date.now().toString(36);
+    isNearBottomRef.current = true;
+
     const userMessage = {
       role: 'user',
       content: input,
       type: 'user' as const,
+      messageId: turnMessageId,
+      clientKey: `${turnMessageId}:user`,
       images: uploadedImages.filter((item) => item.contentType.startsWith('image/')).map((item) => item.preview),
     };
 
@@ -410,22 +483,42 @@ export default function ChatScreen() {
     }));
   }, [dispatch, user]);
 
-  const toggleFolded = useCallback((index: number, currentState: boolean) => {
+  const toggleFolded = useCallback((messageKey: string, currentState: boolean) => {
     setFoldedMessages((prev) => ({
       ...prev,
-      [index]: !currentState,
+      [messageKey]: !currentState,
     }));
   }, []);
 
-  const renderItem = useCallback(({ item, index }: { item: Message; index: number }) => (
-    <MessageItem 
-      item={item} 
-      index={index} 
-      isFolded={foldedMessages[index] ?? item.folded ?? false} 
-      onToggleFold={toggleFolded}
-      onFeedback={handleFeedback}
-    />
-  ), [foldedMessages, toggleFolded, handleFeedback]);
+  const handleListScroll = useCallback((event: NativeSyntheticEvent<NativeScrollEvent>) => {
+    const { contentOffset, contentSize, layoutMeasurement } = event.nativeEvent;
+    isNearBottomRef.current =
+      contentOffset.y + layoutMeasurement.height >= contentSize.height - AUTO_SCROLL_THRESHOLD_PX;
+  }, []);
+
+  const handleContentSizeChange = useCallback(() => {
+    if (isNearBottomRef.current || isLoading) {
+      scheduleScrollToEnd(!isLoading);
+    }
+  }, [isLoading, scheduleScrollToEnd]);
+
+  const handleListLayout = useCallback(() => {
+    scheduleScrollToEnd(false);
+  }, [scheduleScrollToEnd]);
+
+  const renderItem = useCallback(({ item, index }: { item: Message; index: number }) => {
+    const messageKey = getMessageKey(item, index);
+
+    return (
+      <MessageItem 
+        item={item}
+        messageKey={messageKey}
+        isFolded={foldedMessages[messageKey] ?? item.folded ?? false}
+        onToggleFold={toggleFolded}
+        onFeedback={handleFeedback}
+      />
+    );
+  }, [foldedMessages, toggleFolded, handleFeedback]);
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
@@ -499,12 +592,19 @@ export default function ChatScreen() {
         <FlatList
           ref={flatListRef}
           data={messages}
-          keyExtractor={(_, index) => index.toString()}
+          keyExtractor={getMessageKey}
           renderItem={renderItem}
           style={{ flex: 1 }}
           contentContainerStyle={styles.listContent}
-          onContentSizeChange={() => flatListRef.current?.scrollToEnd({ animated: true })}
-          onLayout={() => flatListRef.current?.scrollToEnd({ animated: true })}
+          initialNumToRender={FLAT_LIST_INITIAL_RENDER_COUNT}
+          maxToRenderPerBatch={FLAT_LIST_BATCH_RENDER_COUNT}
+          windowSize={FLAT_LIST_WINDOW_SIZE}
+          removeClippedSubviews={Platform.OS === 'android'}
+          keyboardShouldPersistTaps="handled"
+          scrollEventThrottle={16}
+          onScroll={handleListScroll}
+          onContentSizeChange={handleContentSizeChange}
+          onLayout={handleListLayout}
         />
 
         {uploadedImages.length > 0 ? (

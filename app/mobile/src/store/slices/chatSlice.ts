@@ -70,6 +70,12 @@ const extractChatIdFromChunk = (chunk: string): number | null => {
   return Number.isInteger(id) ? id : null;
 };
 
+const buildStreamMessageKey = (
+  messageId: string,
+  type: Message['type'],
+  ordinal: number
+): string => `${messageId}:${type ?? 'assistant'}:${ordinal}`;
+
 // Async thunk for sending message
 export const sendMessage = createAsyncThunk('chat/sendMessage', async (args: SendMessageArgs, { dispatch, rejectWithValue }) => {
   // Generate a messageId for this turn
@@ -129,7 +135,10 @@ const chatSlice = createSlice({
       state.uploadedImages = action.payload;
     },
     addUserMessage: (state, action: PayloadAction<Message>) => {
-      state.messages.push(action.payload);
+      state.messages.push({
+        ...action.payload,
+        clientKey: action.payload.clientKey || `user:${state.messages.length}:${action.payload.messageId || 'local'}`,
+      });
     },
     setBaseModel: (state, action: PayloadAction<string>) => {
       state.baseModel = action.payload;
@@ -171,11 +180,25 @@ const chatSlice = createSlice({
         if (isOutputContinuation) {
           lastMessage.content += chunk;
         } else {
+          if (lastMessage?.messageId === messageId) {
+            for (let i = state.messages.length - 1; i >= 0; i--) {
+              const message = state.messages[i];
+              if (message.messageId !== messageId) {
+                break;
+              }
+
+              if (message.type === 'reasoning_summary' || message.type === 'tool_calls' || message.type === 'tool_output') {
+                message.folded = true;
+              }
+            }
+          }
+
           state.messages.push({
             role: 'assistant',
             content: chunk,
             type: 'output_text',
             messageId,
+            clientKey: buildStreamMessageKey(messageId, 'output_text', state.messages.length),
           });
         }
       } else {
@@ -191,6 +214,7 @@ const chatSlice = createSlice({
             type: normalizedType as Message['type'],
             folded: false,
             messageId,
+            clientKey: buildStreamMessageKey(messageId, normalizedType as Message['type'], state.messages.length),
           });
         }
       }
@@ -253,6 +277,7 @@ const chatSlice = createSlice({
           role: 'assistant',
           content: 'Sorry, I encountered an error.',
           type: 'output_text',
+          clientKey: `error:${state.messages.length}`,
         });
       })
       .addCase(submitMessageFeedback.pending, (state, action) => {

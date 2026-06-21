@@ -17,12 +17,14 @@ def _image_generation_tool(prompt: str) -> str:
         with open(f"{image_name}", "wb") as f:
             f.write(image_response)
         minio_storage = MinioStorage()
-        minio_storage.file_upload(image_name, f"{config.s3_base_path}/generated_images/{image_name}", "image/png")
-        return image_response
+        upload = minio_storage.file_upload(image_name, f"generated_images/{image_name}", "image/png", bucket_name=config.s3_public_bucket)
+        if upload:
+            image_url = f"{config.webdav_public_url}/generated_images/{image_name}"
+            return image_url
     return "Unsupported image model runtime or failed to generate image."
 
 image_generation_tool = StructuredTool.from_function(
-    func=_image_generation_tool,
+    func=_image_generation_tool, 
     name="image_generation_tool",
     description="Generate an image based on the given prompt. The tool will return the generated image in base64 format.",
     args_schema={
