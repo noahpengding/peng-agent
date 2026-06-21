@@ -175,21 +175,23 @@ const chatSlice = createSlice({
       }
 
       if (normalizedType === 'output_text') {
-        // Collapse intermediate chunks only after final text starts streaming.
-        for (let i = state.messages.length - 1; i >= 0; i--) {
-          const message = state.messages[i];
-          if (message.messageId === messageId) {
-            if (message.type === 'reasoning_summary' || message.type === 'tool_calls' || message.type === 'tool_output') {
-              message.folded = true;
-            }
-          }
-        }
-
         const isOutputContinuation = lastMessage && lastMessage.type === 'output_text' && lastMessage.messageId === messageId;
 
         if (isOutputContinuation) {
           lastMessage.content += chunk;
         } else {
+          // Collapse intermediate chunks once, when final text starts streaming.
+          for (let i = state.messages.length - 1; i >= 0; i--) {
+            const message = state.messages[i];
+            if (message.messageId === messageId) {
+              if (message.type === 'reasoning_summary' || message.type === 'tool_calls' || message.type === 'tool_output') {
+                message.folded = true;
+              }
+            } else if (message.messageId !== messageId && message.type === 'user') {
+              break;
+            }
+          }
+
           state.messages.push({
             role: 'assistant',
             content: chunk,
@@ -234,6 +236,8 @@ const chatSlice = createSlice({
           } else if (m.type === 'output_text') {
             m.content = m.content.replace(/\n\n+/g, '\n');
           }
+        } else if (m.messageId !== messageId && m.type === 'user') {
+          break;
         }
       }
     },

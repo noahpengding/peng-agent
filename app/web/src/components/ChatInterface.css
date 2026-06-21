@@ -654,6 +654,10 @@
   display: none;
 }
 
+.action-tooltip-wrapper {
+  display: flex;
+}
+
 .upload-button {
   background-color: var(--color-bg-deep);
   color: var(--color-text-dim);

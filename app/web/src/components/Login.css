@@ -180,6 +180,11 @@
 }
 
 /* ── Submit button ─────────────────────────────────────── */
+.login-submit-wrapper {
+  display: block;
+  width: 100%;
+}
+
 .login-submit {
   width: 100%;
   display: flex;

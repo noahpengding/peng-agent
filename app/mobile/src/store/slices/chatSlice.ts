@@ -205,6 +205,8 @@ const chatSlice = createSlice({
           } else if (m.type === 'output_text') {
             m.content = m.content.replace(/\n\n+/g, '\n');
           }
+        } else if (m.messageId !== messageId && m.type === 'user') {
+          break;
         }
       }
     },

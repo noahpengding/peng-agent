@@ -50,6 +50,8 @@ const md = new MarkdownIt({
   typographer: true,
 }).use(markdownItKatex);
 
+const MemoizedMarkdown = React.memo(Markdown);
+
 const markdownRules: RenderRules = {
   math_inline: (
     node: ASTNode,
@@ -137,13 +139,13 @@ const MessageItem = React.memo(({
             )}
             {!isFolded && (
               <View>
-                <Markdown 
+                <MemoizedMarkdown
                   style={markdownStyles}
                   markdownit={md}
                   rules={markdownRules}
                 >
                   {item.content}
-                </Markdown>
+                </MemoizedMarkdown>
                 {item.chatId && item.messageId && item.type === 'output_text' && (
                   <View style={styles.feedbackContainer}>
                     <TouchableOpacity
@@ -175,13 +177,13 @@ const MessageItem = React.memo(({
             )}
           </>
         ) : (
-          <Markdown 
+          <MemoizedMarkdown
             style={userMarkdownStyles}
             markdownit={md}
             rules={markdownRules}
           >
             {item.content}
-          </Markdown>
+          </MemoizedMarkdown>
         )}
       </View>
     </View>

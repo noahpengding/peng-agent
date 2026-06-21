@@ -118,9 +118,19 @@ const MemoryPage: React.FC = () => {
             <tbody>
               {filteredMemories.length > 0 ? (
                 filteredMemories.map((memory) => (
-                  <tr key={memory.id}>
+                  <tr
+                    key={memory.id}
+                    onClick={() => handleCheckboxChange(memory.id)}
+                    style={{ cursor: 'pointer' }}
+                  >
                     <td>
-                      <input type="checkbox" checked={selectedMemoryIds.includes(memory.id)} onChange={() => handleCheckboxChange(memory.id)} aria-label={`Select memory ${memory.id}`} />
+                      <input
+                        type="checkbox"
+                        checked={selectedMemoryIds.includes(memory.id)}
+                        onChange={() => handleCheckboxChange(memory.id)}
+                        onClick={(e) => e.stopPropagation()}
+                        aria-label={`Select memory: ${truncateText(memory.human_input, 50)}`}
+                      />
                     </td>
                     <td>{memory.base_model}</td>
                     <td title={memory.human_input}>{truncateText(memory.human_input, 600)}</td>
@@ -129,7 +139,7 @@ const MemoryPage: React.FC = () => {
                 ))
               ) : (
                 <tr>
-                  <td colSpan={5} className="no-memories">
+                  <td colSpan={4} className="no-memories">
                     {searchTerm ? 'No memories match your search' : 'No memories available'}
                   </td>
                 </tr>

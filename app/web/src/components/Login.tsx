@@ -44,6 +44,7 @@ const Login: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false);
   const dispatch = useDispatch();
   const navigate = useNavigate();
+  const submitLabel = isLoading ? 'Signing in...' : !username || !password ? 'Please enter both username and password' : 'Sign in';
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -132,28 +133,31 @@ const Login: React.FC = () => {
               </div>
             )}
 
-            <button
-              type="submit"
-              className="login-submit"
-              disabled={isLoading || !username || !password}
-            >
-              {isLoading ? (
-                <>
-                  <svg
-                    className="login-spinner"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    style={{ animation: 'spin 1s linear infinite' }}
-                  >
-                    <circle cx="12" cy="12" r="10" stroke="rgba(255,255,255,0.25)" strokeWidth="3" />
-                    <path d="M12 2a10 10 0 0 1 10 10" stroke="white" strokeWidth="3" strokeLinecap="round" />
-                  </svg>
-                  Signing in…
-                </>
-              ) : (
-                'Sign in'
-              )}
-            </button>
+            <span className="login-submit-wrapper" title={submitLabel}>
+              <button
+                type="submit"
+                className="login-submit"
+                disabled={isLoading || !username || !password}
+                aria-label={submitLabel}
+              >
+                {isLoading ? (
+                  <>
+                    <svg
+                      className="login-spinner"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      style={{ animation: 'spin 1s linear infinite' }}
+                    >
+                      <circle cx="12" cy="12" r="10" stroke="rgba(255,255,255,0.25)" strokeWidth="3" />
+                      <path d="M12 2a10 10 0 0 1 10 10" stroke="white" strokeWidth="3" strokeLinecap="round" />
+                    </svg>
+                    Signing in…
+                  </>
+                ) : (
+                  'Sign in'
+                )}
+              </button>
+            </span>
           </form>
         </div>
       </div>

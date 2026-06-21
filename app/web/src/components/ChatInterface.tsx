@@ -329,6 +329,8 @@ const ChatbotUI = () => {
           type="button"
           className="menu-button"
           aria-label="Open menu"
+          aria-haspopup="menu"
+          aria-expanded={isMenuOpen}
           title="Menu"
           onClick={() => setIsMenuOpen((v) => !v)}
         >
@@ -340,18 +342,19 @@ const ChatbotUI = () => {
             role="menu"
             aria-label="Navigation Menu"
           >
-            <a href="/memory" className="menu-item" onClick={() => setIsMenuOpen(false)}>
+            <a href="/memory" className="menu-item" role="menuitem" onClick={() => setIsMenuOpen(false)}>
               Memory
             </a>
-            <a href="/model" className="menu-item" onClick={() => setIsMenuOpen(false)}>
+            <a href="/model" className="menu-item" role="menuitem" onClick={() => setIsMenuOpen(false)}>
               Model
             </a>
-            <a href="/rag" className="menu-item" onClick={() => setIsMenuOpen(false)}>
+            <a href="/rag" className="menu-item" role="menuitem" onClick={() => setIsMenuOpen(false)}>
               RAG
             </a>
             <a
               href="https://us5.datadoghq.com/llm/applications?query=&fromUser=true&start=1770794053588&end=1770880453588&paused=false"
               className="menu-item external-link"
+              role="menuitem"
               target="_blank"
               rel="noreferrer"
               onClick={() => setIsMenuOpen(false)}
@@ -361,6 +364,7 @@ const ChatbotUI = () => {
             <a
               href="https://github.com/Noahdingpeng/peng-agent"
               className="menu-item external-link"
+              role="menuitem"
               target="_blank"
               rel="noreferrer"
               onClick={() => setIsMenuOpen(false)}
