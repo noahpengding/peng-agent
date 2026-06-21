@@ -83,6 +83,7 @@ const MemoryPage: React.FC = () => {
       {/* Search Bar */}
       <div className="search-container">
         <input
+          id="search-memories"
           type="text"
           placeholder="Search memories..."
           className="search-input"
@@ -125,6 +126,7 @@ const MemoryPage: React.FC = () => {
                   >
                     <td>
                       <input
+                        id={`memory-checkbox-${memory.id}`}
                         type="checkbox"
                         checked={selectedMemoryIds.includes(memory.id)}
                         onChange={() => handleCheckboxChange(memory.id)}

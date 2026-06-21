@@ -146,8 +146,9 @@ const RAGInterface: React.FC = () => {
 
           <form onSubmit={handleIndexDocument} className="form">
             <div className="form-group">
-              <label className="form-label">File Path</label>
+              <label htmlFor="rag-file-path" className="form-label">File Path</label>
               <input
+                id="rag-file-path"
                 type="text"
                 className="form-input"
                 value={filePath}
@@ -156,6 +157,7 @@ const RAGInterface: React.FC = () => {
               />
               <div className="upload-controls">
                 <input
+                  id="rag-file-upload"
                   ref={fileInputRef}
                   type="file"
                   accept="image/*,application/pdf"
@@ -175,8 +177,9 @@ const RAGInterface: React.FC = () => {
             </div>
 
             <div className="form-group">
-              <label className="form-label">Knowledge Base</label>
+              <label htmlFor="rag-collection-name" className="form-label">Knowledge Base</label>
               <input
+                id="rag-collection-name"
                 type="text"
                 className="form-input"
                 value={collectionName}
@@ -188,8 +191,9 @@ const RAGInterface: React.FC = () => {
             <div className="form-group">
               <label className="form-label">File Type</label>
               <div className="radio-group">
-                <label className="radio-label">
+                <label htmlFor="rag-type-standard" className="radio-label">
                   <input
+                    id="rag-type-standard"
                     type="radio"
                     name="typeOfFile"
                     value="standard"
@@ -199,8 +203,9 @@ const RAGInterface: React.FC = () => {
                   />
                   Standard
                 </label>
-                <label className="radio-label">
+                <label htmlFor="rag-type-handwriting" className="radio-label">
                   <input
+                    id="rag-type-handwriting"
                     type="radio"
                     name="typeOfFile"
                     value="handwriting"
@@ -229,8 +234,8 @@ const RAGInterface: React.FC = () => {
             <h3 className="filter-title">Filters</h3>
 
             <div className="form-group">
-              <label className="form-label">Knowledge Base</label>
-              <select className="form-select" value={selectedKnowledgeBase} onChange={(e) => setSelectedKnowledgeBase(e.target.value)}>
+              <label htmlFor="rag-filter-kb" className="form-label">Knowledge Base</label>
+              <select id="rag-filter-kb" className="form-select" value={selectedKnowledgeBase} onChange={(e) => setSelectedKnowledgeBase(e.target.value)}>
                 <option value="">All Knowledge Bases</option>
                 {knowledgeBases.map((kb) => (
                   <option key={kb} value={kb}>

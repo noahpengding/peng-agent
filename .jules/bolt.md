@@ -15,3 +15,7 @@ We can use a simple backward loop `for (let i = state.messages.length - 1; i >= 
 ## 2026-06-19 - [Redux Toolkit Streaming Array Update Optimization]
 **Learning:** In high-frequency reducer updates, such as handling streaming AI response chunks in `chatSlice.ts`, scanning the full message array repeatedly is O(N) and degrades performance on long conversations.
 **Action:** Keep high-frequency reducer work limited to the current trailing message block. Add early `break` conditions during backward loops and run fold-on-first-text logic only when a new `output_text` block starts.
+
+## 2026-05-22 - [Input Area Render Isolation]
+**Learning:** Memoizing large input components only helps during streaming if callback props remain stable and async state updates still read the latest store state.
+**Action:** Wrap `InputArea` in `React.memo`, stabilize submit/error/upload callbacks with `useCallback`, and resolve functional uploaded-image updates against the latest Redux state.

@@ -16,7 +16,7 @@ interface InputAreaProps {
   maxTextareaHeight?: number;
 }
 
-export const InputArea: React.FC<InputAreaProps> = ({
+const InputAreaComponent: React.FC<InputAreaProps> = ({
   input,
   setInput,
   s3PathsInput,
@@ -154,6 +154,7 @@ export const InputArea: React.FC<InputAreaProps> = ({
       <form onSubmit={onSubmit} className="input-form">
         <div className="s3-input-row">
           <input
+            id="s3-paths"
             type="text"
             className="s3-input"
             value={s3PathsInput}
@@ -212,6 +213,7 @@ export const InputArea: React.FC<InputAreaProps> = ({
           </div>
           <div className="input-actions">
             <input
+              id="file-upload"
               ref={fileInputRef}
               type="file"
               accept="image/*,application/pdf"
@@ -243,6 +245,7 @@ export const InputArea: React.FC<InputAreaProps> = ({
                     viewBox="0 0 24 24"
                     fill="none"
                     style={{ animation: 'spin 1s linear infinite', width: '20px', height: '20px' }}
+                    aria-hidden="true"
                   >
                     <circle cx="12" cy="12" r="10" stroke="rgba(255,255,255,0.25)" strokeWidth="3" />
                     <path d="M12 2a10 10 0 0 1 10 10" stroke="white" strokeWidth="3" strokeLinecap="round" />
@@ -258,3 +261,7 @@ export const InputArea: React.FC<InputAreaProps> = ({
     </div>
   );
 };
+
+export const InputArea = React.memo(InputAreaComponent);
+
+InputArea.displayName = 'InputArea';
