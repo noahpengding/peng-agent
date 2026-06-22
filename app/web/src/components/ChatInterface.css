@@ -798,24 +798,36 @@
 }
 
 .message-image-container {
-  width: min(100%, 360px);
-  max-width: 360px;
-  aspect-ratio: 1 / 1;
+  width: fit-content;
+  max-width: 100%;
   padding: 0;
   border: 1px solid var(--color-border);
   border-radius: 8px;
   overflow: hidden;
   background: var(--color-bg-deep);
-  display: flex;
+  display: inline-flex;
   align-items: center;
   justify-content: center;
+  line-height: 0;
+}
+
+.message-image-container.is-measured {
+  width: min(100%, var(--message-image-width));
 }
 
 .message-image {
-  width: 100%;
-  height: 100%;
+  width: auto;
+  height: auto;
+  max-width: min(100%, 640px);
+  max-height: min(70vh, 720px);
   object-fit: contain;
   display: block;
+}
+
+.message-image-container.is-measured .message-image {
+  width: 100%;
+  max-width: 100%;
+  max-height: none;
 }
 
 .message-image-fallback {
@@ -839,8 +851,8 @@
 }
 
 .message-image-document {
-  width: min(100%, 360px);
-  max-width: 360px;
+  width: min(100%, 640px);
+  max-width: 640px;
   border: 1px solid var(--color-border);
   border-radius: 8px;
   overflow: hidden;
@@ -851,7 +863,8 @@
 
 .message-image-frame {
   width: 100%;
-  aspect-ratio: 1 / 1;
+  min-height: 260px;
+  max-height: min(70vh, 720px);
   border: 0;
   background: var(--color-bg-deep);
 }

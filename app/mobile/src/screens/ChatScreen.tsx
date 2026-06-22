@@ -15,6 +15,8 @@ import {
   StyleSheet,
   KeyboardAvoidingView,
   Platform,
+  useWindowDimensions,
+  type ImageLoadEventData,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useSelector, useDispatch } from 'react-redux';
@@ -57,9 +59,38 @@ const AUTO_SCROLL_THRESHOLD_PX = 120;
 const FLAT_LIST_INITIAL_RENDER_COUNT = 12;
 const FLAT_LIST_BATCH_RENDER_COUNT = 8;
 const FLAT_LIST_WINDOW_SIZE = 5;
+const MAX_MESSAGE_IMAGE_WIDTH = 360;
+const MAX_MESSAGE_IMAGE_HEIGHT = 520;
+const FALLBACK_MESSAGE_IMAGE_HEIGHT = 260;
 
 const getMessageKey = (item: Message, index: number): string =>
   item.clientKey || `${item.messageId || item.type || item.role}-${index}`;
+
+const remoteMessageImageStyle = {
+  width: '100%',
+  height: '100%',
+} as const;
+
+type ImageSize = {
+  width: number;
+  height: number;
+};
+
+const getContainedImageSize = (imageSize: ImageSize | null, maxWidth: number): ImageSize => {
+  if (!imageSize?.width || !imageSize.height) {
+    return {
+      width: maxWidth,
+      height: FALLBACK_MESSAGE_IMAGE_HEIGHT,
+    };
+  }
+
+  const scale = Math.min(1, maxWidth / imageSize.width, MAX_MESSAGE_IMAGE_HEIGHT / imageSize.height);
+
+  return {
+    width: Math.round(imageSize.width * scale),
+    height: Math.round(imageSize.height * scale),
+  };
+};
 
 const markdownRules: RenderRules = {
   math_inline: (
@@ -102,6 +133,36 @@ type SelectorType = 'baseModel' | 'knowledgeBase';
 
 const RemoteMessageImage = React.memo(({ uri }: { uri: string }) => {
   const [hasLoadError, setHasLoadError] = useState(false);
+  const [imageSize, setImageSize] = useState<ImageSize | null>(null);
+  const { width: windowWidth } = useWindowDimensions();
+  const maxImageWidth = Math.max(
+    120,
+    Math.min(MAX_MESSAGE_IMAGE_WIDTH, windowWidth - Typography.spacing.md * 2),
+  );
+  const displaySize = getContainedImageSize(imageSize, maxImageWidth);
+
+  useEffect(() => {
+    let mounted = true;
+
+    Image.getSize(
+      uri,
+      (width, height) => {
+        if (!mounted) return;
+        setImageSize({ width, height });
+      },
+      () => undefined,
+    );
+
+    return () => {
+      mounted = false;
+    };
+  }, [uri]);
+
+  const handleLoad = useCallback((event: NativeSyntheticEvent<ImageLoadEventData>) => {
+    const { width, height } = event.nativeEvent.source;
+    if (!width || !height) return;
+    setImageSize({ width, height });
+  }, []);
 
   if (hasLoadError) {
     return (
@@ -116,11 +177,12 @@ const RemoteMessageImage = React.memo(({ uri }: { uri: string }) => {
   }
 
   return (
-    <View style={styles.messageImageFrame}>
+    <View style={[styles.messageImageFrame, displaySize]}>
       <Image
         source={{ uri }}
-        style={styles.messageImage}
+        style={remoteMessageImageStyle}
         resizeMode="contain"
+        onLoad={handleLoad}
         onError={() => setHasLoadError(true)}
       />
     </View>
@@ -1116,19 +1178,15 @@ const styles = StyleSheet.create({
   messageImagesContainer: {
     gap: Typography.spacing.xs,
     marginBottom: Typography.spacing.xs,
+    alignItems: 'flex-start',
   },
   messageImageFrame: {
-    width: '100%',
-    height: 260,
+    maxWidth: '100%',
     borderRadius: 12,
     borderWidth: 1,
     borderColor: Colors.border,
     overflow: 'hidden',
     backgroundColor: Colors.bgDeep,
-  },
-  messageImage: {
-    width: '100%',
-    height: '100%',
   },
   messageImageFallback: {
     minHeight: 104,

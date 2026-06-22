@@ -92,8 +92,28 @@ interface MessageImageProps {
   onSelect: (src: string) => void;
 }
 
+const MAX_MESSAGE_IMAGE_WIDTH = 640;
+const MAX_MESSAGE_IMAGE_HEIGHT = 720;
+
+const getContainedImageWidth = (width: number, height: number) => {
+  if (!width || !height) {
+    return undefined;
+  }
+
+  const viewportMaxHeight =
+    typeof window === 'undefined' ? MAX_MESSAGE_IMAGE_HEIGHT : Math.floor(window.innerHeight * 0.7);
+  const maxHeight = Math.min(MAX_MESSAGE_IMAGE_HEIGHT, viewportMaxHeight);
+  const scale = Math.min(1, MAX_MESSAGE_IMAGE_WIDTH / width, maxHeight / height);
+  return Math.round(width * scale);
+};
+
 const MessageImage = React.memo(({ src, onSelect }: MessageImageProps) => {
   const [hasLoadError, setHasLoadError] = useState(false);
+  const [displayWidth, setDisplayWidth] = useState<number | undefined>();
+
+  const imageFrameStyle = displayWidth
+    ? ({ '--message-image-width': `${displayWidth}px` } as React.CSSProperties)
+    : undefined;
 
   if (hasLoadError) {
     return (
@@ -119,7 +139,8 @@ const MessageImage = React.memo(({ src, onSelect }: MessageImageProps) => {
   return (
     <button
       type="button"
-      className="message-image-container clickable"
+      className={`message-image-container clickable ${displayWidth ? 'is-measured' : ''}`}
+      style={imageFrameStyle}
       onClick={(event) => {
         event.stopPropagation();
         onSelect(src);
@@ -133,6 +154,10 @@ const MessageImage = React.memo(({ src, onSelect }: MessageImageProps) => {
         loading="lazy"
         decoding="async"
         onError={() => setHasLoadError(true)}
+        onLoad={(event) => {
+          const { naturalWidth, naturalHeight } = event.currentTarget;
+          setDisplayWidth(getContainedImageWidth(naturalWidth, naturalHeight));
+        }}
       />
     </button>
   );
