@@ -97,8 +97,18 @@ const MessageImage = React.memo(({ src, onSelect }: MessageImageProps) => {
 
   if (hasLoadError) {
     return (
-      <div className="message-image-fallback" role="alert">
-        <span>Image failed to load.</span>
+      <div className="message-image-document">
+        <iframe
+          src={src}
+          title="Message image preview"
+          className="message-image-frame"
+          loading="lazy"
+          referrerPolicy="no-referrer"
+          sandbox=""
+        />
+        <span className="message-image-fallback-note">
+          Preview opened with browser fallback.
+        </span>
         <a href={src} target="_blank" rel="noreferrer">
           Open image
         </a>

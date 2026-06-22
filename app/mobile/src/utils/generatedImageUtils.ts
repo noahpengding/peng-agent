@@ -15,7 +15,10 @@ export const extractGeneratedImageUrl = (content: string): string | null => {
     const isHttpUrl = url.protocol === 'http:' || url.protocol === 'https:';
     const looksLikeGeneratedImage = url.pathname.includes(GENERATED_IMAGE_PATH_SEGMENT) || IMAGE_EXTENSION_PATTERN.test(url.pathname);
 
-    return isHttpUrl && looksLikeGeneratedImage ? url.toString() : null;
+    if (!isHttpUrl || !looksLikeGeneratedImage) return null;
+
+    url.pathname = url.pathname.replace(/\/{2,}/g, '/');
+    return url.toString();
   } catch {
     return null;
   }

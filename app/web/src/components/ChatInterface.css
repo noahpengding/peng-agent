@@ -838,6 +838,40 @@
   word-break: break-all;
 }
 
+.message-image-document {
+  width: min(100%, 360px);
+  max-width: 360px;
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  overflow: hidden;
+  background: var(--color-bg-deep);
+  display: flex;
+  flex-direction: column;
+}
+
+.message-image-frame {
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  border: 0;
+  background: var(--color-bg-deep);
+}
+
+.message-image-document a,
+.message-image-fallback-note {
+  padding: 0.45rem 0.65rem;
+  font-size: var(--text-xs);
+}
+
+.message-image-document a {
+  color: var(--color-primary);
+  word-break: break-all;
+}
+
+.message-image-fallback-note {
+  color: var(--color-text-muted);
+  border-top: 1px solid var(--color-border);
+}
+
 /* Markdown styles */
 .markdown-content {
   font-family: var(--font-sans);
