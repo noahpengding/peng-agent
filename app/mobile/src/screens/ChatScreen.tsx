@@ -17,6 +17,9 @@ import {
   Platform,
   useWindowDimensions,
   type ImageLoadEventData,
+  type StyleProp,
+  type TextStyle,
+  type ViewStyle,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useSelector, useDispatch } from 'react-redux';
@@ -41,7 +44,8 @@ import { useRAGApi } from '@/hooks/RAGAPI';
 import { UploadService } from '@/services/uploadService';
 import Markdown, { 
   ASTNode, 
-  RenderRules 
+  RenderRules,
+  openUrl,
 } from 'react-native-markdown-display';
 import MarkdownIt from 'markdown-it';
 import markdownItKatex from 'markdown-it-katex';
@@ -76,6 +80,9 @@ type ImageSize = {
   height: number;
 };
 
+type MarkdownStyles = Record<string, unknown>;
+type MarkdownInheritedStyle = StyleProp<TextStyle>;
+
 const getContainedImageSize = (imageSize: ImageSize | null, maxWidth: number): ImageSize => {
   if (!imageSize?.width || !imageSize.height) {
     return {
@@ -92,19 +99,141 @@ const getContainedImageSize = (imageSize: ImageSize | null, maxWidth: number): I
   };
 };
 
+const trimMarkdownCodeContent = (content: string): string =>
+  content.endsWith('\n') ? content.substring(0, content.length - 1) : content;
+
+const markdownTextStyle = (styles: MarkdownStyles, key: string): StyleProp<TextStyle> =>
+  styles[key] as StyleProp<TextStyle>;
+
+const markdownViewStyle = (styles: MarkdownStyles, key: string): StyleProp<ViewStyle> =>
+  styles[key] as StyleProp<ViewStyle>;
+
+const markdownFlattenedTextStyle = (styles: MarkdownStyles, key: string): TextStyle =>
+  StyleSheet.flatten(markdownTextStyle(styles, key)) ?? {};
+
+const handleMarkdownLinkPress = (url: string, onLinkPress?: (url: string) => boolean) => {
+  if (!url) return;
+  if (onLinkPress) {
+    if (onLinkPress(url)) {
+      openUrl(url);
+    }
+    return;
+  }
+  openUrl(url);
+};
+
 const markdownRules: RenderRules = {
+  strong: (node: ASTNode, children: React.ReactNode[], parent: ASTNode[], styles: MarkdownStyles) => (
+    <Text key={node.key} selectable style={markdownTextStyle(styles, 'strong')}>
+      {children}
+    </Text>
+  ),
+  em: (node: ASTNode, children: React.ReactNode[], parent: ASTNode[], styles: MarkdownStyles) => (
+    <Text key={node.key} selectable style={markdownTextStyle(styles, 'em')}>
+      {children}
+    </Text>
+  ),
+  s: (node: ASTNode, children: React.ReactNode[], parent: ASTNode[], styles: MarkdownStyles) => (
+    <Text key={node.key} selectable style={markdownTextStyle(styles, 's')}>
+      {children}
+    </Text>
+  ),
+  code_inline: (
+    node: ASTNode,
+    children: React.ReactNode[],
+    parent: ASTNode[],
+    styles: MarkdownStyles,
+    inheritedStyles: MarkdownInheritedStyle = {},
+  ) => (
+    <Text key={node.key} selectable style={[inheritedStyles, markdownTextStyle(styles, 'code_inline')]}>
+      {node.content}
+    </Text>
+  ),
+  code_block: (
+    node: ASTNode,
+    children: React.ReactNode[],
+    parent: ASTNode[],
+    styles: MarkdownStyles,
+    inheritedStyles: MarkdownInheritedStyle = {},
+  ) => (
+    <Text key={node.key} selectable style={[inheritedStyles, markdownTextStyle(styles, 'code_block')]}>
+      {trimMarkdownCodeContent(node.content)}
+    </Text>
+  ),
+  fence: (
+    node: ASTNode,
+    children: React.ReactNode[],
+    parent: ASTNode[],
+    styles: MarkdownStyles,
+    inheritedStyles: MarkdownInheritedStyle = {},
+  ) => (
+    <Text key={node.key} selectable style={[inheritedStyles, markdownTextStyle(styles, 'fence')]}>
+      {trimMarkdownCodeContent(node.content)}
+    </Text>
+  ),
+  link: (
+    node: ASTNode,
+    children: React.ReactNode[],
+    parent: ASTNode[],
+    styles: MarkdownStyles,
+    onLinkPress?: (url: string) => boolean,
+  ) => (
+    <Text
+      key={node.key}
+      selectable
+      style={markdownTextStyle(styles, 'link')}
+      onPress={() => handleMarkdownLinkPress(node.attributes.href, onLinkPress)}
+    >
+      {children}
+    </Text>
+  ),
+  text: (
+    node: ASTNode,
+    children: React.ReactNode[],
+    parent: ASTNode[],
+    styles: MarkdownStyles,
+    inheritedStyles: MarkdownInheritedStyle = {},
+  ) => (
+    <Text key={node.key} selectable style={[inheritedStyles, markdownTextStyle(styles, 'text')]}>
+      {node.content}
+    </Text>
+  ),
+  textgroup: (node: ASTNode, children: React.ReactNode[], parent: ASTNode[], styles: MarkdownStyles) => (
+    <Text key={node.key} selectable style={markdownTextStyle(styles, 'textgroup')}>
+      {children}
+    </Text>
+  ),
+  hardbreak: (node: ASTNode, children: React.ReactNode[], parent: ASTNode[], styles: MarkdownStyles) => (
+    <Text key={node.key} selectable style={markdownTextStyle(styles, 'hardbreak')}>
+      {'\n'}
+    </Text>
+  ),
+  softbreak: (node: ASTNode, children: React.ReactNode[], parent: ASTNode[], styles: MarkdownStyles) => (
+    <Text key={node.key} selectable style={markdownTextStyle(styles, 'softbreak')}>
+      {'\n'}
+    </Text>
+  ),
+  inline: (node: ASTNode, children: React.ReactNode[], parent: ASTNode[], styles: MarkdownStyles) => (
+    <Text key={node.key} selectable style={markdownTextStyle(styles, 'inline')}>
+      {children}
+    </Text>
+  ),
+  span: (node: ASTNode, children: React.ReactNode[], parent: ASTNode[], styles: MarkdownStyles) => (
+    <Text key={node.key} selectable style={markdownTextStyle(styles, 'span')}>
+      {children}
+    </Text>
+  ),
   math_inline: (
     node: ASTNode,
     children: React.ReactNode[],
     parent: ASTNode[],
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    styles: any,
+    styles: MarkdownStyles,
   ) => (
     <Katex
       key={node.key}
       expression={node.content}
       style={{
-        ...styles.math,
+        ...markdownFlattenedTextStyle(styles, 'math'),
         backgroundColor: 'transparent',
       }}
     />
@@ -113,15 +242,14 @@ const markdownRules: RenderRules = {
     node: ASTNode,
     children: React.ReactNode[],
     parent: ASTNode[],
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    styles: any,
+    styles: MarkdownStyles,
   ) => (
-    <View key={node.key} style={styles.mathBlock}>
+    <View key={node.key} style={markdownViewStyle(styles, 'mathBlock')}>
       <Katex
         expression={node.content}
         displayMode={true}
         style={{
-          ...styles.math,
+          ...markdownFlattenedTextStyle(styles, 'math'),
           backgroundColor: 'transparent',
         }}
       />
