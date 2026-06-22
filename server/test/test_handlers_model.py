@@ -113,10 +113,20 @@ class TestModelHandlers(unittest.TestCase):
     @patch('handlers.model_handlers.update_operator')
     @patch('handlers.model_handlers.get_model')
     @patch('handlers.model_handlers.get_all_operators')
+    @patch('handlers.model_handlers.get_table_records')
     @patch('handlers.model_handlers.get_table_record')
     @patch('handlers.model_handlers.create_table_record')
-    def test_refresh_models(self, mock_create, mock_get_record, mock_get_ops, mock_get_model, mock_update_op):
+    def test_refresh_models(
+        self,
+        mock_create,
+        mock_get_record,
+        mock_get_records,
+        mock_get_ops,
+        mock_get_model,
+        mock_update_op,
+    ):
         mock_get_model.return_value = []
+        mock_get_records.return_value = []
         
         op = MagicMock()
         op.operator = "op1"
