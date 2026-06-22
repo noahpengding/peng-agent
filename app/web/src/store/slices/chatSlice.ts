@@ -2,6 +2,8 @@ import { createSlice, createAsyncThunk, PayloadAction } from '@reduxjs/toolkit';
 import { Message, UploadedImage } from '@/types/ChatInterface.types';
 import { ChatService } from '../../services/chatService';
 import { fetchBaseModels } from './modelSlice';
+import { parsePythonBytes, binaryToDataUrl } from '../../utils/imageUtils';
+import { extractGeneratedImageUrl, isImageGenerationToolCall } from '@/utils/generatedImageUtils';
 
 interface SendMessageArgs {
   user_name: string;
@@ -68,6 +70,18 @@ const extractChatIdFromChunk = (chunk: string): number | null => {
   if (!match) return null;
   const id = Number(match[0]);
   return Number.isInteger(id) ? id : null;
+};
+
+const buildStreamMessageKey = (
+  messageId: string,
+  type: Message['type'],
+  ordinal: number
+): string => `${messageId}:${type ?? 'assistant'}:${ordinal}`;
+
+const hasImageGenerationToolCall = (messages: Message[], messageId: string): boolean => {
+  return messages.some((message) => {
+    return message.messageId === messageId && message.type === 'tool_calls' && isImageGenerationToolCall(message.content);
+  });
 };
 
 // Async thunk for sending message
@@ -159,37 +173,58 @@ const chatSlice = createSlice({
     // Actions for streaming
     handleChunk: (state, action: PayloadAction<{ chunk: string; type: string; done: boolean; messageId: string }>) => {
       const { chunk, type, done, messageId } = action.payload;
-      const normalizedType = type?.trim() as Message['type'];
+      let normalizedType = type?.trim() as Message['type'];
 
       if (done && !chunk) return;
       if (!normalizedType || !SUPPORTED_CHUNK_TYPES.includes(normalizedType)) return;
 
-      if (normalizedType === 'output_text') {
-        // Collapse intermediate chunks only after final text starts streaming.
-        for (let i = state.messages.length - 1; i >= 0; i--) {
-          const message = state.messages[i];
-          if (message.messageId === messageId) {
-            if (message.type === 'reasoning_summary' || message.type === 'tool_calls' || message.type === 'tool_output') {
-              message.folded = true;
-            }
-          }
-        }
+      const lastMessage = state.messages[state.messages.length - 1];
+      const isGeneratedImageToolOutput = normalizedType === 'tool_output' && hasImageGenerationToolCall(state.messages, messageId);
+      const generatedImageUrl = isGeneratedImageToolOutput ? extractGeneratedImageUrl(chunk) : null;
 
-        const lastMessage = state.messages[state.messages.length - 1];
+      // Detect binary image in tool_output or continuation of a binary output reclassified as output_text
+      if (normalizedType === 'tool_output' && chunk.trim().startsWith("b'")) {
+        normalizedType = 'output_text';
+      } else if (isGeneratedImageToolOutput) {
+        normalizedType = 'output_text';
+      } else if (lastMessage && lastMessage.type === 'output_text' && lastMessage.messageId === messageId && lastMessage.content.startsWith("b'")) {
+        normalizedType = 'output_text';
+      }
+
+      if (normalizedType === 'output_text') {
         const isOutputContinuation = lastMessage && lastMessage.type === 'output_text' && lastMessage.messageId === messageId;
 
         if (isOutputContinuation) {
-          lastMessage.content += chunk;
+          if (generatedImageUrl) {
+            lastMessage.images = lastMessage.images || [];
+            lastMessage.images.push(generatedImageUrl);
+          } else {
+            lastMessage.content += chunk;
+          }
         } else {
+          // Collapse only the trailing chunk block for this streamed turn.
+          if (lastMessage?.messageId === messageId) {
+            for (let i = state.messages.length - 1; i >= 0; i--) {
+              const message = state.messages[i];
+              if (message.messageId !== messageId) {
+                break;
+              }
+              if (message.type === 'reasoning_summary' || message.type === 'tool_calls' || message.type === 'tool_output') {
+                message.folded = true;
+              }
+            }
+          }
+
           state.messages.push({
             role: 'assistant',
-            content: chunk,
+            content: generatedImageUrl ? '' : chunk,
+            images: generatedImageUrl ? [generatedImageUrl] : undefined,
             type: 'output_text',
             messageId,
+            clientKey: buildStreamMessageKey(messageId, 'output_text', state.messages.length),
           });
         }
       } else {
-        const lastMessage = state.messages[state.messages.length - 1];
         const isContinuation = lastMessage && lastMessage.type === normalizedType && lastMessage.messageId === messageId;
 
         if (isContinuation) {
@@ -201,20 +236,36 @@ const chatSlice = createSlice({
             type: normalizedType as Message['type'],
             folded: false,
             messageId,
+            clientKey: buildStreamMessageKey(messageId, normalizedType as Message['type'], state.messages.length),
           });
         }
       }
     },
     finishMessage: (state, action: PayloadAction<{ messageId: string }>) => {
       const { messageId } = action.payload;
+      let hasSeenTargetMessage = false;
       for (let i = state.messages.length - 1; i >= 0; i--) {
         const m = state.messages[i];
         if (m.messageId === messageId) {
+          hasSeenTargetMessage = true;
+          // Process binary tool output that was reclassified as output_text
+          if (m.type === 'output_text' && m.content.trim().startsWith("b'")) {
+            const bytes = parsePythonBytes(m.content);
+            if (bytes) {
+              const dataUrl = binaryToDataUrl(bytes);
+              m.images = m.images || [];
+              m.images.push(dataUrl);
+              m.content = ''; // Clear the raw binary string
+            }
+          }
+
           if (m.type && m.type !== 'output_text' && m.type !== 'assistant' && m.type !== 'user') {
             m.folded = true;
           } else if (m.type === 'output_text') {
             m.content = m.content.replace(/\n\n+/g, '\n');
           }
+        } else if (hasSeenTargetMessage) {
+          break;
         }
       }
     },
@@ -224,13 +275,19 @@ const chatSlice = createSlice({
     },
     attachChatIdToMessage: (state, action: PayloadAction<{ messageId: string; chatId: number }>) => {
       const { messageId, chatId } = action.payload;
+      let hasSeenTargetMessage = false;
       for (let i = state.messages.length - 1; i >= 0; i--) {
         const message = state.messages[i];
-        if (message.messageId === messageId && message.type === 'output_text') {
-          message.chatId = chatId;
-          message.feedback = message.feedback || 'no_response';
-          message.feedbackUpdating = false;
-          break; // Usually only one output_text per messageId
+        if (message.messageId === messageId) {
+          hasSeenTargetMessage = true;
+          if (message.type === 'output_text') {
+            message.chatId = chatId;
+            message.feedback = message.feedback || 'no_response';
+            message.feedbackUpdating = false;
+            break; // Usually only one output_text per messageId
+          }
+        } else if (hasSeenTargetMessage) {
+          break;
         }
       }
     },
@@ -253,6 +310,7 @@ const chatSlice = createSlice({
           role: 'assistant',
           content: 'Sorry, I encountered an error.',
           type: 'output_text',
+          clientKey: `error:${state.messages.length}`,
         });
       })
       .addCase(submitMessageFeedback.pending, (state, action) => {

@@ -12,10 +12,12 @@ class Config(BaseModel):
     port: int
     s3_url: str
     s3_bucket: str
+    s3_public_bucket: str
     s3_access_key: str
     s3_secret_key: str
     s3_base_path: str
     s3_region: str
+    webdav_public_url: str
     qdrant_host: str
     qdrant_port: int
     default_operator: str
@@ -37,6 +39,8 @@ class Config(BaseModel):
     jwt_secret_key: str
     admin_password: str
     tavily_api_key: str
+    image_model_operator: str
+    image_model: str
     web_search_max_results: int
     crawler4ai_url: str
     input_max_length: int
@@ -62,6 +66,12 @@ try:
         "s3_bucket": os.environ.get("S3_BUCKET")
         if os.environ.get("S3_BUCKET")
         else "test",
+        "s3_public_bucket": os.environ.get("S3_PUBLIC_BUCKET")
+        if os.environ.get("S3_PUBLIC_BUCKET")
+        else "test-public",
+        "webdav_public_url": os.environ.get("WEBDAV_PUBLIC_URL")
+        if os.environ.get("WEBDAV_PUBLIC_URL")
+        else "http://localhost:9000/test-public",
         "s3_access_key": os.environ.get("S3_ACCESS_KEY")
         if os.environ.get("S3_ACCESS_KEY")
         else "minioadmin",
@@ -143,6 +153,12 @@ try:
         "tavily_api_key": os.environ.get("TAVILY_API_KEY")
         if os.environ.get("TAVILY_API_KEY")
         else "tavily_api_key",
+        "image_model_operator": os.environ.get("IMAGE_MODEL_OPERATOR")
+        if os.environ.get("IMAGE_MODEL_OPERATOR")
+        else "openai",
+        "image_model": os.environ.get("IMAGE_MODEL")
+        if os.environ.get("IMAGE_MODEL")
+        else "gpt-image-2",
         "web_search_max_results": int(os.environ.get("WEB_SEARCH_MAX_RESULTS"))
         if os.environ.get("WEB_SEARCH_MAX_RESULTS")
         else 5,

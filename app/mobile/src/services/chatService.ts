@@ -17,32 +17,39 @@ interface ChatRequest {
 
 type FeedbackValue = 'upvote' | 'downvote' | 'no_response';
 
-const createPayloadLineProcessor = (
-  onChunk: (chunk: string, type: string, done: boolean) => void
-) => {
-  return (line: string): boolean => {
-    const trimmed = line.trim();
-    if (!trimmed) return false;
+interface StreamPayload {
+  chunk: string;
+  type: string;
+  done: boolean;
+}
 
-    const normalized = trimmed.startsWith('data:') ? trimmed.slice(5).trim() : trimmed;
-    if (!normalized) return false;
+const STREAM_BATCH_WINDOW_MS = 100;
 
-    try {
-      const data = JSON.parse(normalized);
-      onChunk(data.chunk, data.type, data.done);
-      return Boolean(data.done);
-    } catch {
-      // Ignore malformed or partial lines.
-      return false;
-    }
-  };
+const parsePayloadLine = (line: string): StreamPayload | null => {
+  const trimmed = line.trim();
+  if (!trimmed) return null;
+
+  const normalized = trimmed.startsWith('data:') ? trimmed.slice(5).trim() : trimmed;
+  if (!normalized) return null;
+
+  try {
+    const data = JSON.parse(normalized) as Partial<StreamPayload>;
+    return {
+      chunk: typeof data.chunk === 'string' ? data.chunk : String(data.chunk ?? ''),
+      type: typeof data.type === 'string' ? data.type : '',
+      done: Boolean(data.done),
+    };
+  } catch {
+    // Ignore malformed or partial lines.
+    return null;
+  }
 };
 
 const sendMessageWithXhr = (
   apiUrl: string,
   request: ChatRequest,
   token: string | null,
-  processPayloadLine: (line: string) => boolean,
+  onChunk: (chunk: string, type: string, done: boolean) => void,
   onComplete: () => void,
   onError: (error: Error) => void
 ): Promise<void> => {
@@ -51,6 +58,63 @@ const sendMessageWithXhr = (
     let cursor = 0;
     let buffer = '';
     let completed = false;
+    let batchTimer: ReturnType<typeof setTimeout> | null = null;
+    let queuedPayloads: StreamPayload[] = [];
+
+    const clearBatchTimer = () => {
+      if (batchTimer !== null) {
+        clearTimeout(batchTimer);
+        batchTimer = null;
+      }
+    };
+
+    const flushQueuedPayloads = () => {
+      clearBatchTimer();
+      if (queuedPayloads.length === 0) {
+        return;
+      }
+
+      const pendingPayloads = queuedPayloads;
+      queuedPayloads = [];
+
+      for (const payload of pendingPayloads) {
+        onChunk(payload.chunk, payload.type, payload.done);
+      }
+    };
+
+    const scheduleBatchFlush = () => {
+      if (batchTimer !== null) {
+        return;
+      }
+
+      batchTimer = setTimeout(() => {
+        batchTimer = null;
+        flushQueuedPayloads();
+      }, STREAM_BATCH_WINDOW_MS);
+    };
+
+    const queuePayload = (payload: StreamPayload): boolean => {
+      if (payload.done) {
+        flushQueuedPayloads();
+        onChunk(payload.chunk, payload.type, true);
+        completed = true;
+        return true;
+      }
+
+      const lastQueuedPayload = queuedPayloads[queuedPayloads.length - 1];
+      if (lastQueuedPayload && lastQueuedPayload.type === payload.type) {
+        lastQueuedPayload.chunk += payload.chunk;
+      } else {
+        if (lastQueuedPayload && lastQueuedPayload.type !== payload.type) {
+          flushQueuedPayloads();
+        }
+
+        queuedPayloads.push({ ...payload });
+      }
+
+      scheduleBatchFlush();
+      return false;
+    };
 
     const processDelta = () => {
       const currentText = xhr.responseText || '';
@@ -65,7 +129,9 @@ const sendMessageWithXhr = (
 
       for (const line of lines) {
         if (completed) break;
-        completed = processPayloadLine(line);
+        const payload = parsePayloadLine(line);
+        if (!payload) continue;
+        completed = queuePayload(payload);
       }
     };
 
@@ -82,22 +148,32 @@ const sendMessageWithXhr = (
       processDelta();
 
       if (buffer.trim() && !completed) {
-        completed = processPayloadLine(buffer);
+        const payload = parsePayloadLine(buffer);
+        if (payload) {
+          completed = queuePayload(payload);
+        }
         buffer = '';
       }
 
+      flushQueuedPayloads();
+
       if (xhr.status < 200 || xhr.status >= 300) {
+        clearBatchTimer();
+        queuedPayloads = [];
         const error = new Error(`API error (${xhr.status}): ${xhr.responseText || 'Request failed'}`);
         onError(error);
         reject(error);
         return;
       }
 
+      clearBatchTimer();
       onComplete();
       resolve();
     };
 
     xhr.onerror = () => {
+      clearBatchTimer();
+      queuedPayloads = [];
       const error = new Error('Network request failed');
       onError(error);
       reject(error);
@@ -126,11 +202,9 @@ export const ChatService = {
       // Get auth token from storage
       const token = await storage.getItem('access_token');
 
-      const processPayloadLine = createPayloadLineProcessor(onChunk);
-
       // React Native fetch buffers stream chunks until request completion.
       // We use XHR with LOADING events for incremental parsing and live rendering.
-      await sendMessageWithXhr(apiUrl, request, token, processPayloadLine, onComplete, onError);
+      await sendMessageWithXhr(apiUrl, request, token, onChunk, onComplete, onError);
     } catch (error) {
       if (error instanceof Error) {
         onError(error);

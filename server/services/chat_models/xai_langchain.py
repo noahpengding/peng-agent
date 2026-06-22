@@ -152,8 +152,8 @@ class CustomXAIResponse(BaseChatModel):
         return super().bind(**kwargs)
 
     def list_models(self):
-        response = self.client.models.list()
-        models = [model.id for model in response.data]
+        response = self.client.models.list_language_models()
+        models = [model.name for model in response]
         return "\n".join(models)
 
     def list_parameters(self):

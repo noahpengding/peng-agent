@@ -7,6 +7,7 @@ import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { vscDarkPlus } from 'react-syntax-highlighter/dist/esm/styles/prism';
 import 'katex/dist/katex.min.css';
 import { Message } from '@/types/ChatInterface.types';
+import ImageModal from './ImageModal';
 
 interface CodeBlockProps extends React.HTMLAttributes<HTMLElement> {
   inline?: boolean;
@@ -86,7 +87,87 @@ interface MessageItemProps {
   onSubmitFeedback: (messageId: string, chatId: number, feedback: 'upvote' | 'downvote' | 'no_response') => void;
 }
 
+interface MessageImageProps {
+  src: string;
+  onSelect: (src: string) => void;
+}
+
+const MAX_MESSAGE_IMAGE_WIDTH = 640;
+const MAX_MESSAGE_IMAGE_HEIGHT = 720;
+
+const getContainedImageWidth = (width: number, height: number) => {
+  if (!width || !height) {
+    return undefined;
+  }
+
+  const viewportMaxHeight =
+    typeof window === 'undefined' ? MAX_MESSAGE_IMAGE_HEIGHT : Math.floor(window.innerHeight * 0.7);
+  const maxHeight = Math.min(MAX_MESSAGE_IMAGE_HEIGHT, viewportMaxHeight);
+  const scale = Math.min(1, MAX_MESSAGE_IMAGE_WIDTH / width, maxHeight / height);
+  return Math.round(width * scale);
+};
+
+const MessageImage = React.memo(({ src, onSelect }: MessageImageProps) => {
+  const [hasLoadError, setHasLoadError] = useState(false);
+  const [displayWidth, setDisplayWidth] = useState<number | undefined>();
+
+  const imageFrameStyle = displayWidth
+    ? ({ '--message-image-width': `${displayWidth}px` } as React.CSSProperties)
+    : undefined;
+
+  if (hasLoadError) {
+    return (
+      <div className="message-image-document">
+        <iframe
+          src={src}
+          title="Message image preview"
+          className="message-image-frame"
+          loading="lazy"
+          referrerPolicy="no-referrer"
+          sandbox=""
+        />
+        <span className="message-image-fallback-note">
+          Preview opened with browser fallback.
+        </span>
+        <a href={src} target="_blank" rel="noreferrer">
+          Open image
+        </a>
+      </div>
+    );
+  }
+
+  return (
+    <button
+      type="button"
+      className={`message-image-container clickable ${displayWidth ? 'is-measured' : ''}`}
+      style={imageFrameStyle}
+      onClick={(event) => {
+        event.stopPropagation();
+        onSelect(src);
+      }}
+      aria-label="Open message image"
+    >
+      <img
+        src={src}
+        alt="Message image"
+        className="message-image"
+        loading="lazy"
+        decoding="async"
+        onError={() => setHasLoadError(true)}
+        onLoad={(event) => {
+          const { naturalWidth, naturalHeight } = event.currentTarget;
+          setDisplayWidth(getContainedImageWidth(naturalWidth, naturalHeight));
+        }}
+      />
+    </button>
+  );
+});
+
+MessageImage.displayName = 'MessageImage';
+
 export const MessageItem = React.memo(({ message, index, isFolded, onToggleFold, setRef, onSubmitFeedback }: MessageItemProps) => {
+  const [selectedImage, setSelectedImage] = useState<string | null>(null);
+
   const messageClass =
     message.role === 'user'
       ? 'user-message'
@@ -161,14 +242,12 @@ export const MessageItem = React.memo(({ message, index, isFolded, onToggleFold,
           {message.images && message.images.length > 0 && (
             <div className="message-images-container">
               {message.images.map((imgSrc, imgIndex) => (
-                <div
-                  key={imgIndex}
-                  className="message-image-container"
-                >
-                  <img src={imgSrc} alt="Message attachment" className="message-image" />
-                </div>
+                <MessageImage key={`${imgSrc}-${imgIndex}`} src={imgSrc} onSelect={setSelectedImage} />
               ))}
             </div>
+          )}
+          {selectedImage && (
+            <ImageModal src={selectedImage} onClose={() => setSelectedImage(null)} />
           )}
           <div className="message-text markdown-content">
             <ReactMarkdown

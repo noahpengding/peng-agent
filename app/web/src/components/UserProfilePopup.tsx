@@ -19,6 +19,7 @@ const UserProfilePopup: React.FC<UserProfilePopupProps> = ({ isOpen, onClose, av
   const [newMemory, setNewMemory] = useState('');
   const [regeneratingToken, setRegeneratingToken] = useState(false);
   const getProfileRef = React.useRef(getProfile);
+  const popupRef = React.useRef<HTMLDivElement | null>(null);
 
   const fetchProfile = useCallback(async () => {
     setLoading(true);
@@ -38,6 +39,53 @@ const UserProfilePopup: React.FC<UserProfilePopupProps> = ({ isOpen, onClose, av
       fetchProfile();
     }
   }, [isOpen, fetchProfile]);
+
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const previouslyFocused = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    const dialog = popupRef.current;
+    dialog?.focus();
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        event.preventDefault();
+        onClose();
+        return;
+      }
+
+      if (event.key !== 'Tab' || !dialog) return;
+
+      const focusable = Array.from(
+        dialog.querySelectorAll<HTMLElement>(
+          'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
+        )
+      );
+
+      if (focusable.length === 0) {
+        event.preventDefault();
+        dialog.focus();
+        return;
+      }
+
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
+      }
+    };
+
+    document.addEventListener('keydown', handleKeyDown);
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown);
+      previouslyFocused?.focus();
+    };
+  }, [isOpen, onClose]);
 
   const handleSave = async () => {
     if (!profile) return;
@@ -115,10 +163,15 @@ const UserProfilePopup: React.FC<UserProfilePopupProps> = ({ isOpen, onClose, av
     >
       <div
         className="popup-content user-profile-popup"
+        ref={popupRef}
         onClick={(e) => e.stopPropagation()}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="profile-popup-title"
+        tabIndex={-1}
       >
         <div className="popup-header">
-          <h3>User Profile</h3>
+          <h3 id="profile-popup-title">User Profile</h3>
           <div className="popup-actions">
             <button
               className="update-button"

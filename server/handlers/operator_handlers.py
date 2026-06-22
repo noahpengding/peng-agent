@@ -11,8 +11,18 @@ from io import BytesIO
 import pandas as pd
 
 
+def _id_sort_key(record: dict) -> tuple[int, int | str]:
+    value = record.get("id")
+    if value in (None, ""):
+        return (2, "")
+    try:
+        return (0, int(value))
+    except (TypeError, ValueError):
+        return (1, str(value).casefold())
+
+
 def get_operator(operator_name: str) -> OperatorConfig:
-    operator = get_table_record("operator", operator_name)
+    operator = get_table_record("operator", operator_name, db_backed=False)
     return OperatorConfig(**operator) if operator else None
 
 
@@ -25,18 +35,20 @@ def update_operator() -> None:
     operators = operators.fillna("")
     operators = [OperatorConfig(**row.to_dict()) for _, row in operators.iterrows()]
     for operator in operators:
-        existing = get_table_record("operator", operator.operator)
+        existing = get_table_record("operator", operator.operator, db_backed=False)
         if existing:
             update_table_record(
                 "operator",
                 operator.to_dict(),
                 {"operator": operator.operator},
                 redis_id="operator",
+                db_backed=False,
             )
         else:
-            create_table_record("operator", operator.to_dict(), redis_id="operator")
+            create_table_record("operator", operator.to_dict(), redis_id="operator", db_backed=False)
 
 
 def get_all_operators() -> list[OperatorConfig]:
-    operators = get_table_records("operator")
-    return [OperatorConfig(**operator) for operator in operators] if operators else []
+    operators = get_table_records("operator", db_backed=False)
+    operators = sorted(operators, key=_id_sort_key) if operators else []
+    return [OperatorConfig(**operator) for operator in operators]

@@ -18,11 +18,42 @@ const ModelInterface: React.FC = () => {
 
   const [error, setError] = useState<string>('');
 
+  const fetchModels = async () => {
+    try {
+      const fetchedModels = await getAllModels();
+      setModels(fetchedModels);
+    } catch (error) {
+      setError(`Failed to refresh models: ${error}`);
+    }
+  };
+
   // Load models on initial render
   useEffect(() => {
     fetchModels();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  const applyFilters = () => {
+    let result = [...models];
+
+    // Apply search filter
+    if (searchTerm) {
+      result = result.filter((model) => model.model_name.toLowerCase().includes(searchTerm.toLowerCase()));
+    }
+
+    // Apply operator filter
+    if (selectedOperator) {
+      result = result.filter((model) => model.operator === selectedOperator);
+    }
+
+    // Apply availability filter
+    if (availabilityFilter !== 'all') {
+      const isAvailable = availabilityFilter === 'available';
+      result = result.filter((model) => model.isAvailable === isAvailable);
+    }
+
+    setFilteredModels(result);
+  };
 
   // Apply filters when models or filter criteria change
   useEffect(() => {
@@ -39,14 +70,6 @@ const ModelInterface: React.FC = () => {
     }
   }, [models]);
 
-  const fetchModels = async () => {
-    try {
-      const fetchedModels = await getAllModels();
-      setModels(fetchedModels);
-    } catch (error) {
-      setError(`Failed to refresh models: ${error}`);
-    }
-  };
 
   const handleRefresh = async () => {
     try {
@@ -156,27 +179,6 @@ const ModelInterface: React.FC = () => {
     }
   };
 
-  const applyFilters = () => {
-    let result = [...models];
-
-    // Apply search filter
-    if (searchTerm) {
-      result = result.filter((model) => model.model_name.toLowerCase().includes(searchTerm.toLowerCase()));
-    }
-
-    // Apply operator filter
-    if (selectedOperator) {
-      result = result.filter((model) => model.operator === selectedOperator);
-    }
-
-    // Apply availability filter
-    if (availabilityFilter !== 'all') {
-      const isAvailable = availabilityFilter === 'available';
-      result = result.filter((model) => model.isAvailable === isAvailable);
-    }
-
-    setFilteredModels(result);
-  };
 
   return (
     <div className="model-container">
@@ -220,6 +222,7 @@ const ModelInterface: React.FC = () => {
           <div className="models-header">
             <div className="search-box">
               <input
+                id="search-model-name"
                 type="text"
                 className="search-input"
                 placeholder="Search by model name..."
@@ -268,6 +271,7 @@ const ModelInterface: React.FC = () => {
                         <td className="modality-cell">{renderModalityButtons(model, 'output')}</td>
                         <td>
                           <select
+                            id={`reasoning-effect-${model.id}`}
                             className="reasoning-effect-select"
                             value={model.reasoning_effect}
                             onChange={(e) => handleModelReasoningEffect(model.model_name, e.target.value)}

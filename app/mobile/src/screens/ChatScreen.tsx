@@ -3,6 +3,8 @@ import {
   ActivityIndicator,
   Image,
   Modal,
+  NativeScrollEvent,
+  NativeSyntheticEvent,
   Pressable,
   ScrollView,
   View,
@@ -13,6 +15,11 @@ import {
   StyleSheet,
   KeyboardAvoidingView,
   Platform,
+  useWindowDimensions,
+  type ImageLoadEventData,
+  type StyleProp,
+  type TextStyle,
+  type ViewStyle,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useSelector, useDispatch } from 'react-redux';
@@ -37,10 +44,10 @@ import { useRAGApi } from '@/hooks/RAGAPI';
 import { UploadService } from '@/services/uploadService';
 import Markdown, { 
   ASTNode, 
-  RenderRules 
+  RenderRules,
+  openUrl,
 } from 'react-native-markdown-display';
 import MarkdownIt from 'markdown-it';
-// @ts-expect-error - markdown-it-katex lacks types
 import markdownItKatex from 'markdown-it-katex';
 import Katex from 'react-native-katex';
 import { Colors } from '../utils/colors';
@@ -50,19 +57,183 @@ const md = new MarkdownIt({
   typographer: true,
 }).use(markdownItKatex);
 
+const MemoizedMarkdown = React.memo(Markdown);
+
+const AUTO_SCROLL_THRESHOLD_PX = 120;
+const FLAT_LIST_INITIAL_RENDER_COUNT = 12;
+const FLAT_LIST_BATCH_RENDER_COUNT = 8;
+const FLAT_LIST_WINDOW_SIZE = 5;
+const MAX_MESSAGE_IMAGE_WIDTH = 360;
+const MAX_MESSAGE_IMAGE_HEIGHT = 520;
+const FALLBACK_MESSAGE_IMAGE_HEIGHT = 260;
+
+const getMessageKey = (item: Message, index: number): string =>
+  item.clientKey || `${item.messageId || item.type || item.role}-${index}`;
+
+const remoteMessageImageStyle = {
+  width: '100%',
+  height: '100%',
+} as const;
+
+type ImageSize = {
+  width: number;
+  height: number;
+};
+
+type MarkdownStyles = Record<string, unknown>;
+type MarkdownInheritedStyle = StyleProp<TextStyle>;
+
+const getContainedImageSize = (imageSize: ImageSize | null, maxWidth: number): ImageSize => {
+  if (!imageSize?.width || !imageSize.height) {
+    return {
+      width: maxWidth,
+      height: FALLBACK_MESSAGE_IMAGE_HEIGHT,
+    };
+  }
+
+  const scale = Math.min(1, maxWidth / imageSize.width, MAX_MESSAGE_IMAGE_HEIGHT / imageSize.height);
+
+  return {
+    width: Math.round(imageSize.width * scale),
+    height: Math.round(imageSize.height * scale),
+  };
+};
+
+const trimMarkdownCodeContent = (content: string): string =>
+  content.endsWith('\n') ? content.substring(0, content.length - 1) : content;
+
+const markdownTextStyle = (styles: MarkdownStyles, key: string): StyleProp<TextStyle> =>
+  styles[key] as StyleProp<TextStyle>;
+
+const markdownViewStyle = (styles: MarkdownStyles, key: string): StyleProp<ViewStyle> =>
+  styles[key] as StyleProp<ViewStyle>;
+
+const markdownFlattenedTextStyle = (styles: MarkdownStyles, key: string): TextStyle =>
+  StyleSheet.flatten(markdownTextStyle(styles, key)) ?? {};
+
+const handleMarkdownLinkPress = (url: string, onLinkPress?: (url: string) => boolean) => {
+  if (!url) return;
+  if (onLinkPress) {
+    if (onLinkPress(url)) {
+      openUrl(url);
+    }
+    return;
+  }
+  openUrl(url);
+};
+
 const markdownRules: RenderRules = {
+  strong: (node: ASTNode, children: React.ReactNode[], parent: ASTNode[], styles: MarkdownStyles) => (
+    <Text key={node.key} selectable style={markdownTextStyle(styles, 'strong')}>
+      {children}
+    </Text>
+  ),
+  em: (node: ASTNode, children: React.ReactNode[], parent: ASTNode[], styles: MarkdownStyles) => (
+    <Text key={node.key} selectable style={markdownTextStyle(styles, 'em')}>
+      {children}
+    </Text>
+  ),
+  s: (node: ASTNode, children: React.ReactNode[], parent: ASTNode[], styles: MarkdownStyles) => (
+    <Text key={node.key} selectable style={markdownTextStyle(styles, 's')}>
+      {children}
+    </Text>
+  ),
+  code_inline: (
+    node: ASTNode,
+    children: React.ReactNode[],
+    parent: ASTNode[],
+    styles: MarkdownStyles,
+    inheritedStyles: MarkdownInheritedStyle = {},
+  ) => (
+    <Text key={node.key} selectable style={[inheritedStyles, markdownTextStyle(styles, 'code_inline')]}>
+      {node.content}
+    </Text>
+  ),
+  code_block: (
+    node: ASTNode,
+    children: React.ReactNode[],
+    parent: ASTNode[],
+    styles: MarkdownStyles,
+    inheritedStyles: MarkdownInheritedStyle = {},
+  ) => (
+    <Text key={node.key} selectable style={[inheritedStyles, markdownTextStyle(styles, 'code_block')]}>
+      {trimMarkdownCodeContent(node.content)}
+    </Text>
+  ),
+  fence: (
+    node: ASTNode,
+    children: React.ReactNode[],
+    parent: ASTNode[],
+    styles: MarkdownStyles,
+    inheritedStyles: MarkdownInheritedStyle = {},
+  ) => (
+    <Text key={node.key} selectable style={[inheritedStyles, markdownTextStyle(styles, 'fence')]}>
+      {trimMarkdownCodeContent(node.content)}
+    </Text>
+  ),
+  link: (
+    node: ASTNode,
+    children: React.ReactNode[],
+    parent: ASTNode[],
+    styles: MarkdownStyles,
+    onLinkPress?: (url: string) => boolean,
+  ) => (
+    <Text
+      key={node.key}
+      selectable
+      style={markdownTextStyle(styles, 'link')}
+      onPress={() => handleMarkdownLinkPress(node.attributes.href, onLinkPress)}
+    >
+      {children}
+    </Text>
+  ),
+  text: (
+    node: ASTNode,
+    children: React.ReactNode[],
+    parent: ASTNode[],
+    styles: MarkdownStyles,
+    inheritedStyles: MarkdownInheritedStyle = {},
+  ) => (
+    <Text key={node.key} selectable style={[inheritedStyles, markdownTextStyle(styles, 'text')]}>
+      {node.content}
+    </Text>
+  ),
+  textgroup: (node: ASTNode, children: React.ReactNode[], parent: ASTNode[], styles: MarkdownStyles) => (
+    <Text key={node.key} selectable style={markdownTextStyle(styles, 'textgroup')}>
+      {children}
+    </Text>
+  ),
+  hardbreak: (node: ASTNode, children: React.ReactNode[], parent: ASTNode[], styles: MarkdownStyles) => (
+    <Text key={node.key} selectable style={markdownTextStyle(styles, 'hardbreak')}>
+      {'\n'}
+    </Text>
+  ),
+  softbreak: (node: ASTNode, children: React.ReactNode[], parent: ASTNode[], styles: MarkdownStyles) => (
+    <Text key={node.key} selectable style={markdownTextStyle(styles, 'softbreak')}>
+      {'\n'}
+    </Text>
+  ),
+  inline: (node: ASTNode, children: React.ReactNode[], parent: ASTNode[], styles: MarkdownStyles) => (
+    <Text key={node.key} selectable style={markdownTextStyle(styles, 'inline')}>
+      {children}
+    </Text>
+  ),
+  span: (node: ASTNode, children: React.ReactNode[], parent: ASTNode[], styles: MarkdownStyles) => (
+    <Text key={node.key} selectable style={markdownTextStyle(styles, 'span')}>
+      {children}
+    </Text>
+  ),
   math_inline: (
     node: ASTNode,
     children: React.ReactNode[],
     parent: ASTNode[],
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    styles: any,
+    styles: MarkdownStyles,
   ) => (
     <Katex
       key={node.key}
       expression={node.content}
       style={{
-        ...styles.math,
+        ...markdownFlattenedTextStyle(styles, 'math'),
         backgroundColor: 'transparent',
       }}
     />
@@ -71,15 +242,14 @@ const markdownRules: RenderRules = {
     node: ASTNode,
     children: React.ReactNode[],
     parent: ASTNode[],
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    styles: any,
+    styles: MarkdownStyles,
   ) => (
-    <View key={node.key} style={styles.mathBlock}>
+    <View key={node.key} style={markdownViewStyle(styles, 'mathBlock')}>
       <Katex
         expression={node.content}
         displayMode={true}
         style={{
-          ...styles.math,
+          ...markdownFlattenedTextStyle(styles, 'math'),
           backgroundColor: 'transparent',
         }}
       />
@@ -89,17 +259,93 @@ const markdownRules: RenderRules = {
 
 type SelectorType = 'baseModel' | 'knowledgeBase';
 
+const RemoteMessageImage = React.memo(({ uri }: { uri: string }) => {
+  const [hasLoadError, setHasLoadError] = useState(false);
+  const [imageSize, setImageSize] = useState<ImageSize | null>(null);
+  const { width: windowWidth } = useWindowDimensions();
+  const maxImageWidth = Math.max(
+    120,
+    Math.min(MAX_MESSAGE_IMAGE_WIDTH, windowWidth - Typography.spacing.md * 2),
+  );
+  const displaySize = getContainedImageSize(imageSize, maxImageWidth);
+
+  useEffect(() => {
+    let mounted = true;
+
+    Image.getSize(
+      uri,
+      (width, height) => {
+        if (!mounted) return;
+        setImageSize({ width, height });
+      },
+      () => undefined,
+    );
+
+    return () => {
+      mounted = false;
+    };
+  }, [uri]);
+
+  const handleLoad = useCallback((event: NativeSyntheticEvent<ImageLoadEventData>) => {
+    const { width, height } = event.nativeEvent.source;
+    if (!width || !height) return;
+    setImageSize({ width, height });
+  }, []);
+
+  if (hasLoadError) {
+    return (
+      <View style={styles.messageImageFallback}>
+        <MaterialCommunityIcons name="image-broken-variant" size={22} color={Colors.error} />
+        <Text style={styles.messageImageFallbackTitle}>Image failed to load.</Text>
+        <Text selectable numberOfLines={2} style={styles.messageImageFallbackUrl}>
+          {uri}
+        </Text>
+      </View>
+    );
+  }
+
+  return (
+    <View style={[styles.messageImageFrame, displaySize]}>
+      <Image
+        source={{ uri }}
+        style={remoteMessageImageStyle}
+        resizeMode="contain"
+        onLoad={handleLoad}
+        onError={() => setHasLoadError(true)}
+      />
+    </View>
+  );
+});
+
+RemoteMessageImage.displayName = 'RemoteMessageImage';
+
+const MessageImages = React.memo(({ images }: { images?: string[] }) => {
+  if (!images || images.length === 0) {
+    return null;
+  }
+
+  return (
+    <View style={styles.messageImagesContainer}>
+      {images.map((uri, index) => (
+        <RemoteMessageImage key={`${uri}-${index}`} uri={uri} />
+      ))}
+    </View>
+  );
+});
+
+MessageImages.displayName = 'MessageImages';
+
 const MessageItem = React.memo(({ 
   item, 
-  index, 
+  messageKey,
   isFolded, 
   onToggleFold, 
   onFeedback 
 }: { 
   item: Message; 
-  index: number; 
+  messageKey: string;
   isFolded: boolean; 
-  onToggleFold: (index: number, current: boolean) => void;
+  onToggleFold: (messageKey: string, current: boolean) => void;
   onFeedback: (mid: string, cid: number, f: 'upvote' | 'downvote') => void;
 }) => {
   const isFoldable = item.type === 'reasoning_summary' || item.type === 'tool_calls' || item.type === 'tool_output';
@@ -126,7 +372,7 @@ const MessageItem = React.memo(({
         {!isUser ? (
           <>
             {isFoldable && (
-              <Pressable style={styles.foldHeader} onPress={() => onToggleFold(index, isFolded)}>
+              <Pressable style={styles.foldHeader} onPress={() => onToggleFold(messageKey, isFolded)}>
                 <MaterialCommunityIcons
                   name={isFolded ? 'chevron-right' : 'chevron-down'}
                   size={16}
@@ -137,13 +383,16 @@ const MessageItem = React.memo(({
             )}
             {!isFolded && (
               <View>
-                <Markdown 
-                  style={markdownStyles}
-                  markdownit={md}
-                  rules={markdownRules}
-                >
-                  {item.content}
-                </Markdown>
+                <MessageImages images={item.images} />
+                {item.content ? (
+                  <MemoizedMarkdown
+                    style={markdownStyles}
+                    markdownit={md}
+                    rules={markdownRules}
+                  >
+                    {item.content}
+                  </MemoizedMarkdown>
+                ) : null}
                 {item.chatId && item.messageId && item.type === 'output_text' && (
                   <View style={styles.feedbackContainer}>
                     <TouchableOpacity
@@ -175,16 +424,47 @@ const MessageItem = React.memo(({
             )}
           </>
         ) : (
-          <Markdown 
-            style={userMarkdownStyles}
-            markdownit={md}
-            rules={markdownRules}
-          >
-            {item.content}
-          </Markdown>
+          <>
+            <MessageImages images={item.images} />
+            {item.content ? (
+              <MemoizedMarkdown
+                style={userMarkdownStyles}
+                markdownit={md}
+                rules={markdownRules}
+              >
+                {item.content}
+              </MemoizedMarkdown>
+            ) : null}
+          </>
         )}
       </View>
     </View>
+  );
+}, (prevProps, nextProps) => {
+  const prevItem = prevProps.item;
+  const nextItem = nextProps.item;
+
+  const prevImages = prevItem.images || [];
+  const nextImages = nextItem.images || [];
+  const imagesAreEqual =
+    prevImages.length === nextImages.length &&
+    prevImages.every((image, index) => image === nextImages[index]);
+
+  return (
+    prevProps.messageKey === nextProps.messageKey &&
+    prevProps.isFolded === nextProps.isFolded &&
+    prevProps.onToggleFold === nextProps.onToggleFold &&
+    prevProps.onFeedback === nextProps.onFeedback &&
+    prevItem.content === nextItem.content &&
+    prevItem.role === nextItem.role &&
+    prevItem.type === nextItem.type &&
+    prevItem.messageId === nextItem.messageId &&
+    prevItem.clientKey === nextItem.clientKey &&
+    prevItem.chatId === nextItem.chatId &&
+    prevItem.feedback === nextItem.feedback &&
+    prevItem.feedbackUpdating === nextItem.feedbackUpdating &&
+    prevItem.folded === nextItem.folded &&
+    imagesAreEqual
   );
 });
 
@@ -218,8 +498,11 @@ export default function ChatScreen() {
   const [isConfigExpanded, setIsConfigExpanded] = useState(false);
   const [isComposerCollapsed, setIsComposerCollapsed] = useState(false);
   const [attachmentMenuVisible, setAttachmentMenuVisible] = useState(false);
-  const [foldedMessages, setFoldedMessages] = useState<Record<number, boolean>>({});
+  const [foldedMessages, setFoldedMessages] = useState<Record<string, boolean>>({});
   const [isUploading, setIsUploading] = useState(false);
+  const isNearBottomRef = useRef(true);
+  const scrollFrameRef = useRef<number | null>(null);
+  const previousLoadingRef = useRef(isLoading);
 
   useEffect(() => {
     dispatch(fetchBaseModels());
@@ -247,15 +530,50 @@ export default function ChatScreen() {
     };
   }, [dispatch, getCollections, knowledgeBase]);
 
+  const scheduleScrollToEnd = useCallback((animated: boolean) => {
+    if (scrollFrameRef.current !== null) {
+      return;
+    }
+
+    scrollFrameRef.current = requestAnimationFrame(() => {
+      scrollFrameRef.current = null;
+      flatListRef.current?.scrollToEnd({ animated });
+    });
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      if (scrollFrameRef.current !== null) {
+        cancelAnimationFrame(scrollFrameRef.current);
+      }
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!previousLoadingRef.current && isLoading) {
+      isNearBottomRef.current = true;
+      scheduleScrollToEnd(false);
+    } else if (previousLoadingRef.current && !isLoading && isNearBottomRef.current) {
+      scheduleScrollToEnd(true);
+    }
+
+    previousLoadingRef.current = isLoading;
+  }, [isLoading, scheduleScrollToEnd]);
+
   const handleSend = () => {
     if (!input.trim() && uploadedImages.length === 0) {
       return;
     }
 
+    const turnMessageId = Math.random().toString(36).substring(2) + Date.now().toString(36);
+    isNearBottomRef.current = true;
+
     const userMessage = {
       role: 'user',
       content: input,
       type: 'user' as const,
+      messageId: turnMessageId,
+      clientKey: `${turnMessageId}:user`,
       images: uploadedImages.filter((item) => item.contentType.startsWith('image/')).map((item) => item.preview),
     };
 
@@ -408,22 +726,42 @@ export default function ChatScreen() {
     }));
   }, [dispatch, user]);
 
-  const toggleFolded = useCallback((index: number, currentState: boolean) => {
+  const toggleFolded = useCallback((messageKey: string, currentState: boolean) => {
     setFoldedMessages((prev) => ({
       ...prev,
-      [index]: !currentState,
+      [messageKey]: !currentState,
     }));
   }, []);
 
-  const renderItem = useCallback(({ item, index }: { item: Message; index: number }) => (
-    <MessageItem 
-      item={item} 
-      index={index} 
-      isFolded={foldedMessages[index] ?? item.folded ?? false} 
-      onToggleFold={toggleFolded}
-      onFeedback={handleFeedback}
-    />
-  ), [foldedMessages, toggleFolded, handleFeedback]);
+  const handleListScroll = useCallback((event: NativeSyntheticEvent<NativeScrollEvent>) => {
+    const { contentOffset, contentSize, layoutMeasurement } = event.nativeEvent;
+    isNearBottomRef.current =
+      contentOffset.y + layoutMeasurement.height >= contentSize.height - AUTO_SCROLL_THRESHOLD_PX;
+  }, []);
+
+  const handleContentSizeChange = useCallback(() => {
+    if (isNearBottomRef.current || isLoading) {
+      scheduleScrollToEnd(!isLoading);
+    }
+  }, [isLoading, scheduleScrollToEnd]);
+
+  const handleListLayout = useCallback(() => {
+    scheduleScrollToEnd(false);
+  }, [scheduleScrollToEnd]);
+
+  const renderItem = useCallback(({ item, index }: { item: Message; index: number }) => {
+    const messageKey = getMessageKey(item, index);
+
+    return (
+      <MessageItem 
+        item={item}
+        messageKey={messageKey}
+        isFolded={foldedMessages[messageKey] ?? item.folded ?? false}
+        onToggleFold={toggleFolded}
+        onFeedback={handleFeedback}
+      />
+    );
+  }, [foldedMessages, toggleFolded, handleFeedback]);
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
@@ -497,12 +835,19 @@ export default function ChatScreen() {
         <FlatList
           ref={flatListRef}
           data={messages}
-          keyExtractor={(_, index) => index.toString()}
+          keyExtractor={getMessageKey}
           renderItem={renderItem}
           style={{ flex: 1 }}
           contentContainerStyle={styles.listContent}
-          onContentSizeChange={() => flatListRef.current?.scrollToEnd({ animated: true })}
-          onLayout={() => flatListRef.current?.scrollToEnd({ animated: true })}
+          initialNumToRender={FLAT_LIST_INITIAL_RENDER_COUNT}
+          maxToRenderPerBatch={FLAT_LIST_BATCH_RENDER_COUNT}
+          windowSize={FLAT_LIST_WINDOW_SIZE}
+          removeClippedSubviews={Platform.OS === 'android'}
+          keyboardShouldPersistTaps="handled"
+          scrollEventThrottle={16}
+          onScroll={handleListScroll}
+          onContentSizeChange={handleContentSizeChange}
+          onLayout={handleListLayout}
         />
 
         {uploadedImages.length > 0 ? (
@@ -957,6 +1302,38 @@ const styles = StyleSheet.create({
     fontWeight: Typography.weights.black,
     textTransform: 'uppercase',
     letterSpacing: 0.5,
+  },
+  messageImagesContainer: {
+    gap: Typography.spacing.xs,
+    marginBottom: Typography.spacing.xs,
+    alignItems: 'flex-start',
+  },
+  messageImageFrame: {
+    maxWidth: '100%',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    overflow: 'hidden',
+    backgroundColor: Colors.bgDeep,
+  },
+  messageImageFallback: {
+    minHeight: 104,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    backgroundColor: Colors.bgDeep,
+    padding: Typography.spacing.xs,
+    justifyContent: 'center',
+    gap: Typography.spacing['3xs'],
+  },
+  messageImageFallbackTitle: {
+    color: Colors.error,
+    fontSize: Typography.sizes.sm,
+    fontWeight: Typography.weights.bold,
+  },
+  messageImageFallbackUrl: {
+    color: Colors.textDim,
+    fontSize: Typography.sizes.xs,
   },
   composerCollapsedBar: {
     backgroundColor: Colors.bgDeep,

@@ -57,7 +57,7 @@ export const MessageList: React.FC<MessageListProps> = React.memo(({ messages, i
         const isFolded = foldedMessages[index] ?? message.folded ?? false;
 
         return (
-          <div key={message.messageId || `msg-${index}`}>
+          <div key={message.clientKey || message.messageId || `msg-${index}`}>
             <MessageItem
               message={message}
               index={index}

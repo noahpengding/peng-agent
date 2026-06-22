@@ -8,6 +8,8 @@ export interface Message {
   folded?: boolean;
   // messageId to track related messages
   messageId?: string;
+  // clientKey stabilizes React Native list identity while streamed rows update incrementally
+  clientKey?: string;
   // chatId is assigned when a chat turn is fully completed on backend
   chatId?: number;
   // feedback for completed assistant output

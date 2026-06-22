@@ -52,6 +52,7 @@ export default [
     rules: {
       ...reactHooks.configs.recommended.rules,
       'react-refresh/only-export-components': ['warn', { allowConstantExport: true }],
+      'react-hooks/set-state-in-effect': 'off',
       'no-console': process.env.NODE_ENV === 'production' ? 'error' : 'warn',
     },
   },

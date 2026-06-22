@@ -16,7 +16,7 @@ interface InputAreaProps {
   maxTextareaHeight?: number;
 }
 
-export const InputArea: React.FC<InputAreaProps> = ({
+const InputAreaComponent: React.FC<InputAreaProps> = ({
   input,
   setInput,
   s3PathsInput,
@@ -34,6 +34,10 @@ export const InputArea: React.FC<InputAreaProps> = ({
   const [uploadingCount, setUploadingCount] = useState(0);
   const isUploading = uploadingCount > 0;
   const maxAttachments = 10;
+  const isSendEmpty = !input.trim() && uploadedImages.length === 0 && s3PathsInput.trim().length === 0;
+  const isSendDisabled = isLoading || isUploading || isSendEmpty;
+  const uploadButtonLabel = isLoading ? 'Cannot upload while sending message' : isUploading ? 'Upload in progress...' : 'Upload image or PDF';
+  const sendButtonLabel = isLoading ? 'Sending message...' : isUploading ? 'Waiting for upload to finish...' : isSendEmpty ? 'Enter a message or attach a file to send' : 'Send message';
 
   const isImageType = (contentType: string) => contentType.startsWith('image/');
 
@@ -150,6 +154,7 @@ export const InputArea: React.FC<InputAreaProps> = ({
       <form onSubmit={onSubmit} className="input-form">
         <div className="s3-input-row">
           <input
+            id="s3-paths"
             type="text"
             className="s3-input"
             value={s3PathsInput}
@@ -208,6 +213,7 @@ export const InputArea: React.FC<InputAreaProps> = ({
           </div>
           <div className="input-actions">
             <input
+              id="file-upload"
               ref={fileInputRef}
               type="file"
               accept="image/*,application/pdf"
@@ -215,39 +221,47 @@ export const InputArea: React.FC<InputAreaProps> = ({
               className="file-input"
               disabled={isLoading || isUploading}
             />
-            <button
-              type="button"
-              onClick={() => fileInputRef.current?.click()}
-              className="upload-button"
-              title="Upload image or PDF"
-              aria-label="Upload image or PDF"
-              disabled={isLoading || isUploading}
-            >
-              {isUploading ? '⏳' : '📎'}
-            </button>
-            <button
-              type="submit"
-              className="send-button"
-              aria-label={isLoading ? 'Sending message...' : 'Send message'}
-              disabled={isLoading || isUploading || (!input.trim() && uploadedImages.length === 0 && s3PathsInput.trim().length === 0)}
-            >
-              {isLoading ? (
-                <svg
-                  className="send-spinner"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  style={{ animation: 'spin 1s linear infinite', width: '20px', height: '20px' }}
-                >
-                  <circle cx="12" cy="12" r="10" stroke="rgba(255,255,255,0.25)" strokeWidth="3" />
-                  <path d="M12 2a10 10 0 0 1 10 10" stroke="white" strokeWidth="3" strokeLinecap="round" />
-                </svg>
-              ) : (
-                '➤'
-              )}
-            </button>
+            <span className="action-tooltip-wrapper" title={uploadButtonLabel}>
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                className="upload-button"
+                aria-label={uploadButtonLabel}
+                disabled={isLoading || isUploading}
+              >
+                {isUploading ? '⏳' : '📎'}
+              </button>
+            </span>
+            <span className="action-tooltip-wrapper" title={sendButtonLabel}>
+              <button
+                type="submit"
+                className="send-button"
+                aria-label={sendButtonLabel}
+                disabled={isSendDisabled}
+              >
+                {isLoading ? (
+                  <svg
+                    className="send-spinner"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    style={{ animation: 'spin 1s linear infinite', width: '20px', height: '20px' }}
+                    aria-hidden="true"
+                  >
+                    <circle cx="12" cy="12" r="10" stroke="rgba(255,255,255,0.25)" strokeWidth="3" />
+                    <path d="M12 2a10 10 0 0 1 10 10" stroke="white" strokeWidth="3" strokeLinecap="round" />
+                  </svg>
+                ) : (
+                  '➤'
+                )}
+              </button>
+            </span>
           </div>
         </div>
       </form>
     </div>
   );
 };
+
+export const InputArea = React.memo(InputAreaComponent);
+
+InputArea.displayName = 'InputArea';

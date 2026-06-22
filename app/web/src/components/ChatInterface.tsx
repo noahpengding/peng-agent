@@ -27,6 +27,18 @@ import { useRAGApi } from '@/hooks/RAGAPI';
 // Code split heavy components
 const UserProfilePopup = lazy(() => import('./UserProfilePopup'));
 
+const getOperatorForModel = (modelName: string): string => {
+  if (modelName.includes('/')) {
+    return modelName.split('/')[0];
+  }
+  return 'openai';
+};
+
+const getToolCheckboxId = (toolName: string, index: number): string => {
+  const safeToolName = toolName.replace(/[^a-zA-Z0-9_-]/g, '-');
+  return `tool-checkbox-${index}-${safeToolName || 'tool'}`;
+};
+
 // Main App Component
 const ChatbotUI = () => {
   const dispatch = useDispatch<AppDispatch>();
@@ -50,6 +62,7 @@ const ChatbotUI = () => {
   const [collections, setCollections] = useState<string[]>([]);
   const [s3PathsInput, setS3PathsInput] = useState('');
   const menuRef = useRef<HTMLDivElement | null>(null);
+  const toolPopupRef = useRef<HTMLDivElement | null>(null);
 
   // Initial Data Fetching
   useEffect(() => {
@@ -156,41 +169,92 @@ const ChatbotUI = () => {
     }
   }, [dispatch]);
 
-  // Helper
-  const getOperatorForModel = (modelName: string): string => {
-    if (modelName.includes('/')) {
-      return modelName.split('/')[0];
-    }
-    return 'openai';
-  };
-
   // Tools
-  const loadTools = async () => {
+  const loadTools = useCallback(() => {
     dispatch(fetchTools());
-  };
+  }, [dispatch]);
 
-  const handleUpdateTools = async () => {
+  const handleUpdateTools = useCallback(async () => {
     await dispatch(updateTools());
-  };
+  }, [dispatch]);
 
-  const handleToolSelection = (toolName: string, isSelected: boolean) => {
-    if (isSelected) {
-      dispatch(setSelectedToolNames([...selectedToolNames, toolName]));
-    } else {
-      dispatch(setSelectedToolNames(selectedToolNames.filter((name) => name !== toolName)));
-    }
-  };
+  const handleToolSelection = useCallback(
+    (toolName: string, isSelected: boolean) => {
+      if (isSelected) {
+        if (!selectedToolNames.includes(toolName)) {
+          dispatch(setSelectedToolNames([...selectedToolNames, toolName]));
+        }
+        return;
+      }
 
-  const openToolPopup = () => {
+      if (selectedToolNames.includes(toolName)) {
+        dispatch(setSelectedToolNames(selectedToolNames.filter((name) => name !== toolName)));
+      }
+    },
+    [dispatch, selectedToolNames]
+  );
+
+  const openToolPopup = useCallback(() => {
     setIsToolPopupOpen(true);
     if (availableTools.length === 0) {
       loadTools();
     }
-  };
+  }, [availableTools.length, loadTools]);
 
-  const closeToolPopup = () => {
+  const closeToolPopup = useCallback(() => {
     setIsToolPopupOpen(false);
-  };
+  }, []);
+
+  const closeProfilePopup = useCallback(() => {
+    setIsProfilePopupOpen(false);
+  }, []);
+
+  useEffect(() => {
+    if (!isToolPopupOpen) return;
+
+    const previouslyFocused = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    const dialog = toolPopupRef.current;
+    dialog?.focus();
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        event.preventDefault();
+        closeToolPopup();
+        return;
+      }
+
+      if (event.key !== 'Tab' || !dialog) return;
+
+      const focusable = Array.from(
+        dialog.querySelectorAll<HTMLElement>(
+          'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
+        )
+      );
+
+      if (focusable.length === 0) {
+        event.preventDefault();
+        dialog.focus();
+        return;
+      }
+
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
+      }
+    };
+
+    document.addEventListener('keydown', handleKeyDown);
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown);
+      previouslyFocused?.focus();
+    };
+  }, [closeToolPopup, isToolPopupOpen]);
 
   // Menu click outside
   useEffect(() => {
@@ -208,7 +272,7 @@ const ChatbotUI = () => {
   }, [isMenuOpen]);
 
   // Submit
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = useCallback((e: React.FormEvent) => {
     e.preventDefault();
     if (!input.trim() && uploadedImages.length === 0 && s3PathsInput.trim().length === 0) return;
 
@@ -255,17 +319,22 @@ const ChatbotUI = () => {
     if (s3PathsInput.trim().length > 0) {
       setS3PathsInput('');
     }
-  };
+  }, [baseModel, dispatch, input, knowledgeBase, s3PathsInput, selectedToolNames, shortTermMemory, uploadedImages, username]);
 
-  const handleSetInput = (val: string) => dispatch(setInput(val));
-  const handleSetUploadedImages = (val: UploadedImage[] | ((prev: UploadedImage[]) => UploadedImage[])) => {
-    if (typeof val === 'function') {
-      const newValue = val(uploadedImages);
-      dispatch(setUploadedImages(newValue));
-    } else {
-      dispatch(setUploadedImages(val));
-    }
-  };
+  const handleSetInput = useCallback((val: string) => dispatch(setInput(val)), [dispatch]);
+  const handleSetUploadedImages = useCallback(
+    (val: UploadedImage[] | ((prev: UploadedImage[]) => UploadedImage[])) => {
+      if (typeof val === 'function') {
+        dispatch((innerDispatch: AppDispatch, getState: () => RootState) => {
+          innerDispatch(setUploadedImages(val(getState().chat.uploadedImages)));
+        });
+      } else {
+        dispatch(setUploadedImages(val));
+      }
+    },
+    [dispatch]
+  );
+  const handleInputError = useCallback((msg: string) => dispatch(setError(msg)), [dispatch]);
 
   // ⚡ Bolt Optimization: Memoize the feedback handler to keep its reference stable across renders.
   // This prevents the expensive MessageList component from re-rendering on every keystroke in the input area.
@@ -328,17 +397,19 @@ const ChatbotUI = () => {
         <button
           type="button"
           className="menu-button"
-          aria-label="Open menu"
+          aria-label={isMenuOpen ? 'Close navigation' : 'Open navigation'}
+          aria-expanded={isMenuOpen}
+          aria-controls={isMenuOpen ? 'top-right-menu-dropdown' : undefined}
           title="Menu"
           onClick={() => setIsMenuOpen((v) => !v)}
         >
           …
         </button>
         {isMenuOpen && (
-          <div
+          <nav
+            id="top-right-menu-dropdown"
             className="menu-dropdown"
-            role="menu"
-            aria-label="Navigation Menu"
+            aria-label="Navigation"
           >
             <a href="/memory" className="menu-item" onClick={() => setIsMenuOpen(false)}>
               Memory
@@ -367,7 +438,7 @@ const ChatbotUI = () => {
             >
               GitHub
             </a>
-          </div>
+          </nav>
         )}
       </div>
 
@@ -401,6 +472,7 @@ const ChatbotUI = () => {
               strokeWidth="2"
               strokeLinecap="round"
               strokeLinejoin="round"
+              aria-hidden="true"
             >
               <polyline points="15 18 9 12 15 6" />
               <rect x="3" y="4" width="18" height="16" rx="2" ry="2" />
@@ -433,6 +505,7 @@ const ChatbotUI = () => {
                   strokeWidth="2"
                   strokeLinecap="round"
                   strokeLinejoin="round"
+                  aria-hidden="true"
                 >
                   <rect x="3" y="4" width="18" height="16" rx="2" ry="2" />
                   <path d="M9 4v16" />
@@ -520,7 +593,7 @@ const ChatbotUI = () => {
             setUploadedImages={handleSetUploadedImages}
             isLoading={isLoading}
             onSubmit={handleSubmit}
-            onError={(msg) => dispatch(setError(msg))}
+            onError={handleInputError}
           />
         </div>
       </div>
@@ -533,10 +606,15 @@ const ChatbotUI = () => {
         >
           <div
             className="popup-content"
+            ref={toolPopupRef}
             onClick={(e) => e.stopPropagation()}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="tools-popup-title"
+            tabIndex={-1}
           >
             <div className="popup-header">
-              <h3>Select Tools</h3>
+              <h3 id="tools-popup-title">Select Tools</h3>
               <div className="popup-actions">
                 <button
                   className="update-button"
@@ -561,13 +639,17 @@ const ChatbotUI = () => {
                 <div className="no-tools">No tools available</div>
               ) : (
                 <div className="tools-list">
-                  {availableTools.map((tool) => (
-                    <div
-                      key={tool.id}
-                      className="tool-item"
-                    >
-                      <label className="tool-checkbox-label">
+                  {availableTools.map((tool, index) => {
+                    const checkboxId = getToolCheckboxId(tool.name, index);
+
+                    return (
+                      <label
+                        key={`${tool.id || tool.name}-${index}`}
+                        htmlFor={checkboxId}
+                        className="tool-item tool-checkbox-label"
+                      >
                         <input
+                          id={checkboxId}
                           type="checkbox"
                           className="tool-checkbox"
                           checked={selectedToolNames.includes(tool.name)}
@@ -579,8 +661,8 @@ const ChatbotUI = () => {
                           <div className="tool-url">{tool.url}</div>
                         </div>
                       </label>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               )}
             </div>
@@ -589,7 +671,7 @@ const ChatbotUI = () => {
       )}
 
       <Suspense fallback={null}>
-        <UserProfilePopup isOpen={isProfilePopupOpen} onClose={() => setIsProfilePopupOpen(false)} availableModels={availableBaseModels} />
+        <UserProfilePopup isOpen={isProfilePopupOpen} onClose={closeProfilePopup} availableModels={availableBaseModels} />
       </Suspense>
     </div>
   );

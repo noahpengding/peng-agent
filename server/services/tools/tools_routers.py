@@ -1,7 +1,6 @@
 from typing import List
 from utils.log import output_log
 
-
 async def tools_routers(tools_name: List[str]):
     tools = []
     output_log(f"Initializing tools: {tools_name}", "DEBUG")
@@ -59,5 +58,10 @@ async def tools_routers(tools_name: List[str]):
             from archive.web_page_tools import web_crawler_tool
 
             tools += tavily_tools + [wikipedia_search_tool] + [web_crawler_tool]
+
+        elif tool_name == "image_generation":
+            from services.tools.image_tools import image_generation_tool
+
+            tools += [image_generation_tool]
 
     return tools

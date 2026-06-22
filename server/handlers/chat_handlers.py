@@ -112,13 +112,19 @@ async def chat_handler(
                             [part for part in chunk_content if isinstance(part, str)]
                         )
                     chunk_type = "tool_output"
-                    _save_chat_response(
-                        chat_id,
-                        chunk_type,
-                        chunk_content,
-                        mysql_conn=mysql,
-                        call_id=tool_call_id,
+                    # Do not save the tool output to database if the content is image binary data
+                    is_binary_image_data = isinstance(chunk_content, (bytes, bytearray)) or (
+                        isinstance(chunk_content, str)
+                        and chunk_content.startswith(("b'", 'b"'))
                     )
+                    if not is_binary_image_data:
+                        _save_chat_response(
+                            chat_id,
+                            chunk_type,
+                            chunk_content,
+                            mysql_conn=mysql,
+                            call_id=tool_call_id,
+                        )
                 else:
                     chunk_content = ""
                     chunk_type = ""

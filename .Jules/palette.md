@@ -13,3 +13,11 @@
 ## 2025-02-23 - Async Action Accessibility
 **Learning:** Form submit buttons without explicit loading state fail to communicate that background processing is happening, especially problematic for screen readers.
 **Action:** Always provide a clear loading state (e.g. SVG spinner) and update the `aria-label` (e.g. "Sending message...") to ensure feedback for interactive processes.
+
+## 2025-06-03 - Dropdown Navigation Accessibility
+**Learning:** Navigation dropdowns should keep native link semantics unless they implement the full WAI-ARIA menu keyboard pattern.
+**Action:** Use a labeled `<nav>` with normal links for navigation dropdowns. Reserve `role="menu"` / `role="menuitem"` / `aria-haspopup="menu"` for widgets that also implement focus management, arrow-key navigation, and Escape handling.
+
+## 2025-05-18 - Click Target Size for Table Actions
+**Learning:** Forcing users to click small checkboxes in data tables is poor usability. Making the entire row clickable provides a much larger hit area.
+**Action:** Make entire table rows clickable when they primarily function as a selection mechanism, taking care to prevent event bubbling issues from inner inputs.

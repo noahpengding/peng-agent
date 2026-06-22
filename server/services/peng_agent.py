@@ -17,7 +17,6 @@ from config.config import config
 from utils.log import output_log
 import os
 
-
 class AgentState(TypedDict):
     messages: Annotated[Sequence[BaseMessage], add_messages]
 
@@ -40,6 +39,7 @@ class PengAgent:
         self.graph = self.init_agent_graph()
         self.tool_call_history: list[ToolCall] = []
         self.total_tool_calls = 25 if operater == "anthropic" else 10
+        self._tool_return_direct = False
 
     def init_agent_graph(self) -> Any:
         graph = StateGraph(AgentState)
@@ -50,7 +50,11 @@ class PengAgent:
             self.should_continue,
             {"call_tools": "call_tools", END: END, "call_model": "call_model"},
         )
-        graph.add_edge("call_tools", "call_model")
+        graph.add_conditional_edges(
+            "call_tools",
+            self.tool_return_direct,
+            {"call_model": "call_model", END: END},
+        )
         graph.set_entry_point("call_model")
         return graph.compile()
 
@@ -188,6 +192,8 @@ class PengAgent:
             }
         name = tool_calls["name"]
         args = tool_calls["args"]
+        if name in ["image_generation_tool", "email_send_tool"]:
+            self._tool_return_direct = True
         # Tool not found
         if name not in self.tools:
             return {
@@ -219,18 +225,19 @@ class PengAgent:
             observation = f"Error calling tool '{name}': {e}"
         if isinstance(observation, list):
             observation = "\n".join(observation)
-        observation = await self.truncate_tool_message(observation.strip())
+        if name not in ["image_generation_tool"]:
+            observation = await self.truncate_tool_message(observation.strip())
+            self.tool_call_history.append(
+                ToolCall(
+                    name=name,
+                    args=args,
+                    id=tool_calls["id"] if isinstance(tool_calls, dict) else "",
+                )
+            )
         message = ToolMessage(
             content=observation,
             name=name,
             tool_call_id=tool_calls["id"] if isinstance(tool_calls, dict) else "",
-        )
-        self.tool_call_history.append(
-            ToolCall(
-                name=name,
-                args=args,
-                id=tool_calls["id"] if isinstance(tool_calls, dict) else "",
-            )
         )
         writer({"call_tools": {"messages": message}})
         return {"messages": message}
@@ -246,3 +253,8 @@ class PengAgent:
         if not isinstance(last_message, AIMessage):
             return "call_model"
         return END
+
+    def tool_return_direct(self, state: AgentState) -> Any:
+        if self._tool_return_direct:
+            return END
+        return "call_model"

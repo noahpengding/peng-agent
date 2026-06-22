@@ -2,6 +2,7 @@ from pydantic import BaseModel, Field
 
 
 class OperatorConfig(BaseModel):
+    id: int | str = Field(default=0)
     operator: str
     runtime: str
     endpoint: str

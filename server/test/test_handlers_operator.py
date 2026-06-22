@@ -23,8 +23,8 @@ class TestOperatorHandlers(unittest.TestCase):
     @patch('handlers.operator_handlers.get_table_records')
     def test_get_all_operators(self, mock_get_records):
         mock_get_records.return_value = [
-            {"operator": "op1", "runtime": "r1", "endpoint": "e1", "api_key": "k1"},
-            {"operator": "op2", "runtime": "r2", "endpoint": "e2", "api_key": "k2"}
+            {"operator": "op2", "runtime": "r2", "endpoint": "e2", "api_key": "k2", "id": 2},
+            {"operator": "op1", "runtime": "r1", "endpoint": "e1", "api_key": "k1", "id": 1}
         ]
         ops = get_all_operators()
         self.assertEqual(len(ops), 2)
