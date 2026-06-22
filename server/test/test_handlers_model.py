@@ -3,20 +3,58 @@ from unittest.mock import patch, MagicMock
 from handlers.model_handlers import (
     get_model, check_multimodal, get_reasoning_effect, 
     flip_avaliable, flip_multimodal, update_reasoning_effect,
-    get_all_available_models, refresh_models
+    avaliable_models, get_all_available_models, refresh_models
 )
 
 class TestModelHandlers(unittest.TestCase):
     @patch('handlers.model_handlers.get_table_records')
     def test_get_model(self, mock_get_records):
         mock_get_records.side_effect = [
+            [{"model_name": "m1", "operator": "op1"}, {"model_name": "m2", "operator": "op2"}], # models
             [{"operator": "op1"}, {"operator": "op2"}], # operators
-            [{"model_name": "m1", "operator": "op1"}, {"model_name": "m2", "operator": "op2"}] # models
         ]
         
         result = get_model()
         self.assertEqual(len(result), 2)
         self.assertEqual(result[0]["model_name"], "m1")
+
+    @patch('handlers.model_handlers.get_table_records')
+    def test_get_model_orders_by_operator_id_then_model_name(self, mock_get_records):
+        mock_get_records.side_effect = [
+            [
+                {"model_name": "op2/zeta", "operator": "op2"},
+                {"model_name": "op1/zeta", "operator": "op1"},
+                {"model_name": "op2/alpha", "operator": "op2"},
+                {"model_name": "op1/alpha", "operator": "op1"},
+            ],
+            [{"operator": "op2", "id": 2}, {"operator": "op1", "id": 1}],
+        ]
+
+        result = get_model()
+
+        self.assertEqual(
+            [model["model_name"] for model in result],
+            ["op1/alpha", "op1/zeta", "op2/alpha", "op2/zeta"],
+        )
+
+    @patch('handlers.model_handlers.get_table_records')
+    def test_avaliable_models_orders_by_operator_id_then_model_name(self, mock_get_records):
+        mock_get_records.side_effect = [
+            [
+                {"model_name": "op2/zeta", "operator": "op2", "isAvailable": True},
+                {"model_name": "op1/zeta", "operator": "op1", "isAvailable": True},
+                {"model_name": "op1/hidden", "operator": "op1", "isAvailable": False},
+                {"model_name": "op1/alpha", "operator": "op1", "isAvailable": 1},
+            ],
+            [{"operator": "op2", "id": 2}, {"operator": "op1", "id": 1}],
+        ]
+
+        result = avaliable_models()
+
+        self.assertEqual(
+            [model["model_name"] for model in result],
+            ["op1/alpha", "op1/zeta", "op2/zeta"],
+        )
 
     @patch('handlers.model_handlers.get_table_record')
     def test_check_multimodal(self, mock_get_record):
@@ -61,9 +99,12 @@ class TestModelHandlers(unittest.TestCase):
 
     @patch('handlers.model_handlers.get_table_records')
     def test_get_all_available_models(self, mock_get_records):
-        mock_get_records.return_value = [
-            {"model_name": "m1", "isAvailable": True},
-            {"model_name": "m2", "isAvailable": False}
+        mock_get_records.side_effect = [
+            [
+                {"model_name": "m1", "isAvailable": True},
+                {"model_name": "m2", "isAvailable": False},
+            ],
+            [],
         ]
         result = get_all_available_models()
         self.assertEqual(len(result), 1)
@@ -134,4 +175,3 @@ class TestModelHandlers(unittest.TestCase):
 
 if __name__ == '__main__':
     unittest.main()
-

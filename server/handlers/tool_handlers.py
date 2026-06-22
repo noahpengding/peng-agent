@@ -6,9 +6,19 @@ from io import BytesIO
 import pandas as pd
 
 
+def _id_sort_key(record: dict) -> tuple[int, int | str]:
+    value = record.get("id")
+    if value in (None, ""):
+        return (2, "")
+    try:
+        return (0, int(value))
+    except (TypeError, ValueError):
+        return (1, str(value).casefold())
+
+
 def get_all_tools():
     tools = redis_cache.get_records("tools")
-    return tools if tools else []
+    return sorted(tools, key=_id_sort_key) if tools else []
 
 
 def get_tool_by_name(tool_name: str):

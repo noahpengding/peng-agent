@@ -34,6 +34,11 @@ const getOperatorForModel = (modelName: string): string => {
   return 'openai';
 };
 
+const getToolCheckboxId = (toolName: string, index: number): string => {
+  const safeToolName = toolName.replace(/[^a-zA-Z0-9_-]/g, '-');
+  return `tool-checkbox-${index}-${safeToolName || 'tool'}`;
+};
+
 // Main App Component
 const ChatbotUI = () => {
   const dispatch = useDispatch<AppDispatch>();
@@ -176,8 +181,13 @@ const ChatbotUI = () => {
   const handleToolSelection = useCallback(
     (toolName: string, isSelected: boolean) => {
       if (isSelected) {
-        dispatch(setSelectedToolNames([...selectedToolNames, toolName]));
-      } else {
+        if (!selectedToolNames.includes(toolName)) {
+          dispatch(setSelectedToolNames([...selectedToolNames, toolName]));
+        }
+        return;
+      }
+
+      if (selectedToolNames.includes(toolName)) {
         dispatch(setSelectedToolNames(selectedToolNames.filter((name) => name !== toolName)));
       }
     },
@@ -629,14 +639,17 @@ const ChatbotUI = () => {
                 <div className="no-tools">No tools available</div>
               ) : (
                 <div className="tools-list">
-                  {availableTools.map((tool) => (
-                    <div
-                      key={tool.id}
-                      className="tool-item"
-                    >
-                      <label htmlFor={`tool-checkbox-${tool.id}`} className="tool-checkbox-label">
+                  {availableTools.map((tool, index) => {
+                    const checkboxId = getToolCheckboxId(tool.name, index);
+
+                    return (
+                      <label
+                        key={`${tool.id || tool.name}-${index}`}
+                        htmlFor={checkboxId}
+                        className="tool-item tool-checkbox-label"
+                      >
                         <input
-                          id={`tool-checkbox-${tool.id}`}
+                          id={checkboxId}
                           type="checkbox"
                           className="tool-checkbox"
                           checked={selectedToolNames.includes(tool.name)}
@@ -648,8 +661,8 @@ const ChatbotUI = () => {
                           <div className="tool-url">{tool.url}</div>
                         </div>
                       </label>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               )}
             </div>

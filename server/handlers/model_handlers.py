@@ -13,6 +13,35 @@ from services.redis_service import (
 import pandas as pd
 
 
+def _rank_sort_key(value) -> tuple[int, int | str]:
+    if value in (None, ""):
+        return (2, "")
+    try:
+        return (0, int(value))
+    except (TypeError, ValueError):
+        return (1, str(value).casefold())
+
+
+def _operator_rank_by_name() -> dict[str, tuple[int, int | str]]:
+    operators = get_table_records("operator", db_backed=False)
+    return {
+        operator["operator"]: _rank_sort_key(operator.get("id"))
+        for operator in operators
+        if isinstance(operator, dict) and operator.get("operator")
+    }
+
+
+def _sort_models(models: list[dict]) -> list[dict]:
+    operator_rank = _operator_rank_by_name()
+    return sorted(
+        models,
+        key=lambda model: (
+            operator_rank.get(model.get("operator"), (2, "")),
+            str(model.get("model_name", "")).casefold(),
+        ),
+    )
+
+
 def _get_local_models() -> list[ModelConfig]:
     m = MinioStorage()
     model_data = m.file_download_to_memory(f"{config.s3_base_path}/models.xlsx")
@@ -38,12 +67,8 @@ def _save_local_models(models: list[ModelConfig]):
 
 
 def get_model():
-    operator_record = get_table_records("operator", db_backed=False)
-    operator = [op["operator"] for op in operator_record if isinstance(op, dict)]
     models = get_table_records("model", db_backed=False)
-    model_order = {val: i for i, val in enumerate(operator)}
-    models.sort(key=lambda x: model_order.get(x["operator"], float("inf")))
-    return models
+    return _sort_models(models)
 
 
 # Refresh will check all operators and discover new models
@@ -126,18 +151,7 @@ def flip_avaliable(model_name: str):
 def avaliable_models():
     models = get_table_records("model", db_backed=False)
     models = [model for model in models if model.get("isAvailable") in (True, 1)]
-    operator = get_table_records("operator", db_backed=False)
-    operator_dict = {
-        op["operator"]: i for i, op in enumerate(operator) if isinstance(op, dict)
-    }
-    models.sort(
-        key=lambda x: (
-            operator_dict.get(x["operator"], float("inf")),
-            x["type"],
-            x["model_name"],
-        )
-    )
-    return models
+    return _sort_models(models)
 
 
 def check_multimodal(model_name: str) -> bool:
@@ -155,7 +169,8 @@ def flip_multimodal(model_name: str, column: str):
 
 def get_all_available_models():
     models = get_table_records("model", db_backed=False)
-    return [model for model in models if model.get("isAvailable") in (True, 1)]
+    models = [model for model in models if model.get("isAvailable") in (True, 1)]
+    return _sort_models(models)
 
 
 def update_reasoning_effect(model_name: str, reasoning_effect: str):
@@ -176,4 +191,3 @@ def get_reasoning_effect(model_name: str):
     if model:
         return model["reasoning_effect"]
     return "not a reasoning model"
-
