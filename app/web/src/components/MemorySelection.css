@@ -43,11 +43,17 @@
   color: var(--color-text-muted);
 }
 
-/* Action buttons */
+.top-controls {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  align-items: center;
+  gap: var(--space-sm);
+  margin-bottom: var(--space-md);
+}
+
 .action-buttons {
   display: flex;
   justify-content: flex-start;
-  margin-bottom: var(--space-md);
   gap: var(--space-sm);
 }
 
@@ -74,8 +80,8 @@
 .pagination-controls {
   display: flex;
   align-items: center;
+  justify-content: center;
   gap: var(--space-sm);
-  margin-bottom: var(--space-md);
 }
 
 .pagination-button {
@@ -110,6 +116,19 @@
 .total-count {
   color: var(--color-text-muted);
   font-weight: 500;
+}
+
+@media (max-width: 720px) {
+  .top-controls {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .action-buttons,
+  .pagination-controls {
+    justify-content: center;
+  }
 }
 
 /* Table styling */

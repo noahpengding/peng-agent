@@ -121,24 +121,25 @@ const MemoryPage: React.FC = () => {
         />
       </div>
 
-      {/* Merged Action Button */}
-      <div className="action-buttons">
-        <button className="primary-button" onClick={handlePrimaryAction}>
-          {selectedMemoryIds.length > 0 ? `Save ${selectedMemoryIds.length} Selected Memories` : 'Return to Chat'}
-        </button>
-      </div>
-
-      <div className="pagination-controls" aria-label="Memory pages">
-        <button className="pagination-button" onClick={handlePreviousPage} disabled={!hasPreviousPage || isLoading}>
-          Previous
-        </button>
-        <div className="page-indicator">
-          Page {currentPage} of {totalPages}
-          {totalCount > 0 && <span className="total-count"> {totalCount} memories</span>}
+      <div className="top-controls">
+        <div className="action-buttons">
+          <button className="primary-button" onClick={handlePrimaryAction}>
+            {selectedMemoryIds.length > 0 ? `Save ${selectedMemoryIds.length} Selected Memories` : 'Return to Chat'}
+          </button>
         </div>
-        <button className="pagination-button" onClick={handleNextPage} disabled={!hasNextPage || isLoading}>
-          Next
-        </button>
+
+        <div className="pagination-controls" aria-label="Memory pages">
+          <button className="pagination-button" onClick={handlePreviousPage} disabled={!hasPreviousPage || isLoading}>
+            Previous
+          </button>
+          <div className="page-indicator">
+            Page {currentPage} of {totalPages}
+            {totalCount > 0 && <span className="total-count"> {totalCount} memories</span>}
+          </div>
+          <button className="pagination-button" onClick={handleNextPage} disabled={!hasNextPage || isLoading}>
+            Next
+          </button>
+        </div>
       </div>
 
       {/* Loading and Error States */}
