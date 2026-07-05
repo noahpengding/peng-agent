@@ -14,8 +14,8 @@ def minio_file_upload_tool(file_content: str, file_name: str, content_type: str)
     success = minio_storage.file_upload_from_string(
         file_content=file_content_encoded,
         file_name=file_name,
-        file_length=len(file_content),
         content_type=content_type,
+        bucket_name="peng"
     )
     if success:
         return f"File '{file_name}' uploaded successfully to Minio."
@@ -24,7 +24,7 @@ def minio_file_upload_tool(file_content: str, file_name: str, content_type: str)
 
 def minio_file_download_tool(file_name: str) -> str:
     minio_storage = MinioStorage()
-    file_content = minio_storage.file_download_to_memory(file_name=file_name)
+    file_content = minio_storage.file_download_to_memory(file_name=file_name, bucket_name="peng")
     if file_content is not None:
         try:
             return file_content.decode("utf-8")
