@@ -1,11 +1,21 @@
 import { apiCall } from '../utils/apiUtils';
-import { Memory } from '../hooks/MemoryAPI';
+import type { MemoryPageResponse } from '../hooks/MemoryAPI';
 
 export const MemoryService = {
-  async fetchMemories(username: string): Promise<Memory[]> {
+  async fetchMemories(username: string, page = 1, search = ''): Promise<MemoryPageResponse> {
     try {
-      const response = await apiCall('POST', '/memory', { user_name: username });
-      return response;
+      const response = await apiCall('POST', '/memory', {
+        user_name: username,
+        page,
+        search,
+      }) as MemoryPageResponse;
+      return {
+        ...response,
+        memories: response.memories.map((memory) => ({
+          ...memory,
+          id: String(memory.id),
+        })),
+      };
     } catch (error) {
       throw error;
     }

@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useCallback } from 'react';
+import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import {
   Modal,
   View,
@@ -22,41 +22,66 @@ import { Typography } from '../utils/typography';
 export default function MemoryModal({ visible, onClose }: { visible: boolean; onClose: () => void }) {
   const [memories, setMemories] = useState<Memory[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
-  const [selectedMemoryIds, setSelectedMemoryIds] = useState<string[]>([]);
+  const [selectedMemoriesById, setSelectedMemoriesById] = useState<Record<string, Memory>>({});
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalCount, setTotalCount] = useState(0);
+  const [hasNextPage, setHasNextPage] = useState(false);
+  const [hasPreviousPage, setHasPreviousPage] = useState(false);
   
   const { fetchMemories, isLoading } = useMemoryApi();
   const { user } = useSelector((state: RootState) => state.auth);
   const dispatch = useDispatch();
 
-  const loadMemories = useCallback(async () => {
-    if (!user) return;
-    try {
-      const fetched = await fetchMemories(user);
-      setMemories(fetched);
-    } catch (err) {
-      Alert.alert('Error', `Failed to fetch memories: ${err}`);
-    }
-  }, [fetchMemories, user]);
+  const selectedMemoryIds = useMemo(() => Object.keys(selectedMemoriesById), [selectedMemoriesById]);
 
-  const filteredMemories = useMemo(() => {
-    if (!searchTerm.trim()) return memories;
-    const lower = searchTerm.toLowerCase();
-    return memories.filter(
-      (m) =>
-        m.human_input.toLowerCase().includes(lower) ||
-        m.ai_response.toLowerCase().includes(lower) ||
-        m.base_model.toLowerCase().includes(lower)
-    );
-  }, [searchTerm, memories]);
+  useEffect(() => {
+    let mounted = true;
 
-  const handleToggleSelect = (id: string) => {
-    setSelectedMemoryIds((prev) =>
-      prev.includes(id) ? prev.filter((i) => i !== id) : [...prev, id]
-    );
+    const loadMemories = async () => {
+      if (!visible || !user) return;
+      try {
+        const response = await fetchMemories(user, currentPage, searchTerm);
+        if (!mounted) return;
+        setMemories(response.memories);
+        setCurrentPage(response.page);
+        setTotalPages(response.total_pages);
+        setTotalCount(response.total_count);
+        setHasNextPage(response.has_next);
+        setHasPreviousPage(response.has_previous);
+      } catch (err) {
+        if (mounted) {
+          Alert.alert('Error', `Failed to fetch memories: ${err}`);
+        }
+      }
+    };
+
+    loadMemories();
+
+    return () => {
+      mounted = false;
+    };
+  }, [visible, user, currentPage, searchTerm, fetchMemories]);
+
+  const handleSearchChange = (value: string) => {
+    setSearchTerm(value);
+    setCurrentPage(1);
+  };
+
+  const handleToggleSelect = (memory: Memory) => {
+    setSelectedMemoriesById((prev) => {
+      const next = { ...prev };
+      if (next[memory.id]) {
+        delete next[memory.id];
+      } else {
+        next[memory.id] = memory;
+      }
+      return next;
+    });
   };
 
   const handleSave = async () => {
-    const selectedMemories = memories.filter((m) => selectedMemoryIds.includes(m.id));
+    const selectedMemories = Object.values(selectedMemoriesById);
     
     // Mimic web behavior: populate chat messages with selected memories
     const memoryMessages: Message[] = [];
@@ -85,13 +110,20 @@ export default function MemoryModal({ visible, onClose }: { visible: boolean; on
     onClose();
   };
 
+  const handlePreviousPage = useCallback(() => {
+    setCurrentPage((page) => Math.max(page - 1, 1));
+  }, []);
+
+  const handleNextPage = useCallback(() => {
+    setCurrentPage((page) => Math.min(page + 1, totalPages));
+  }, [totalPages]);
+
   return (
     <Modal
       animationType="slide"
       transparent={true}
       visible={visible}
       onRequestClose={onClose}
-      onShow={loadMemories}
     >
       <View style={styles.centeredView}>
         <View style={styles.modalView}>
@@ -113,27 +145,28 @@ export default function MemoryModal({ visible, onClose }: { visible: boolean; on
             style={styles.searchInput}
             placeholder="Search memories..."
             value={searchTerm}
-            onChangeText={setSearchTerm}
+            onChangeText={handleSearchChange}
+            placeholderTextColor={Colors.textMuted}
           />
 
           {isLoading ? (
             <ActivityIndicator size="large" color="#007AFF" style={{ marginTop: 20 }} />
           ) : (
             <ScrollView style={styles.memoryList}>
-              {filteredMemories.map((memory) => (
+              {memories.map((memory) => (
                 <TouchableOpacity
                   key={memory.id}
                   style={[
                     styles.memoryCard,
                     selectedMemoryIds.includes(memory.id) && styles.memoryCardSelected,
                   ]}
-                  onPress={() => handleToggleSelect(memory.id)}
+                  onPress={() => handleToggleSelect(memory)}
                 >
                   <View style={styles.memoryHeader}>
                     <Text style={styles.modelTag}>{memory.base_model}</Text>
                     <Switch
                       value={selectedMemoryIds.includes(memory.id)}
-                      onValueChange={() => handleToggleSelect(memory.id)}
+                      onValueChange={() => handleToggleSelect(memory)}
                     />
                   </View>
                   <Text style={styles.humanLabel}>You:</Text>
@@ -146,13 +179,39 @@ export default function MemoryModal({ visible, onClose }: { visible: boolean; on
                   </Text>
                 </TouchableOpacity>
               ))}
-              {filteredMemories.length === 0 && (
-                <Text style={styles.emptyText}>No memories found</Text>
+              {memories.length === 0 && (
+                <Text style={styles.emptyText}>
+                  {searchTerm ? 'No memories match your search' : 'No memories found'}
+                </Text>
               )}
             </ScrollView>
           )}
 
           <View style={styles.footer}>
+            <View style={styles.paginationRow}>
+              <TouchableOpacity
+                style={[styles.pageButton, (!hasPreviousPage || isLoading) && styles.pageButtonDisabled]}
+                onPress={handlePreviousPage}
+                disabled={!hasPreviousPage || isLoading}
+              >
+                <Text style={[styles.pageButtonText, (!hasPreviousPage || isLoading) && styles.pageButtonTextDisabled]}>
+                  Previous
+                </Text>
+              </TouchableOpacity>
+              <View style={styles.pageStatus}>
+                <Text style={styles.pageStatusText}>Page {currentPage} of {totalPages}</Text>
+                {totalCount > 0 && <Text style={styles.pageTotalText}>{totalCount} memories</Text>}
+              </View>
+              <TouchableOpacity
+                style={[styles.pageButton, (!hasNextPage || isLoading) && styles.pageButtonDisabled]}
+                onPress={handleNextPage}
+                disabled={!hasNextPage || isLoading}
+              >
+                <Text style={[styles.pageButtonText, (!hasNextPage || isLoading) && styles.pageButtonTextDisabled]}>
+                  Next
+                </Text>
+              </TouchableOpacity>
+            </View>
             <Text style={styles.footerText}>
               {selectedMemoryIds.length} memories selected
             </Text>
@@ -288,6 +347,49 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderTopColor: Colors.border,
     alignItems: 'center',
+  },
+  paginationRow: {
+    width: '100%',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: Typography.spacing.xs,
+    marginBottom: Typography.spacing.xs,
+  },
+  pageButton: {
+    minWidth: 84,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: Colors.border,
+    borderRadius: 10,
+    paddingHorizontal: Typography.spacing.xs,
+    paddingVertical: Typography.spacing['2xs'],
+    backgroundColor: Colors.bgCard,
+  },
+  pageButtonDisabled: {
+    opacity: 0.45,
+  },
+  pageButtonText: {
+    color: Colors.textMain,
+    fontSize: Typography.sizes.sm,
+    fontWeight: Typography.weights.bold,
+  },
+  pageButtonTextDisabled: {
+    color: Colors.textMuted,
+  },
+  pageStatus: {
+    flex: 1,
+    alignItems: 'center',
+  },
+  pageStatusText: {
+    color: Colors.textDim,
+    fontSize: Typography.sizes.sm,
+    fontWeight: Typography.weights.bold,
+  },
+  pageTotalText: {
+    color: Colors.textMuted,
+    fontSize: Typography.sizes.xs,
+    marginTop: 2,
   },
   footerText: {
     fontSize: Typography.sizes.sm,

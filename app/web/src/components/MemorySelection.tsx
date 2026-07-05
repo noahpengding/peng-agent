@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useSelector } from 'react-redux';
 import { RootState } from '@/store';
@@ -9,7 +9,12 @@ const MemoryPage: React.FC = () => {
   // State variables
   const [memories, setMemories] = useState<Memory[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
-  const [selectedMemoryIds, setSelectedMemoryIds] = useState<string[]>([]);
+  const [selectedMemoriesById, setSelectedMemoriesById] = useState<Record<string, Memory>>({});
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalCount, setTotalCount] = useState(0);
+  const [hasNextPage, setHasNextPage] = useState(false);
+  const [hasPreviousPage, setHasPreviousPage] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   // Hooks
@@ -17,14 +22,27 @@ const MemoryPage: React.FC = () => {
   const { fetchMemories, isLoading } = useMemoryApi();
   const { user } = useSelector((state: RootState) => state.auth);
 
-  // Fetch memories on component mount
+  const selectedMemoryIds = useMemo(() => Object.keys(selectedMemoriesById), [selectedMemoriesById]);
+
+  // Fetch memories on component mount and whenever page/search changes
   useEffect(() => {
+    let mounted = true;
+
     const getMemories = async (username: string) => {
       try {
-        const fetchedMemories = await fetchMemories(username);
-        setMemories(fetchedMemories);
+        setError(null);
+        const response = await fetchMemories(username, currentPage, searchTerm);
+        if (!mounted) return;
+        setMemories(response.memories);
+        setCurrentPage(response.page);
+        setTotalPages(response.total_pages);
+        setTotalCount(response.total_count);
+        setHasNextPage(response.has_next);
+        setHasPreviousPage(response.has_previous);
       } catch (error) {
-        setError(`Failed to fetch memories: ${error}`);
+        if (mounted) {
+          setError(`Failed to fetch memories: ${error}`);
+        }
       }
     };
 
@@ -32,35 +50,36 @@ const MemoryPage: React.FC = () => {
     if (user) {
       getMemories(user);
     }
-  }, [user, fetchMemories]); // Now we can safely include fetchMemories
 
-  // Filter memories based on search term
-  const filteredMemories = React.useMemo(() => {
-    if (searchTerm.trim() === '') {
-      return memories;
-    }
-    const lowerCaseSearchTerm = searchTerm.toLowerCase();
-    return memories.filter(
-      (memory) => memory.human_input.toLowerCase().includes(lowerCaseSearchTerm) || memory.ai_response.toLowerCase().includes(lowerCaseSearchTerm)
-    );
-  }, [searchTerm, memories]);
+    return () => {
+      mounted = false;
+    };
+  }, [user, currentPage, searchTerm, fetchMemories]);
+
+  const handleSearchChange = (value: string) => {
+    setSearchTerm(value);
+    setCurrentPage(1);
+  };
 
   // Handle checkbox change
-  const handleCheckboxChange = (id: string) => {
-    setSelectedMemoryIds((prevSelectedIds) => {
-      if (prevSelectedIds.includes(id)) {
-        return prevSelectedIds.filter((selectedId) => selectedId !== id);
+  const handleCheckboxChange = (memory: Memory) => {
+    setSelectedMemoriesById((prevSelectedMemories) => {
+      const nextSelectedMemories = { ...prevSelectedMemories };
+      if (nextSelectedMemories[memory.id]) {
+        delete nextSelectedMemories[memory.id];
       } else {
-        return [...prevSelectedIds, id];
+        nextSelectedMemories[memory.id] = memory;
       }
+      return nextSelectedMemories;
     });
   };
 
   // Handle primary button click - save if memories are selected, otherwise exit
   const handlePrimaryAction = () => {
     if (selectedMemoryIds.length > 0) {
+      const selectedMemories = Object.values(selectedMemoriesById);
+
       // Save selected memories for UI display
-      const selectedMemories = memories.filter((memory) => selectedMemoryIds.includes(memory.id));
       localStorage.setItem('selectedMemories', JSON.stringify(selectedMemories));
 
       // Save selected memory IDs (chat IDs) for backend
@@ -70,6 +89,14 @@ const MemoryPage: React.FC = () => {
 
     // In all cases, navigate back to chat interface
     navigate('/');
+  };
+
+  const handlePreviousPage = () => {
+    setCurrentPage((page) => Math.max(page - 1, 1));
+  };
+
+  const handleNextPage = () => {
+    setCurrentPage((page) => Math.min(page + 1, totalPages));
   };
 
   // Truncate text for display
@@ -88,7 +115,7 @@ const MemoryPage: React.FC = () => {
           placeholder="Search memories..."
           className="search-input"
           value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
+          onChange={(e) => handleSearchChange(e.target.value)}
           aria-label="Search memories"
         />
       </div>
@@ -97,6 +124,19 @@ const MemoryPage: React.FC = () => {
       <div className="action-buttons">
         <button className="primary-button" onClick={handlePrimaryAction}>
           {selectedMemoryIds.length > 0 ? `Save ${selectedMemoryIds.length} Selected Memories` : 'Return to Chat'}
+        </button>
+      </div>
+
+      <div className="pagination-controls" aria-label="Memory pages">
+        <button className="pagination-button" onClick={handlePreviousPage} disabled={!hasPreviousPage || isLoading}>
+          Previous
+        </button>
+        <div className="page-indicator">
+          Page {currentPage} of {totalPages}
+          {totalCount > 0 && <span className="total-count"> {totalCount} memories</span>}
+        </div>
+        <button className="pagination-button" onClick={handleNextPage} disabled={!hasNextPage || isLoading}>
+          Next
         </button>
       </div>
 
@@ -117,11 +157,11 @@ const MemoryPage: React.FC = () => {
               </tr>
             </thead>
             <tbody>
-              {filteredMemories.length > 0 ? (
-                filteredMemories.map((memory) => (
+              {memories.length > 0 ? (
+                memories.map((memory) => (
                   <tr
                     key={memory.id}
-                    onClick={() => handleCheckboxChange(memory.id)}
+                    onClick={() => handleCheckboxChange(memory)}
                     style={{ cursor: 'pointer' }}
                   >
                     <td>
@@ -129,7 +169,7 @@ const MemoryPage: React.FC = () => {
                         id={`memory-checkbox-${memory.id}`}
                         type="checkbox"
                         checked={selectedMemoryIds.includes(memory.id)}
-                        onChange={() => handleCheckboxChange(memory.id)}
+                        onChange={() => handleCheckboxChange(memory)}
                         onClick={(e) => e.stopPropagation()}
                         aria-label={`Select memory: ${truncateText(memory.human_input, 50)}`}
                       />

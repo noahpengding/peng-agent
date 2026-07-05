@@ -70,3 +70,9 @@ Because types are handwritten and duplicated across three completely separate di
 | **Login** | `{"username", "password"}` | `{"access_token", "token_type"}` | Pydantic `UserLogin` | Web & Mobile Auth Flow |
 | **Chat Stream** | `{"user_name", "message", "knowledge_base", "config"}` | `text/event-stream` chunks | Pydantic `ChatRequest` | Web & Mobile Chat UI |
 | **Feedback** | `{"chat_id", "user_name", "feedback"}` | `{"message", "chat_id", "feedback"}` | Pydantic `ChatFeedbackRequest` | Web & Mobile Message Items |
+| **Memory Page** | `{"user_name", "page", "search"}` | `{"memories", "page", "page_size", "total_count", "total_pages", "has_next", "has_previous", "search"}` | Dict body in `memory_router.py`; handler clamps page and uses fixed `page_size` 20 | Web & Mobile Memory Selection |
+
+### Memory Pagination Notes
+- `POST /memory` returns a paged envelope instead of a bare array. `page` is 1-based, `page_size` is fixed at 20, and out-of-range pages are clamped to the available page range.
+- `search` is optional and server-side; matching applies to human input, AI response, and base model for completed memories with a non-empty AI response.
+- Web and mobile both keep selected memory objects outside the current page so selections from multiple pages can be loaded together into short-term memory.
