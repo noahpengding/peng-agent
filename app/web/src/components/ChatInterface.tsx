@@ -21,7 +21,7 @@ import './ChatInterface.css';
 import { Message, UploadedImage } from '@/types/ChatInterface.types';
 import { InputArea } from './InputArea';
 import { MessageList } from './MessageList';
-import { Memory } from '@/hooks/MemoryAPI';
+import type { Memory } from '@/hooks/MemoryAPI';
 import { useRAGApi } from '@/hooks/RAGAPI';
 
 // Code split heavy components

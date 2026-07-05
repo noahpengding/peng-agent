@@ -55,9 +55,8 @@ async def tools_routers(tools_name: List[str]):
         elif tool_name == "web_search":
             from services.tools.search_tools import tavily_tools
             from services.tools.search_tools import wikipedia_search_tool
-            from archive.web_page_tools import web_crawler_tool
 
-            tools += tavily_tools + [wikipedia_search_tool] + [web_crawler_tool]
+            tools += tavily_tools + [wikipedia_search_tool]
 
         elif tool_name == "image_generation":
             from services.tools.image_tools import image_generation_tool

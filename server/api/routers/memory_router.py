@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends
 from fastapi.responses import Response
 from handlers.auth_handlers import authenticate_request
+from starlette.concurrency import run_in_threadpool
 
 router = APIRouter()
 
@@ -14,11 +15,18 @@ async def options_memory():
 async def memory(request: dict, auth: dict = Depends(authenticate_request)):
     from handlers.memory_handlers import get_memory
 
-    return get_memory(request["user_name"])
+    return await run_in_threadpool(
+        get_memory,
+        request["user_name"],
+        request.get("page", 1),
+        request.get("search", ""),
+    )
+
 
 @router.options("/update_lt_memory")
 async def options_update_lt_memory():
     return Response(headers={"Allow": "POST, OPTIONS"})
+
 
 @router.post("/update_lt_memory")
 async def update_lt_memory(request: dict, auth: dict = Depends(authenticate_request)):

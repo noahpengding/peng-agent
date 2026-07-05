@@ -92,3 +92,7 @@ The app uses several Expo plugins for native device capabilities:
 | `Login` | `src/screens/LoginScreen.tsx` | User authentication | `POST /api/login` |
 | `Chat` | `src/screens/ChatScreen.tsx` | Core AI conversation | `chatService.ts` |
 | `Profile` | `src/screens/ProfileScreen.tsx` | User preferences and settings | `userService.ts` |
+
+## Memory Selection Notes
+- `MemoryModal.tsx` loads memories from `POST /memory` one server-side page at a time. The API returns 20 memories per page plus page metadata.
+- Selections are stored by memory ID outside the current page list so users can select memories across several pages and load them together into chat.

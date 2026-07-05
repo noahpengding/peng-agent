@@ -87,7 +87,6 @@ class RedisCache:
             pipe.get(self._record_key(table, record_id))
         payloads = pipe.execute()
         results = [json.loads(p) for p in payloads if p]
-        results.sort(key=lambda r: r.get("id", ""))
         return results
 
     def delete_record(self, table: str, record_id: str) -> None:

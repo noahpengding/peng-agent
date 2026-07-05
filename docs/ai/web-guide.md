@@ -97,3 +97,7 @@ Currently, there is **no testing framework** (e.g., Vitest, Jest, Cypress) confi
 | `/memory` | `src/components/MemorySelection.tsx` | Managing short/long term context | `memoryService.ts` endpoints |
 | `/rag` | `src/components/RAGInterface.tsx` | Uploading/managing knowledge bases | `ragService.ts`, `uploadService.ts` |
 | `/model` | `src/components/ModelInterface.tsx` | Selecting provider/models | `modelService.ts` endpoints |
+
+## Memory Selection Notes
+- `MemorySelection.tsx` loads memories from `POST /memory` one server-side page at a time. The API returns 20 memories per page plus page metadata.
+- Selections are stored by memory ID outside the current page list so users can select memories across several pages and load them together into chat.

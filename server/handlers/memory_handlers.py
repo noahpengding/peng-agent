@@ -1,45 +1,105 @@
+import json
+from datetime import datetime, timedelta
+from math import ceil
+
 from sqlalchemy import text
+
+from config.config import config
 from utils.log import output_log
 from utils.mysql_connect import MysqlConnect
-from datetime import datetime, timedelta
-from config.config import config
-import json
 
 
-def get_memory(username: str = ""):
-    output_log("GET /memory", "DEBUG")
+MEMORY_PAGE_SIZE = 20
+
+MEMORY_QUERY_BASE = """
+    FROM (
+        SELECT
+            c.id,
+            c.user_name,
+            c.type,
+            c.base_model,
+            c.human_input,
+            c.created_at,
+            COALESCE((SELECT input_location FROM user_input WHERE chat_id = c.id ORDER BY id ASC LIMIT 1), '') as other_input,
+            (SELECT ai_response FROM ai_response WHERE chat_id = c.id ORDER BY id DESC LIMIT 1) as ai_response
+        FROM chat c
+        WHERE c.user_name = :username
+    ) memory_rows
+    WHERE memory_rows.ai_response IS NOT NULL
+      AND memory_rows.ai_response != ''
+      AND (
+          :search = ''
+          OR LOWER(COALESCE(memory_rows.human_input, '')) LIKE :search_pattern
+          OR LOWER(COALESCE(memory_rows.ai_response, '')) LIKE :search_pattern
+          OR LOWER(COALESCE(memory_rows.base_model, '')) LIKE :search_pattern
+      )
+"""
+
+
+def _empty_memory_page(page: int = 1, search: str = ""):
+    return {
+        "memories": [],
+        "page": max(page, 1),
+        "page_size": MEMORY_PAGE_SIZE,
+        "total_count": 0,
+        "total_pages": 1,
+        "has_next": False,
+        "has_previous": False,
+        "search": search,
+    }
+
+
+def get_memory(username: str = "", page: int = 1, search: str = ""):
+    output_log("POST /memory", "DEBUG")
+    try:
+        page = max(int(page), 1)
+    except (TypeError, ValueError):
+        page = 1
+    search = (search or "").strip().lower()
     if username == "":
-        return []
+        return _empty_memory_page(page, search)
 
     mysql = MysqlConnect()
     with mysql.get_session() as session:
-        # Optimized query to fetch all necessary data in one go
-        # This avoids N+1 problem and fetching excessively large content
-        query = text("""
+        count_query = text(f"""
+            SELECT COUNT(*)
+            {MEMORY_QUERY_BASE}
+        """)
+        records_query = text(f"""
             SELECT
-                c.id,
-                c.user_name,
-                c.type,
-                c.base_model,
-                c.human_input,
-                c.created_at,
-                COALESCE((SELECT input_location FROM user_input WHERE chat_id = c.id ORDER BY id ASC LIMIT 1), "") as other_input,
-                (SELECT ai_response FROM ai_response WHERE chat_id = c.id ORDER BY id DESC LIMIT 1) as ai_response
-            FROM chat c
-            WHERE c.user_name = :username
-            ORDER BY c.created_at DESC
+                memory_rows.id,
+                memory_rows.user_name,
+                memory_rows.type,
+                memory_rows.base_model,
+                memory_rows.human_input,
+                memory_rows.other_input,
+                memory_rows.ai_response,
+                memory_rows.created_at
+            {MEMORY_QUERY_BASE}
+            ORDER BY memory_rows.created_at DESC
+            LIMIT :limit OFFSET :offset
         """)
 
         try:
-            result = session.execute(query, {"username": username})
+            base_params = {
+                "username": username,
+                "search": search,
+                "search_pattern": f"%{search}%",
+            }
+            total_count = session.execute(count_query, base_params).scalar() or 0
+            total_pages = max(ceil(total_count / MEMORY_PAGE_SIZE), 1)
+            page = min(page, total_pages)
+            result = session.execute(
+                records_query,
+                {
+                    **base_params,
+                    "limit": MEMORY_PAGE_SIZE,
+                    "offset": (page - 1) * MEMORY_PAGE_SIZE,
+                },
+            )
 
             records = []
             for row in result:
-                # If ai_response is missing, skip the record as it's incomplete
-                if not row.ai_response:
-                    continue
-
-                # other_input is handled by COALESCE, so it's always a string (empty if None)
                 records.append(
                     {
                         "id": row.id,
@@ -52,11 +112,21 @@ def get_memory(username: str = ""):
                         "created_at": row.created_at,
                     }
                 )
-            return records
+            return {
+                "memories": records,
+                "page": page,
+                "page_size": MEMORY_PAGE_SIZE,
+                "total_count": total_count,
+                "total_pages": total_pages,
+                "has_next": page < total_pages,
+                "has_previous": page > 1,
+                "search": search,
+            }
         except Exception as e:
             output_log(f"Error executing memory query: {e}", "error")
-            return []
-        
+            return _empty_memory_page(page, search)
+
+
 async def update_lt_memory(username: str):
     output_log("POST /memory/update_lt_memory", "DEBUG")
     mysql = MysqlConnect()
