@@ -11,7 +11,8 @@ import {
   Alert,
   Switch,
 } from 'react-native';
-import { useMemoryApi, Memory } from '@/hooks/MemoryAPI';
+import { useMemoryApi } from '@/hooks/MemoryAPI';
+import type { Memory } from '@/hooks/MemoryAPI';
 import { useSelector, useDispatch } from 'react-redux';
 import { RootState } from '@/store';
 import { setShortTermMemory, setMessages } from '@/store/slices/chatSlice';

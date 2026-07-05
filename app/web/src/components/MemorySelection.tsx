@@ -2,7 +2,8 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useSelector } from 'react-redux';
 import { RootState } from '@/store';
-import { useMemoryApi, Memory } from '@/hooks/MemoryAPI';
+import { useMemoryApi } from '@/hooks/MemoryAPI';
+import type { Memory } from '@/hooks/MemoryAPI';
 import './MemorySelection.css';
 
 const MemoryPage: React.FC = () => {
