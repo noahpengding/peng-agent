@@ -6,13 +6,19 @@ from langchain_core.messages import (
 )
 from utils.minio_connection import MinioStorage
 from utils.log import output_log
+from datetime import datetime
 import base64
 import json
 import os
 
-def system_prompt(user_name, mysql_conn):
+def system_prompt(user_name, mysql_conn, tool_names):
     user_profile = mysql_conn.read_records("user", conditions={"user_name": user_name})
     system_prompt = str(user_profile[0]["system_prompt"]) if user_profile and "system_prompt" in user_profile[0] else "You are a helpful assistant."
+    system_prompt += f" Today is {datetime.now().strftime('%Y-%m-%d')}."
+    if tool_names != []:
+        system_prompt += f"If you need to use any tools, you need to use it correctly. You need to call the exact tool name and provide the correct parameters with the correct parameter names. "
+        system_prompt += f"You need to check the tools' description and parameter (including parameter name, type, and description) before using the tools. "
+
     current_dir = os.path.dirname(os.path.abspath(__file__))
     with open(os.path.join(current_dir, "prompts/markdown_format.md"), "r") as f:
         markdown_format = f.read()
