@@ -22,6 +22,7 @@ Placeholder for technical debt and tricky parts of the codebase.
 - **Missing Web/Mobile Tests (Severe Risk):** There is absolute zero test coverage (no Jest, Vitest, Cypress, Detox) for the Web and Mobile frontends. The CI pipelines only enforce `eslint`. This heavily increases regression risk during frontend state refactors or component updates.
 - **Frontend Code Duplication:** The Redux slices and API service definitions (`src/store/slices` and `src/services`) are heavily duplicated between `/app/web` and `/app/mobile`. Changes to state logic or API contracts MUST be implemented in both directories manually to prevent desynchronization.
 - **API Mismatch Risk:** There is no OpenAPI/Swagger code generation linking the FastAPI backend to the TypeScript frontends. Payloads are manually typed twice (e.g., `ChatRequest` in Python vs `ChatRequest` in TS). Changing a backend Pydantic model can silently break frontends at runtime.
+- **IP Lookup Dependency:** Each web/mobile chat send performs a best-effort request to the third-party `ipwho.is` service before `/chat`. The client uses a three-second timeout and sends an empty `config.ip_address` on failure, but location context can be absent when the service is unavailable, blocked, or rate-limited.
 
 ## Conflicting Docs/Code Behavior
 - The `README.md` dictates the existence of an `app/share/` package for shared web/mobile state, but the directory is missing in the repository structure, manifesting as the duplicated code issue noted above.

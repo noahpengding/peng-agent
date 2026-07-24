@@ -40,6 +40,7 @@ All API calls pass through a centralized wrapper `apiCall` in `src/utils/apiUtil
 - Automatically attaches the `Authorization: Bearer <token>` header from `src/utils/storage.ts`.
 - Handles `401 Unauthorized` globally by clearing the token and redirecting to `/login`.
 - Services (`src/services/*.ts`) wrap specific endpoints to provide typings to Redux thunks or components.
+- The chat send thunk resolves the current public egress IP through `src/utils/ipAddress.ts` for every send and includes it as `config.ip_address`; lookup failures fall back to an empty string.
 
 ## 8. Auth/Session Flow
 1. User logs in via `/login`.

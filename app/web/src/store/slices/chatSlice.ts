@@ -4,6 +4,7 @@ import { ChatService } from '../../services/chatService';
 import { fetchBaseModels } from './modelSlice';
 import { parsePythonBytes, binaryToDataUrl } from '../../utils/imageUtils';
 import { extractGeneratedImageUrl, isImageGenerationToolCall } from '@/utils/generatedImageUtils';
+import { getCurrentIpAddress } from '@/utils/ipAddress';
 
 interface SendMessageArgs {
   user_name: string;
@@ -91,9 +92,16 @@ export const sendMessage = createAsyncThunk('chat/sendMessage', async (args: Sen
 
   try {
     let chatIdFromChunk: number | null = null;
+    const ipAddress = await getCurrentIpAddress();
 
     await ChatService.sendMessage(
-      args,
+      {
+        ...args,
+        config: {
+          ...args.config,
+          ip_address: ipAddress,
+        },
+      },
       (chunk: string, type: string, done: boolean) => {
         if (done) {
           const chatId = extractChatIdFromChunk(chunk);

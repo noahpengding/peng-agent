@@ -31,6 +31,7 @@ The mobile frontend is a cross-platform React Native application built with Expo
 - The API URL is injected via Expo Config (`app.config.js`) and retrieved in `src/utils/apiUtils.ts`.
 - `src/utils/apiCall.ts` handles generic Axios requests, similar to the Web implementation. It automatically injects the Bearer token.
 - Raw endpoints are abstracted inside `src/services/`.
+- The chat send thunk resolves the current public egress IP through `src/utils/ipAddress.ts` for every send and includes it as `config.ip_address`; lookup failures fall back to an empty string.
 
 ## 8. Auth/Session Flow
 1. App launches -> `App.tsx` checks `expo-secure-store` for `access_token`.
