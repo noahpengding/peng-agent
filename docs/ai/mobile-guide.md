@@ -59,6 +59,12 @@ The app uses several Expo plugins for native device capabilities:
 - Uses standard React Native `StyleSheet.create({})`.
 - Centralized design tokens are stored in `src/utils/colors.ts` and `src/utils/typography.ts`, ensuring consistency with the "Technical & Moody" brand.
 
+### Chat Markdown and Formula Rendering
+- `ChatScreen.tsx` parses chat Markdown with `markdown-it` plus `markdown-it-katex`. It supports inline `$...$` and block `$$...$$` formulas.
+- `src/utils/markdownMath.ts` adds the common LLM delimiter forms `\(...\)` and `\[...\]` without preprocessing code fences or ordinary message text.
+- Block formulas render through `src/components/MarkdownMathBlock.tsx`. The KaTeX WebView must remain full-width because a height-only WebView can collapse inside a centered React Native container and leave a blank formula area.
+- The block renderer measures its HTML content, caps its height relative to the device screen, and keeps overflow scrollable. Long formulas scroll horizontally instead of widening the chat bubble or shrinking to unreadable text.
+
 ## 13. Build Variants/Flavors
 - Managed via Expo Application Services (EAS).
 - Defined in `eas.json` (Profiles for dev, preview, production) and configured with a specific `projectId` in `app.config.js`.

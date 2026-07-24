@@ -39,9 +39,11 @@ import {
   submitMessageFeedback,
   setUploadedImages,
 } from '@/store/slices/chatSlice';
+import MarkdownMathBlock from '@/components/MarkdownMathBlock';
 import { Message, UploadedImage } from '@/types/ChatInterface.types';
 import { useRAGApi } from '@/hooks/RAGAPI';
 import { UploadService } from '@/services/uploadService';
+import { markdownItBracketMath } from '@/utils/markdownMath';
 import Markdown, { 
   ASTNode, 
   RenderRules,
@@ -55,7 +57,9 @@ import { Typography } from '../utils/typography';
 
 const md = new MarkdownIt({
   typographer: true,
-}).use(markdownItKatex);
+})
+  .use(markdownItKatex)
+  .use(markdownItBracketMath);
 
 const MemoizedMarkdown = React.memo(Markdown);
 
@@ -110,6 +114,16 @@ const markdownViewStyle = (styles: MarkdownStyles, key: string): StyleProp<ViewS
 
 const markdownFlattenedTextStyle = (styles: MarkdownStyles, key: string): TextStyle =>
   StyleSheet.flatten(markdownTextStyle(styles, key)) ?? {};
+
+const markdownMathColor = (styles: MarkdownStyles): string => {
+  const color = markdownFlattenedTextStyle(styles, 'math').color;
+  return typeof color === 'string' ? color : Colors.textMain;
+};
+
+const markdownMathFontSize = (styles: MarkdownStyles): number => {
+  const fontSize = markdownFlattenedTextStyle(styles, 'math').fontSize;
+  return typeof fontSize === 'number' ? fontSize : Typography.sizes.base;
+};
 
 const handleMarkdownLinkPress = (url: string, onLinkPress?: (url: string) => boolean) => {
   if (!url) return;
@@ -245,13 +259,10 @@ const markdownRules: RenderRules = {
     styles: MarkdownStyles,
   ) => (
     <View key={node.key} style={markdownViewStyle(styles, 'mathBlock')}>
-      <Katex
+      <MarkdownMathBlock
         expression={node.content}
-        displayMode={true}
-        style={{
-          ...markdownFlattenedTextStyle(styles, 'math'),
-          backgroundColor: 'transparent',
-        }}
+        color={markdownMathColor(styles)}
+        fontSize={markdownMathFontSize(styles)}
       />
     </View>
   ),
@@ -1422,6 +1433,11 @@ const userMarkdownStyles = {
   math: {
     color: Colors.white,
     height: 40,
+    fontSize: Typography.sizes.base,
+  },
+  mathBlock: {
+    width: '100%',
+    marginVertical: Typography.spacing.xs,
   },
 };
 
@@ -1537,11 +1553,10 @@ const markdownStyles = {
   math: {
     color: Colors.textMain,
     height: 40,
+    fontSize: Typography.sizes.base,
   },
   mathBlock: {
     marginVertical: Typography.spacing.xs,
-    alignItems: 'center',
     width: '100%',
-    height: 60,
   },
 };
