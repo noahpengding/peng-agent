@@ -28,8 +28,8 @@ def system_prompt(user_name, mysql_conn, tool_names, ip_address):
     user_profile = mysql_conn.read_records("user", conditions={"user_name": user_name})
     system_prompt = str(user_profile[0]["system_prompt"]) if user_profile and "system_prompt" in user_profile[0] else "You are a helpful assistant."
     if tool_names != []:
-        system_prompt += f"If you need to use any tools, you need to use it correctly. You need to call the exact tool name and provide the correct parameters with the correct parameter names. "
-        system_prompt += f"You need to check the tools' description and parameter (including parameter name, type, and description) before using the tools. "
+        system_prompt += "If you need to use any tools, you need to use it correctly. You need to call the exact tool name and provide the correct parameters with the correct parameter names. "
+        system_prompt += "You need to check the tools' description and parameter (including parameter name, type, and description) before using the tools. "
 
     up_to_date_info = f" Today is {datetime.now().strftime('%Y-%m-%d')}. "
     up_to_date_info += _get_ip_geo_info(ip_address)
