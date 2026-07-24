@@ -12,16 +12,18 @@ class TestPromptGenerator(unittest.TestCase):
             "system_prompt": "You are a test bot.",
             "long_term_memory": '["likes python"]'
         }]
+        test_ip_address = "129.153.54.150"
         
-        result = system_prompt("test_user", mock_mysql, ["web_search"])
-        
+        result = system_prompt("test_user", mock_mysql, ["web_search"], test_ip_address)
+
+        print(result[0].content)
         self.assertEqual(len(result), 2)
         self.assertIsInstance(result[0], SystemMessage)
         with open("services/prompts/markdown_format.md", "r") as f:
             markdown_format = f.read()
         self.assertEqual(
             result[0].content,
-            "You are a test bot. Today is 2026-07-12."
+            "You are a test bot. Today is 2026-07-12. You get request from IP address 129.153.54.150. The location is Vaughan, Ontario, Canada."
             "If you need to use any tools, you need to use it correctly. "
             "You need to call the exact tool name and provide the correct "
             "parameters with the correct parameter names. You need to check "
@@ -34,14 +36,15 @@ class TestPromptGenerator(unittest.TestCase):
     @patch('services.prompt_generator.datetime')
     def test_system_prompt_without_tools(self, mock_datetime):
         mock_datetime.now.return_value.strftime.return_value = "2026-07-12"
+        test_ip_address = "129.153.54.150"
         mock_mysql = MagicMock()
         mock_mysql.read_records.return_value = []
 
-        result = system_prompt("test_user", mock_mysql, [])
+        result = system_prompt("test_user", mock_mysql, [], test_ip_address)
 
         self.assertTrue(
             result[0].content.startswith(
-                "You are a helpful assistant. Today is 2026-07-12."
+                "You are a helpful assistant. Today is 2026-07-12. You get request from IP address 129.153.54.150. The location is Vaughan, Ontario, Canada."
             )
         )
         self.assertNotIn("exact tool name", result[0].content)

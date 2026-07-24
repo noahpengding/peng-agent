@@ -10,11 +10,25 @@ from datetime import datetime
 import base64
 import json
 import os
+import requests
 
-def system_prompt(user_name, mysql_conn, tool_names):
+def _get_ip_geo_info(ip_address):
+    if not ip_address or ip_address == "":
+        return ""
+    url = f"https://ipwho.is/{ip_address}" if ip_address else "https://ipwho.is/"
+    response = requests.get(url, timeout=10)
+    if response.status_code == 200:
+        data = response.json()
+        if data.get("success"):
+            return f"You get request from IP address {ip_address}. The location is {data.get('city')}, {data.get('region')}, {data.get('country')}."
+    return f"You get request from IP address {ip_address}."
+
+
+def system_prompt(user_name, mysql_conn, tool_names, ip_address):
     user_profile = mysql_conn.read_records("user", conditions={"user_name": user_name})
     system_prompt = str(user_profile[0]["system_prompt"]) if user_profile and "system_prompt" in user_profile[0] else "You are a helpful assistant."
-    system_prompt += f" Today is {datetime.now().strftime('%Y-%m-%d')}."
+    system_prompt += f" Today is {datetime.now().strftime('%Y-%m-%d')}. "
+    system_prompt += _get_ip_geo_info(ip_address)
     if tool_names != []:
         system_prompt += f"If you need to use any tools, you need to use it correctly. You need to call the exact tool name and provide the correct parameters with the correct parameter names. "
         system_prompt += f"You need to check the tools' description and parameter (including parameter name, type, and description) before using the tools. "
