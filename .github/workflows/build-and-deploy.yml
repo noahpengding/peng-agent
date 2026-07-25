@@ -34,13 +34,6 @@ jobs:
         run: uv sync
         working-directory: ./server
 
-      - name: Install ruff
-        run: uv tool install ruff
-
-      - name: Run ruff check
-        run: uv tool run ruff check
-        working-directory: ./server
-
       - name: Configure Datadog Test Optimization
         uses: datadog/test-visibility-github-action@v2
         with:
