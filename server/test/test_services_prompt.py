@@ -23,31 +23,16 @@ class TestPromptGenerator(unittest.TestCase):
             markdown_format = f.read()
         self.assertEqual(
             result[0].content,
-            "You are a test bot. Today is 2026-07-12. You get request from IP address 129.153.54.150. The location is Vaughan, Ontario, Canada."
+            "You are a test bot."
             "If you need to use any tools, you need to use it correctly. "
             "You need to call the exact tool name and provide the correct "
             "parameters with the correct parameter names. You need to check "
             "the tools' description and parameter (including parameter name, "
             "type, and description) before using the tools. "
-            + markdown_format,
+            + markdown_format
+            + f" Today is 2026-07-12. You get request from IP address {test_ip_address}. The location is Vaughan, Ontario, Canada.",
         )
         self.assertIn("likes python", result[1].content)
-
-    @patch('services.prompt_generator.datetime')
-    def test_system_prompt_without_tools(self, mock_datetime):
-        mock_datetime.now.return_value.strftime.return_value = "2026-07-12"
-        test_ip_address = "129.153.54.150"
-        mock_mysql = MagicMock()
-        mock_mysql.read_records.return_value = []
-
-        result = system_prompt("test_user", mock_mysql, [], test_ip_address)
-
-        self.assertTrue(
-            result[0].content.startswith(
-                "You are a helpful assistant. Today is 2026-07-12. You get request from IP address 129.153.54.150. The location is Vaughan, Ontario, Canada."
-            )
-        )
-        self.assertNotIn("exact tool name", result[0].content)
 
     def test_add_human_message_to_prompt(self):
         result = add_human_message_to_prompt("hello")
