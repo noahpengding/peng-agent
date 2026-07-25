@@ -16,7 +16,6 @@ class TestPromptGenerator(unittest.TestCase):
         
         result = system_prompt("test_user", mock_mysql, ["web_search"], test_ip_address)
 
-        print(result[0].content)
         self.assertEqual(len(result), 2)
         self.assertIsInstance(result[0], SystemMessage)
         with open("services/prompts/markdown_format.md", "r") as f:

@@ -16,12 +16,14 @@ def _get_ip_geo_info(ip_address):
     if not ip_address or ip_address == "":
         return ""
     url = f"https://ipwho.is/{ip_address}" if ip_address else "https://ipwho.is/"
-    response = requests.get(url, timeout=10)
-    if response.status_code == 200:
-        data = response.json()
-        if data.get("success"):
-            return f"You get request from IP address {ip_address}. The location is {data.get('city')}, {data.get('region')}, {data.get('country')}."
-    return f"You get request from IP address {ip_address}."
+    try:
+        response = requests.get(url, timeout=10)
+        if response.status_code == 200:
+            data = response.json()
+            if data.get("success"):
+                return f"You get request from IP address {ip_address}. The location is {data.get('city')}, {data.get('region')}, {data.get('country')}."
+    except Exception as e:
+        return f"You get request from IP address {ip_address}."
 
 
 def system_prompt(user_name, mysql_conn, tool_names, ip_address):
