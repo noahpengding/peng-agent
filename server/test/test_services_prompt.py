@@ -4,20 +4,33 @@ from services.prompt_generator import system_prompt, add_human_message_to_prompt
 from langchain_core.messages import SystemMessage, HumanMessage
 
 class TestPromptGenerator(unittest.TestCase):
-    def test_system_prompt(self):
+    @patch('services.prompt_generator.datetime')
+    def test_system_prompt_with_tools(self, mock_datetime):
+        mock_datetime.now.return_value.strftime.return_value = "2026-07-12"
         mock_mysql = MagicMock()
         mock_mysql.read_records.return_value = [{
             "system_prompt": "You are a test bot.",
             "long_term_memory": '["likes python"]'
         }]
+        test_ip_address = "129.153.54.150"
         
-        result = system_prompt("test_user", mock_mysql)
-        
+        result = system_prompt("test_user", mock_mysql, ["web_search"], test_ip_address)
+
         self.assertEqual(len(result), 2)
         self.assertIsInstance(result[0], SystemMessage)
         with open("services/prompts/markdown_format.md", "r") as f:
             markdown_format = f.read()
-        self.assertEqual(result[0].content, "You are a test bot." + markdown_format)
+        self.assertEqual(
+            result[0].content,
+            "You are a test bot."
+            "If you need to use any tools, you need to use it correctly. "
+            "You need to call the exact tool name and provide the correct "
+            "parameters with the correct parameter names. You need to check "
+            "the tools' description and parameter (including parameter name, "
+            "type, and description) before using the tools. "
+            + markdown_format
+            + f" Today is 2026-07-12. You get request from IP address {test_ip_address}. The location is Vaughan, Ontario, Canada.",
+        )
         self.assertIn("likes python", result[1].content)
 
     def test_add_human_message_to_prompt(self):

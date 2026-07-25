@@ -30,6 +30,7 @@ import { fetchBaseModels } from '@/store/slices/modelSlice';
 import { fetchTools } from '@/store/slices/toolSlice';
 import {
   addUserMessage,
+  prepareLastTurnRetry,
   sendMessage,
   setBaseModel,
   setError,
@@ -39,9 +40,11 @@ import {
   submitMessageFeedback,
   setUploadedImages,
 } from '@/store/slices/chatSlice';
+import MarkdownMathBlock from '@/components/MarkdownMathBlock';
 import { Message, UploadedImage } from '@/types/ChatInterface.types';
 import { useRAGApi } from '@/hooks/RAGAPI';
 import { UploadService } from '@/services/uploadService';
+import { markdownItBracketMath } from '@/utils/markdownMath';
 import Markdown, { 
   ASTNode, 
   RenderRules,
@@ -55,7 +58,9 @@ import { Typography } from '../utils/typography';
 
 const md = new MarkdownIt({
   typographer: true,
-}).use(markdownItKatex);
+})
+  .use(markdownItKatex)
+  .use(markdownItBracketMath);
 
 const MemoizedMarkdown = React.memo(Markdown);
 
@@ -110,6 +115,16 @@ const markdownViewStyle = (styles: MarkdownStyles, key: string): StyleProp<ViewS
 
 const markdownFlattenedTextStyle = (styles: MarkdownStyles, key: string): TextStyle =>
   StyleSheet.flatten(markdownTextStyle(styles, key)) ?? {};
+
+const markdownMathColor = (styles: MarkdownStyles): string => {
+  const color = markdownFlattenedTextStyle(styles, 'math').color;
+  return typeof color === 'string' ? color : Colors.textMain;
+};
+
+const markdownMathFontSize = (styles: MarkdownStyles): number => {
+  const fontSize = markdownFlattenedTextStyle(styles, 'math').fontSize;
+  return typeof fontSize === 'number' ? fontSize : Typography.sizes.base;
+};
 
 const handleMarkdownLinkPress = (url: string, onLinkPress?: (url: string) => boolean) => {
   if (!url) return;
@@ -245,13 +260,10 @@ const markdownRules: RenderRules = {
     styles: MarkdownStyles,
   ) => (
     <View key={node.key} style={markdownViewStyle(styles, 'mathBlock')}>
-      <Katex
+      <MarkdownMathBlock
         expression={node.content}
-        displayMode={true}
-        style={{
-          ...markdownFlattenedTextStyle(styles, 'math'),
-          backgroundColor: 'transparent',
-        }}
+        color={markdownMathColor(styles)}
+        fontSize={markdownMathFontSize(styles)}
       />
     </View>
   ),
@@ -340,12 +352,16 @@ const MessageItem = React.memo(({
   messageKey,
   isFolded, 
   onToggleFold, 
-  onFeedback 
+  canRetry,
+  onRetry,
+  onFeedback
 }: { 
   item: Message; 
   messageKey: string;
   isFolded: boolean; 
   onToggleFold: (messageKey: string, current: boolean) => void;
+  canRetry: boolean;
+  onRetry: () => void;
   onFeedback: (mid: string, cid: number, f: 'upvote' | 'downvote') => void;
 }) => {
   const isFoldable = item.type === 'reasoning_summary' || item.type === 'tool_calls' || item.type === 'tool_output';
@@ -395,6 +411,20 @@ const MessageItem = React.memo(({
                 ) : null}
                 {item.chatId && item.messageId && item.type === 'output_text' && (
                   <View style={styles.feedbackContainer}>
+                    {canRetry && (
+                      <TouchableOpacity
+                        onPress={onRetry}
+                        style={styles.feedbackButton}
+                        accessibilityRole="button"
+                        accessibilityLabel="Retry last response"
+                      >
+                        <MaterialCommunityIcons
+                          name="refresh"
+                          size={17}
+                          color="#9CA3AF"
+                        />
+                      </TouchableOpacity>
+                    )}
                     <TouchableOpacity
                       onPress={() => onFeedback(item.messageId!, item.chatId!, 'upvote')}
                       disabled={item.feedbackUpdating}
@@ -454,6 +484,8 @@ const MessageItem = React.memo(({
     prevProps.messageKey === nextProps.messageKey &&
     prevProps.isFolded === nextProps.isFolded &&
     prevProps.onToggleFold === nextProps.onToggleFold &&
+    prevProps.canRetry === nextProps.canRetry &&
+    prevProps.onRetry === nextProps.onRetry &&
     prevProps.onFeedback === nextProps.onFeedback &&
     prevItem.content === nextItem.content &&
     prevItem.role === nextItem.role &&
@@ -485,6 +517,8 @@ export default function ChatScreen() {
   const selectedToolNames = useSelector((state: RootState) => state.chat.selectedToolNames);
   const shortTermMemory = useSelector((state: RootState) => state.chat.shortTermMemory);
   const uploadedImages = useSelector((state: RootState) => state.chat.uploadedImages);
+  const lastRequest = useSelector((state: RootState) => state.chat.lastRequest);
+  const retryMessageId = useSelector((state: RootState) => state.chat.retryMessageId);
   const error = useSelector((state: RootState) => state.chat.error);
   const availableBaseModels = useSelector((state: RootState) => state.models.availableBaseModels);
   const baseModelsLoading = useSelector((state: RootState) => state.models.loading);
@@ -503,6 +537,7 @@ export default function ChatScreen() {
   const isNearBottomRef = useRef(true);
   const scrollFrameRef = useRef<number | null>(null);
   const previousLoadingRef = useRef(isLoading);
+  const retryPendingRef = useRef(false);
 
   useEffect(() => {
     dispatch(fetchBaseModels());
@@ -559,6 +594,12 @@ export default function ChatScreen() {
 
     previousLoadingRef.current = isLoading;
   }, [isLoading, scheduleScrollToEnd]);
+
+  useEffect(() => {
+    if (!isLoading) {
+      retryPendingRef.current = false;
+    }
+  }, [isLoading]);
 
   const handleSend = () => {
     if (!input.trim() && uploadedImages.length === 0) {
@@ -726,6 +767,18 @@ export default function ChatScreen() {
     }));
   }, [dispatch, user]);
 
+  const handleRetryLastTurn = useCallback(() => {
+    if (isLoading || !lastRequest || retryPendingRef.current) {
+      return;
+    }
+
+    retryPendingRef.current = true;
+    isNearBottomRef.current = true;
+    dispatch(prepareLastTurnRetry());
+    dispatch(sendMessage(lastRequest));
+    setIsComposerCollapsed(true);
+  }, [dispatch, isLoading, lastRequest]);
+
   const toggleFolded = useCallback((messageKey: string, currentState: boolean) => {
     setFoldedMessages((prev) => ({
       ...prev,
@@ -758,10 +811,12 @@ export default function ChatScreen() {
         messageKey={messageKey}
         isFolded={foldedMessages[messageKey] ?? item.folded ?? false}
         onToggleFold={toggleFolded}
+        canRetry={!isLoading && item.messageId === retryMessageId}
+        onRetry={handleRetryLastTurn}
         onFeedback={handleFeedback}
       />
     );
-  }, [foldedMessages, toggleFolded, handleFeedback]);
+  }, [foldedMessages, handleFeedback, handleRetryLastTurn, isLoading, retryMessageId, toggleFolded]);
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
@@ -1422,6 +1477,11 @@ const userMarkdownStyles = {
   math: {
     color: Colors.white,
     height: 40,
+    fontSize: Typography.sizes.base,
+  },
+  mathBlock: {
+    width: '100%',
+    marginVertical: Typography.spacing.xs,
   },
 };
 
@@ -1537,11 +1597,10 @@ const markdownStyles = {
   math: {
     color: Colors.textMain,
     height: 40,
+    fontSize: Typography.sizes.base,
   },
   mathBlock: {
     marginVertical: Typography.spacing.xs,
-    alignItems: 'center',
     width: '100%',
-    height: 60,
   },
 };

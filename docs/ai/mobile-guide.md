@@ -31,6 +31,7 @@ The mobile frontend is a cross-platform React Native application built with Expo
 - The API URL is injected via Expo Config (`app.config.js`) and retrieved in `src/utils/apiUtils.ts`.
 - `src/utils/apiCall.ts` handles generic Axios requests, similar to the Web implementation. It automatically injects the Bearer token.
 - Raw endpoints are abstracted inside `src/services/`.
+- The chat send thunk resolves the current public egress IP through `src/utils/ipAddress.ts` for every send and includes it as `config.ip_address`; lookup failures fall back to an empty string.
 
 ## 8. Auth/Session Flow
 1. App launches -> `App.tsx` checks `expo-secure-store` for `access_token`.
@@ -57,6 +58,12 @@ The app uses several Expo plugins for native device capabilities:
 ## 12. Styling/Theme System
 - Uses standard React Native `StyleSheet.create({})`.
 - Centralized design tokens are stored in `src/utils/colors.ts` and `src/utils/typography.ts`, ensuring consistency with the "Technical & Moody" brand.
+
+### Chat Markdown and Formula Rendering
+- `ChatScreen.tsx` parses chat Markdown with `markdown-it` plus `markdown-it-katex`. It supports inline `$...$` and block `$$...$$` formulas.
+- `src/utils/markdownMath.ts` adds the common LLM delimiter forms `\(...\)` and `\[...\]` without preprocessing code fences or ordinary message text.
+- Block formulas render through `src/components/MarkdownMathBlock.tsx`. The KaTeX WebView must remain full-width because a height-only WebView can collapse inside a centered React Native container and leave a blank formula area.
+- The block renderer measures its HTML content, caps its height relative to the device screen, and keeps overflow scrollable. Long formulas scroll horizontally instead of widening the chat bubble or shrinking to unreadable text.
 
 ## 13. Build Variants/Flavors
 - Managed via Expo Application Services (EAS).
@@ -85,6 +92,12 @@ The app uses several Expo plugins for native device capabilities:
 1. `app/mobile/app.config.js`
 2. `app/mobile/App.tsx`
 3. `app/mobile/package.json`
+
+## 19. Completed-Turn Retry
+- The latest successfully completed assistant output shows a refresh-style retry control immediately before its feedback controls.
+- `chatSlice.ts` keeps a cloned snapshot of the completed `POST /chat` request, including the message, attachments, knowledge base, model/operator, tools, short-term memory IDs, and resolved IP address.
+- Retrying removes only the final user turn and its streamed assistant/tool/reasoning rows, restores the original request's pre-turn short-term memory IDs, re-adds the user row, and sends the saved request again.
+- Configuration changes made after the original response do not affect its retry. Loading a different saved-memory transcript clears retry eligibility.
 
 ## Screen / Responsibility Table
 | Screen/Flow | File paths | Responsibility | API/data used |

@@ -68,7 +68,7 @@ Because types are handwritten and duplicated across three completely separate di
 | Contract | Request shape | Response shape | Validation | Consumers |
 |---|---|---|---|---|
 | **Login** | `{"username", "password"}` | `{"access_token", "token_type"}` | Pydantic `UserLogin` | Web & Mobile Auth Flow |
-| **Chat Stream** | `{"user_name", "message", "knowledge_base", "config"}` | `text/event-stream` chunks | Pydantic `ChatRequest` | Web & Mobile Chat UI |
+| **Chat Stream** | `{"user_name", "message", "knowledge_base", "config": {"operator", "base_model", "tools_name", "short_term_memory", "ip_address"}}` | `text/event-stream` chunks | Pydantic `ChatRequest` | Web & Mobile Chat UI |
 | **Feedback** | `{"chat_id", "user_name", "feedback"}` | `{"message", "chat_id", "feedback"}` | Pydantic `ChatFeedbackRequest` | Web & Mobile Message Items |
 | **Memory Page** | `{"user_name", "page", "search"}` | `{"memories", "page", "page_size", "total_count", "total_pages", "has_next", "has_previous", "search"}` | Dict body in `memory_router.py`; handler clamps page and uses fixed `page_size` 20 | Web & Mobile Memory Selection |
 
@@ -76,3 +76,12 @@ Because types are handwritten and duplicated across three completely separate di
 - `POST /memory` returns a paged envelope instead of a bare array. `page` is 1-based, `page_size` is fixed at 20, and out-of-range pages are clamped to the available page range.
 - `search` is optional and server-side; matching applies to human input, AI response, and base model for completed memories with a non-empty AI response.
 - Web and mobile both keep selected memory objects outside the current page so selections from multiple pages can be loaded together into short-term memory.
+
+### Chat IP Address Notes
+- Web and mobile resolve the current public egress IP immediately after a chat send is dispatched and add it as `config.ip_address` before posting to `/chat`.
+- IP resolution is best-effort with a three-second timeout. If the lookup fails, clients send an empty string so chat remains available and the backend omits location context.
+
+### Chat Retry Notes
+- Retry reuses the existing `POST /chat` contract; it does not require a separate backend route.
+- Each client snapshots the fully resolved request after a successful turn. A retry resends that snapshot, including its original `config.ip_address`.
+- Before replay, the client restores the saved pre-turn `short_term_memory` list. The completed chat ID being replaced therefore remains persisted server-side but is excluded from the active conversation context and replaced by the newly completed chat ID.

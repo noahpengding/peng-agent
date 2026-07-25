@@ -1,18 +1,34 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { Message } from '@/types/ChatInterface.types';
 import { MessageItem } from './MessageItem';
 
 interface MessageListProps {
   messages: Message[];
   isLoading: boolean;
+  retryMessageId: string | null;
+  onRetry: () => void;
   onSubmitFeedback: (messageId: string, chatId: number, feedback: 'upvote' | 'downvote' | 'no_response') => void;
 }
 
 // ⚡ Bolt Optimization: Wrapped the component in React.memo to prevent unnecessary re-renders.
 // This avoids mapping over potentially hundreds of messages on every keystroke in the ChatInterface input field.
-export const MessageList: React.FC<MessageListProps> = React.memo(({ messages, isLoading, onSubmitFeedback }) => {
+export const MessageList: React.FC<MessageListProps> = React.memo(({ messages, isLoading, retryMessageId, onRetry, onSubmitFeedback }) => {
   const [foldedMessages, setFoldedMessages] = useState<Record<string, boolean>>({});
   const messageRefs = useRef<Record<number, HTMLDivElement | null>>({});
+  const retryMessageIndex = useMemo(() => {
+    if (isLoading || !retryMessageId) {
+      return -1;
+    }
+
+    for (let i = messages.length - 1; i >= 0; i--) {
+      const message = messages[i];
+      if (message.type === 'output_text' && message.chatId && message.messageId === retryMessageId) {
+        return i;
+      }
+    }
+
+    return -1;
+  }, [isLoading, messages, retryMessageId]);
 
   const toggleFolded = useCallback((index: number, currentState: boolean) => {
     setFoldedMessages((prev) => ({
@@ -64,6 +80,8 @@ export const MessageList: React.FC<MessageListProps> = React.memo(({ messages, i
               isFolded={isFolded}
               onToggleFold={toggleFolded}
               setRef={setRef}
+              canRetry={index === retryMessageIndex}
+              onRetry={onRetry}
               onSubmitFeedback={onSubmitFeedback}
             />
           </div>

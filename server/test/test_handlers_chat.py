@@ -15,7 +15,9 @@ class TestChatHandlers(unittest.IsolatedAsyncioTestCase):
         mock_prompt_gen.add_knowledge_base_to_prompt.return_value = []
         mock_prompt_gen.add_human_message_to_prompt.return_value = [{"role": "user", "content": "hi"}]
 
-        chat_config = ChatConfig(operator="op", base_model="model", tools_name=[])
+        chat_config = ChatConfig(
+            operator="op", base_model="model", tools_name=["web_search"], ip_address="129.153.54.150"
+        )
         
         prompt, chat_id = _generate_prompt_params(
             "user", "hi", "kb", [], chat_config, mock_mysql
@@ -23,6 +25,9 @@ class TestChatHandlers(unittest.IsolatedAsyncioTestCase):
         
         self.assertEqual(chat_id, 123)
         self.assertGreater(len(prompt), 0)
+        mock_prompt_gen.system_prompt.assert_called_once_with(
+            "user", mock_mysql, ["web_search"], "129.153.54.150"
+        )
         mock_mysql.create_record.assert_called()
 
     @patch('handlers.chat_handlers.MysqlConnect')

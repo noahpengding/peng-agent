@@ -40,6 +40,7 @@ All API calls pass through a centralized wrapper `apiCall` in `src/utils/apiUtil
 - Automatically attaches the `Authorization: Bearer <token>` header from `src/utils/storage.ts`.
 - Handles `401 Unauthorized` globally by clearing the token and redirecting to `/login`.
 - Services (`src/services/*.ts`) wrap specific endpoints to provide typings to Redux thunks or components.
+- The chat send thunk resolves the current public egress IP through `src/utils/ipAddress.ts` for every send and includes it as `config.ip_address`; lookup failures fall back to an empty string.
 
 ## 8. Auth/Session Flow
 1. User logs in via `/login`.
@@ -88,6 +89,12 @@ Currently, there is **no testing framework** (e.g., Vitest, Jest, Cypress) confi
 2. `app/web/src/index.tsx`
 3. `app/web/src/utils/apiUtils.ts`
 4. `app/web/src/store/index.ts`
+
+## 18. Completed-Turn Retry
+- The latest successfully completed assistant output shows a retry control immediately before its feedback controls.
+- `chatSlice.ts` keeps a cloned snapshot of the completed `POST /chat` request, including the message, attachments, knowledge base, model/operator, tools, short-term memory IDs, and resolved IP address.
+- Retrying removes only the final user turn and its streamed assistant/tool/reasoning rows, restores the original request's pre-turn short-term memory IDs, re-adds the user row, and sends the saved request again.
+- Configuration changes made after the original response do not affect its retry. Loading a different saved-memory transcript clears retry eligibility.
 
 ## Route / API Responsibility Table
 | Route/Page | File paths | Responsibility | API/data used |

@@ -12,6 +12,7 @@ interface ChatRequest {
     base_model: string;
     tools_name: string[];
     short_term_memory: number[];
+    ip_address: string;
   };
 }
 

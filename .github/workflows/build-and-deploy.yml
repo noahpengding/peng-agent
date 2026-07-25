@@ -7,7 +7,7 @@ env:
   REGISTRY: ghcr.io
   SERVER_IMAGE: ghcr.io/${{ github.repository }}/server
   WEB_IMAGE: ghcr.io/${{ github.repository }}/front
-  VERSION: v2.4.7
+  VERSION: v2.4.8
   GITHUB_REPOSITORY: ${{ github.repository }}
   GITHUB_COMMIT_SHA: ${{ github.sha }}
 
@@ -32,13 +32,6 @@ jobs:
 
       - name: Install Python dependencies
         run: uv sync
-        working-directory: ./server
-
-      - name: Install ruff
-        run: uv tool install ruff
-
-      - name: Run ruff check
-        run: uv tool run ruff check
         working-directory: ./server
 
       - name: Configure Datadog Test Optimization

@@ -4,6 +4,7 @@ import { ChatService } from '../../services/chatService';
 import { fetchBaseModels } from './modelSlice';
 import { parsePythonBytes, binaryToDataUrl } from '../../utils/imageUtils';
 import { extractGeneratedImageUrl, isImageGenerationToolCall } from '@/utils/generatedImageUtils';
+import { getCurrentIpAddress } from '@/utils/ipAddress';
 
 interface SendMessageArgs {
   user_name: string;
@@ -15,6 +16,7 @@ interface SendMessageArgs {
     base_model: string;
     tools_name: string[];
     short_term_memory: number[];
+    ip_address?: string;
   };
 }
 
@@ -34,6 +36,8 @@ interface ChatState {
   error: string | null;
   isSidebarHidden: boolean;
   uploadedImages: UploadedImage[];
+  lastRequest: SendMessageArgs | null;
+  retryMessageId: string | null;
 
   // Selection state
   baseModel: string;
@@ -49,6 +53,8 @@ const initialState: ChatState = {
   error: null,
   isSidebarHidden: false,
   uploadedImages: [],
+  lastRequest: null,
+  retryMessageId: null,
 
   baseModel: 'gpt-4',
   knowledgeBase: 'default',
@@ -84,6 +90,16 @@ const hasImageGenerationToolCall = (messages: Message[], messageId: string): boo
   });
 };
 
+const cloneSendMessageArgs = (args: SendMessageArgs): SendMessageArgs => ({
+  ...args,
+  image: args.image ? [...args.image] : undefined,
+  config: {
+    ...args.config,
+    tools_name: [...args.config.tools_name],
+    short_term_memory: [...args.config.short_term_memory],
+  },
+});
+
 // Async thunk for sending message
 export const sendMessage = createAsyncThunk('chat/sendMessage', async (args: SendMessageArgs, { dispatch, rejectWithValue }) => {
   // Generate a messageId for this turn
@@ -91,9 +107,19 @@ export const sendMessage = createAsyncThunk('chat/sendMessage', async (args: Sen
 
   try {
     let chatIdFromChunk: number | null = null;
+    const request = {
+      ...args,
+      image: args.image ? [...args.image] : undefined,
+      config: {
+        ...args.config,
+        tools_name: [...args.config.tools_name],
+        short_term_memory: [...args.config.short_term_memory],
+        ip_address: args.config.ip_address ?? await getCurrentIpAddress(),
+      },
+    };
 
     await ChatService.sendMessage(
-      args,
+      request,
       (chunk: string, type: string, done: boolean) => {
         if (done) {
           const chatId = extractChatIdFromChunk(chunk);
@@ -115,6 +141,7 @@ export const sendMessage = createAsyncThunk('chat/sendMessage', async (args: Sen
         throw error;
       }
     );
+    return request;
   } catch (error) {
     return rejectWithValue((error as Error).message);
   }
@@ -159,15 +186,48 @@ const chatSlice = createSlice({
     },
     setMessages: (state, action: PayloadAction<Message[]>) => {
       state.messages = action.payload;
+      state.lastRequest = null;
+      state.retryMessageId = null;
     },
     resetState: (state) => {
       state.messages = [];
       state.input = '';
       state.isLoading = false;
       state.error = null;
+      state.lastRequest = null;
+      state.retryMessageId = null;
     },
     setError: (state, action: PayloadAction<string | null>) => {
       state.error = action.payload;
+    },
+    prepareLastTurnRetry: (state) => {
+      if (!state.lastRequest || state.isLoading) {
+        return;
+      }
+
+      let lastUserMessageIndex = -1;
+      for (let i = state.messages.length - 1; i >= 0; i--) {
+        if (state.messages[i].role === 'user' || state.messages[i].role === 'human') {
+          lastUserMessageIndex = i;
+          break;
+        }
+      }
+
+      if (lastUserMessageIndex < 0) {
+        return;
+      }
+
+      const lastUserMessage = state.messages[lastUserMessageIndex];
+      const retryUserMessage: Message = {
+        ...lastUserMessage,
+        images: lastUserMessage.images ? [...lastUserMessage.images] : undefined,
+      };
+
+      state.messages.splice(lastUserMessageIndex);
+      state.messages.push(retryUserMessage);
+      state.shortTermMemory = [...state.lastRequest.config.short_term_memory];
+      state.error = null;
+      state.retryMessageId = null;
     },
 
     // Actions for streaming
@@ -284,6 +344,7 @@ const chatSlice = createSlice({
             message.chatId = chatId;
             message.feedback = message.feedback || 'no_response';
             message.feedbackUpdating = false;
+            state.retryMessageId = messageId;
             break; // Usually only one output_text per messageId
           }
         } else if (hasSeenTargetMessage) {
@@ -297,15 +358,18 @@ const chatSlice = createSlice({
       .addCase(sendMessage.pending, (state) => {
         state.isLoading = true;
         state.error = null;
+        state.retryMessageId = null;
       })
-      .addCase(sendMessage.fulfilled, (state) => {
+      .addCase(sendMessage.fulfilled, (state, action) => {
         state.isLoading = false;
         state.input = '';
         state.uploadedImages = [];
+        state.lastRequest = cloneSendMessageArgs(action.payload);
       })
       .addCase(sendMessage.rejected, (state, action) => {
         state.isLoading = false;
         state.error = action.payload as string;
+        state.lastRequest = null;
         state.messages.push({
           role: 'assistant',
           content: 'Sorry, I encountered an error.',
@@ -368,6 +432,7 @@ export const {
   setMessages,
   resetState,
   setError,
+  prepareLastTurnRetry,
   handleChunk,
   finishMessage,
   updateMemoryWithChatId,
