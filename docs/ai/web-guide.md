@@ -90,6 +90,12 @@ Currently, there is **no testing framework** (e.g., Vitest, Jest, Cypress) confi
 3. `app/web/src/utils/apiUtils.ts`
 4. `app/web/src/store/index.ts`
 
+## 18. Completed-Turn Retry
+- The latest successfully completed assistant output shows a retry control immediately before its feedback controls.
+- `chatSlice.ts` keeps a cloned snapshot of the completed `POST /chat` request, including the message, attachments, knowledge base, model/operator, tools, short-term memory IDs, and resolved IP address.
+- Retrying removes only the final user turn and its streamed assistant/tool/reasoning rows, restores the original request's pre-turn short-term memory IDs, re-adds the user row, and sends the saved request again.
+- Configuration changes made after the original response do not affect its retry. Loading a different saved-memory transcript clears retry eligibility.
+
 ## Route / API Responsibility Table
 | Route/Page | File paths | Responsibility | API/data used |
 |---|---|---|---|

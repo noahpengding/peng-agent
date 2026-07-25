@@ -70,7 +70,8 @@ class CustomOpenAICompletion(BaseChatModel):
             request_params["tools"] = []
             for tool in tools:
                 parameters = tool.get("function", {}).get("parameters", {})
-                parameters["additionalProperties"] = False
+                # parameters["additionalProperties"] = False
+                print("**" + str(parameters) + "**")
                 request_params["tools"].append(
                     {
                         "type": "function",

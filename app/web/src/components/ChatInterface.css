@@ -523,6 +523,11 @@
   /* Transition and animation removed */
 }
 
+.retry-button {
+  font-size: 1rem;
+  line-height: 1;
+}
+
 .feedback-button:hover:not(:disabled) {
   border-color: #6b7280;
   color: #e5e7eb;

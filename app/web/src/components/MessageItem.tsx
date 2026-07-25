@@ -84,6 +84,8 @@ interface MessageItemProps {
   isFolded: boolean;
   onToggleFold: (index: number, currentState: boolean) => void;
   setRef: (el: HTMLDivElement | null, index: number) => void;
+  canRetry: boolean;
+  onRetry: () => void;
   onSubmitFeedback: (messageId: string, chatId: number, feedback: 'upvote' | 'downvote' | 'no_response') => void;
 }
 
@@ -165,7 +167,7 @@ const MessageImage = React.memo(({ src, onSelect }: MessageImageProps) => {
 
 MessageImage.displayName = 'MessageImage';
 
-export const MessageItem = React.memo(({ message, index, isFolded, onToggleFold, setRef, onSubmitFeedback }: MessageItemProps) => {
+export const MessageItem = React.memo(({ message, index, isFolded, onToggleFold, setRef, canRetry, onRetry, onSubmitFeedback }: MessageItemProps) => {
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
 
   const messageClass =
@@ -264,6 +266,17 @@ export const MessageItem = React.memo(({ message, index, isFolded, onToggleFold,
           </div>
           {canShowFeedback && (
             <div className="message-feedback-actions">
+              {canRetry && (
+                <button
+                  type="button"
+                  className="feedback-button retry-button"
+                  onClick={onRetry}
+                  title="Retry response"
+                  aria-label="Retry last response"
+                >
+                  ↻
+                </button>
+              )}
               {isFeedbackLocked ? (
                 <button
                   type="button"

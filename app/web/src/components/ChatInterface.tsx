@@ -16,6 +16,7 @@ import {
   sendMessage,
   setError,
   submitMessageFeedback,
+  prepareLastTurnRetry,
 } from '@/store/slices/chatSlice';
 import './ChatInterface.css';
 import { Message, UploadedImage } from '@/types/ChatInterface.types';
@@ -44,7 +45,7 @@ const ChatbotUI = () => {
   const dispatch = useDispatch<AppDispatch>();
 
   // Redux State
-  const { messages, input, isLoading, error, isSidebarHidden, uploadedImages, baseModel, knowledgeBase, selectedToolNames, shortTermMemory } =
+  const { messages, input, isLoading, error, isSidebarHidden, uploadedImages, lastRequest, retryMessageId, baseModel, knowledgeBase, selectedToolNames, shortTermMemory } =
     useSelector((state: RootState) => state.chat);
 
   const { availableBaseModels, loading: baseModelsLoading } = useSelector((state: RootState) => state.models);
@@ -63,6 +64,7 @@ const ChatbotUI = () => {
   const [s3PathsInput, setS3PathsInput] = useState('');
   const menuRef = useRef<HTMLDivElement | null>(null);
   const toolPopupRef = useRef<HTMLDivElement | null>(null);
+  const retryPendingRef = useRef(false);
 
   // Initial Data Fetching
   useEffect(() => {
@@ -126,6 +128,12 @@ const ChatbotUI = () => {
   }, []);
 
   const displayError = error || toolsError || collectionsError;
+
+  useEffect(() => {
+    if (!isLoading) {
+      retryPendingRef.current = false;
+    }
+  }, [isLoading]);
 
   // Username
   const username = user || 'default_user';
@@ -351,6 +359,16 @@ const ChatbotUI = () => {
     },
     [dispatch, username]
   );
+
+  const handleRetryLastTurn = useCallback(() => {
+    if (isLoading || !lastRequest || retryPendingRef.current) {
+      return;
+    }
+
+    retryPendingRef.current = true;
+    dispatch(prepareLastTurnRetry());
+    dispatch(sendMessage(lastRequest));
+  }, [dispatch, isLoading, lastRequest]);
 
   // Base Model Selection
   const renderBaseModelSelection = () => {
@@ -581,7 +599,13 @@ const ChatbotUI = () => {
           </div>
 
           <div className="messages-container">
-            <MessageList messages={messages} isLoading={isLoading} onSubmitFeedback={handleSubmitFeedback} />
+            <MessageList
+              messages={messages}
+              isLoading={isLoading}
+              retryMessageId={lastRequest ? retryMessageId : null}
+              onRetry={handleRetryLastTurn}
+              onSubmitFeedback={handleSubmitFeedback}
+            />
           </div>
 
           <InputArea

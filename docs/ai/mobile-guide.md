@@ -93,6 +93,12 @@ The app uses several Expo plugins for native device capabilities:
 2. `app/mobile/App.tsx`
 3. `app/mobile/package.json`
 
+## 19. Completed-Turn Retry
+- The latest successfully completed assistant output shows a refresh-style retry control immediately before its feedback controls.
+- `chatSlice.ts` keeps a cloned snapshot of the completed `POST /chat` request, including the message, attachments, knowledge base, model/operator, tools, short-term memory IDs, and resolved IP address.
+- Retrying removes only the final user turn and its streamed assistant/tool/reasoning rows, restores the original request's pre-turn short-term memory IDs, re-adds the user row, and sends the saved request again.
+- Configuration changes made after the original response do not affect its retry. Loading a different saved-memory transcript clears retry eligibility.
+
 ## Screen / Responsibility Table
 | Screen/Flow | File paths | Responsibility | API/data used |
 |---|---|---|---|

@@ -80,3 +80,8 @@ Because types are handwritten and duplicated across three completely separate di
 ### Chat IP Address Notes
 - Web and mobile resolve the current public egress IP immediately after a chat send is dispatched and add it as `config.ip_address` before posting to `/chat`.
 - IP resolution is best-effort with a three-second timeout. If the lookup fails, clients send an empty string so chat remains available and the backend omits location context.
+
+### Chat Retry Notes
+- Retry reuses the existing `POST /chat` contract; it does not require a separate backend route.
+- Each client snapshots the fully resolved request after a successful turn. A retry resends that snapshot, including its original `config.ip_address`.
+- Before replay, the client restores the saved pre-turn `short_term_memory` list. The completed chat ID being replaced therefore remains persisted server-side but is excluded from the active conversation context and replaced by the newly completed chat ID.
