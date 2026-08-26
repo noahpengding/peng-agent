@@ -29,7 +29,7 @@ class TestPromptGenerator(unittest.TestCase):
             "the tools' description and parameter (including parameter name, "
             "type, and description) before using the tools. "
             + markdown_format
-            + f" Today is 2026-07-12. You get request from IP address {test_ip_address}. The location is Vaughan, Ontario, Canada.",
+            + f" Today is 2026-07-12. You get request from IP address {test_ip_address}. The location is Toronto, Ontario, Canada.",
         )
         self.assertIn("likes python", result[1].content)
 
