@@ -22,7 +22,7 @@ def _get_ip_geo_info(ip_address):
             data = response.json()
             if data.get("success"):
                 return f"You get request from IP address {ip_address}. The location is {data.get('city')}, {data.get('region')}, {data.get('country')}."
-    except Exception as e:
+    except Exception:
         return f"You get request from IP address {ip_address}."
 
 
