@@ -3,6 +3,8 @@ services:
     image: qdrant/qdrant:latest
     container_name: qdrant
     restart: always
+    networks:
+      - agent
     ports:
       - 6333:6333
       - 6334:6334
@@ -16,6 +18,8 @@ services:
     container_name: peng-agent-mysql
     hostname: peng-agent
     restart: always
+    networks:
+      - agent
     ports:
       - "3306:3306"
     env_file:
@@ -29,7 +33,31 @@ services:
     image: redis:latest
     container_name: peng-agent-redis
     restart: always
+    networks:
+      - agent
     ports:
       - "6379:6379"
     security_opt:
       - no-new-privileges=true
+
+  datadog-agent:
+    image: registry.datadoghq.com/agent:latest
+    container_name: peng-agent-datadog
+    hostname: datadog-agent
+    restart: always
+    networks:
+      - agent
+    env_file:
+      - ./.env
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - /proc/:/host/proc/:ro
+      - /sys/fs/cgroup/:/host/sys/fs/cgroup:ro
+    security_opt:
+      - no-new-privileges=true
+
+networks:
+  agent:
+    driver: bridge
+    name: agent
+    internal: false

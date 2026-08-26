@@ -73,6 +73,22 @@ services:
     depends_on:
       - peng-agent-server
 
+  datadog-agent:
+    image: registry.datadoghq.com/agent:latest
+    container_name: peng-agent-datadog
+    hostname: datadog-agent
+    restart: always
+    networks:
+      - agent
+    env_file:
+      - ./.env
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - /proc/:/host/proc/:ro
+      - /sys/fs/cgroup/:/host/sys/fs/cgroup:ro
+    security_opt:
+      - no-new-privileges=true
+
 
 networks:
   agent:

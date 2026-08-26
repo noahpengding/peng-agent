@@ -51,7 +51,6 @@ def dd_setup():
         ml_app=config.app_name,
         api_key=config.dd_api_key,
         site=config.dd_site,
-        agentless_enabled=True,
         service=config.dd_service,
         env=config.env,
     )
