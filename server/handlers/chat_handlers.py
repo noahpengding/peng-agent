@@ -10,21 +10,13 @@ from langchain_core.messages import (
 from typing import List
 import json
 from typing import AsyncIterator
+from ddtrace.llmobs import LLMObs
 
 
 def _generate_prompt_params(
     user_name: str, message: str, knowledge_base: str, image: List[str],  chat_config: ChatConfig, mysql_conn: MysqlConnect
 ):
-    chat = mysql_conn.create_record(
-        table="chat",
-        data={
-            "user_name": user_name,
-            "type": "chat",
-            "base_model": chat_config.base_model,
-            "knowledge_base": knowledge_base,
-            "human_input": message[:4096],
-        }
-    )
+    
 
     prompt = []
     prompt += prompt_generator.system_prompt(user_name, mysql_conn, chat_config.tools_name, chat_config.ip_address)
@@ -34,16 +26,31 @@ def _generate_prompt_params(
     prompt += prompt_generator.add_human_message_to_prompt(message)
     output_log(f"Generated Prompt: {prompt}", "DEBUG")
 
-    chat_id = chat["id"]
-    mysql_conn.create_record(
-        table="user_input",
-        data={
-            "chat_id": chat_id,
-            "input_content": message[:4096],
-            "input_type": "chat",
-            "input_location": "|".join(image) if image and not image[0].startswith("data:image") else "",
-        }
-    )
+    if not chat_config.temp_chat:
+        chat = mysql_conn.create_record(
+            table="chat",
+            data={
+                "user_name": user_name,
+                "type": "chat",
+                "base_model": chat_config.base_model,
+                "knowledge_base": knowledge_base,
+                "human_input": message[:4096],
+            }
+        )
+
+        chat_id = chat["id"]
+        mysql_conn.create_record(
+            table="user_input",
+            data={
+                "chat_id": chat_id,
+                "input_content": message[:4096],
+                "input_type": "chat",
+                "input_location": "|".join(image) if image and not image[0].startswith("data:image") else "",
+            }
+        )
+    else:
+        import random
+        chat_id = f"temp_chat_{user_name}_{random.randint(1000, 9999)}"
     return prompt, chat_id
 
 
@@ -55,8 +62,9 @@ async def chat_handler(
         "debug",
     )
 
-    mysql = MysqlConnect()
-    prompt, chat_id = _generate_prompt_params(user_name, message, knowledge_base, image, chat_config, mysql)
+    if not chat_config.temp_chat:
+        mysql = MysqlConnect()
+        prompt, chat_id = _generate_prompt_params(user_name, message, knowledge_base, image, chat_config, mysql)
 
     agent = PengAgent(
         user_name,
@@ -72,80 +80,87 @@ async def chat_handler(
     full_response = ""
     pre_chunk_type = ""
     try:
-        async for chunk in agent.astream(AgentState(messages=prompt)):
-            output_log(f"Received chunk: {chunk}", "DEBUG")
-            if chunk:
-                if "call_model" in chunk and "messages" in chunk["call_model"]:
-                    message = chunk["call_model"]["messages"]
-                    if message["type"] == "text":
-                        chunk_content = message["text"]
-                        chunk_type = "output_text"
-                    elif message["type"] == "reasoning":
-                        chunk_content = message["reasoning"]
-                        chunk_type = "reasoning_summary"
-                    # Tool call from chat model
-                    elif message["type"] == "tool_call":
-                        chunk_content = (
-                            f"Tool Call: {message['name']} with args {message['args']}"
+        with LLMObs.annotation_context(tags={
+            "feature": "chat_streaming",
+            "temp_chat": chat_config.temp_chat
+        }):
+            async for chunk in agent.astream(AgentState(messages=prompt)):
+                output_log(f"Received chunk: {chunk}", "DEBUG")
+                if chunk:
+                    if "call_model" in chunk and "messages" in chunk["call_model"]:
+                        message = chunk["call_model"]["messages"]
+                        if message["type"] == "text":
+                            chunk_content = message["text"]
+                            chunk_type = "output_text"
+                        elif message["type"] == "reasoning":
+                            chunk_content = message["reasoning"]
+                            chunk_type = "reasoning_summary"
+                        # Tool call from chat model
+                        elif message["type"] == "tool_call":
+                            chunk_content = (
+                                f"Tool Call: {message['name']} with args {message['args']}"
+                            )
+                            chunk_type = "tool_calls"
+                            _save_chat_response(
+                                chat_id,
+                                chunk_type,
+                                chunk_content,
+                                mysql_conn=mysql,
+                                temp_chat=chat_config.temp_chat,
+                                call_id=message["id"],
+                                tool_name=message["name"],
+                                tool_args=str(message["args"]),
+                            )
+                    # Tool message after execution the tool
+                    elif "call_tools" in chunk and "messages" in chunk["call_tools"]:
+                        chunk_content = chunk["call_tools"]["messages"]
+                        if isinstance(chunk_content, list):
+                            tool_call_id = chunk_content[0].tool_call_id
+                            chunk_content = chunk_content[0].content
+                        else:
+                            tool_call_id = chunk_content.tool_call_id
+                            chunk_content = chunk_content.content
+                        if isinstance(chunk_content, list):
+                            chunk_content = "".join(
+                                [part for part in chunk_content if isinstance(part, str)]
+                            )
+                        chunk_type = "tool_output"
+                        # Do not save the tool output to database if the content is image binary data
+                        is_binary_image_data = isinstance(chunk_content, (bytes, bytearray)) or (
+                            isinstance(chunk_content, str)
+                            and chunk_content.startswith(("b'", 'b"'))
                         )
-                        chunk_type = "tool_calls"
-                        _save_chat_response(
-                            chat_id,
-                            chunk_type,
-                            chunk_content,
-                            mysql_conn=mysql,
-                            call_id=message["id"],
-                            tool_name=message["name"],
-                            tool_args=str(message["args"]),
-                        )
-                # Tool message after execution the tool
-                elif "call_tools" in chunk and "messages" in chunk["call_tools"]:
-                    chunk_content = chunk["call_tools"]["messages"]
-                    if isinstance(chunk_content, list):
-                        tool_call_id = chunk_content[0].tool_call_id
-                        chunk_content = chunk_content[0].content
+                        if not is_binary_image_data:
+                            _save_chat_response(
+                                chat_id,
+                                chunk_type,
+                                chunk_content,
+                                mysql_conn=mysql,
+                                temp_chat=chat_config.temp_chat,
+                                call_id=tool_call_id,
+                            )
                     else:
-                        tool_call_id = chunk_content.tool_call_id
-                        chunk_content = chunk_content.content
-                    if isinstance(chunk_content, list):
-                        chunk_content = "".join(
-                            [part for part in chunk_content if isinstance(part, str)]
+                        chunk_content = ""
+                        chunk_type = ""
+                    if pre_chunk_type == "" or pre_chunk_type != chunk_type:
+                        if pre_chunk_type in ["output_text", "reasoning_summary"] and full_response != "":
+                            _save_chat_response(
+                                chat_id,
+                                pre_chunk_type,
+                                full_response,
+                                mysql_conn=mysql,
+                                temp_chat=chat_config.temp_chat,
+                            )
+                        pre_chunk_type = chunk_type
+                        full_response = ""
+                    if isinstance(chunk_content, str):
+                        yield (
+                            json.dumps(
+                                {"chunk": chunk_content, "type": chunk_type, "done": False}
+                            )
+                            + "\n"
                         )
-                    chunk_type = "tool_output"
-                    # Do not save the tool output to database if the content is image binary data
-                    is_binary_image_data = isinstance(chunk_content, (bytes, bytearray)) or (
-                        isinstance(chunk_content, str)
-                        and chunk_content.startswith(("b'", 'b"'))
-                    )
-                    if not is_binary_image_data:
-                        _save_chat_response(
-                            chat_id,
-                            chunk_type,
-                            chunk_content,
-                            mysql_conn=mysql,
-                            call_id=tool_call_id,
-                        )
-                else:
-                    chunk_content = ""
-                    chunk_type = ""
-                if pre_chunk_type == "" or pre_chunk_type != chunk_type:
-                    if pre_chunk_type in ["output_text", "reasoning_summary"] and full_response != "":
-                        _save_chat_response(
-                            chat_id,
-                            pre_chunk_type,
-                            full_response,
-                            mysql_conn=mysql,
-                        )
-                    pre_chunk_type = chunk_type
-                    full_response = ""
-                if isinstance(chunk_content, str):
-                    yield (
-                        json.dumps(
-                            {"chunk": chunk_content, "type": chunk_type, "done": False}
-                        )
-                        + "\n"
-                    )
-                    full_response += chunk_content
+                        full_response += chunk_content
     except Exception as e:
         output_log(f"Error during streaming: {e}", "error")
         yield (
@@ -161,11 +176,14 @@ async def chat_handler(
                 pre_chunk_type,
                 full_response,
                 mysql_conn=mysql,
+                temp_chat=chat_config.temp_chat,
             )
         mysql.close()
         yield json.dumps({"chunk": f"{chat_id}", "done": True}) + "\n"
 
-def _save_chat_response(chat_id: int, message_type: str, content: str, mysql_conn: MysqlConnect = None, **kwargs):
+def _save_chat_response(chat_id: int, message_type: str, content: str, mysql_conn: MysqlConnect = None, temp_chat: bool = False, **kwargs):
+    if temp_chat:
+        return
     mysql = mysql_conn
     if message_type == "output_text":
         mysql.create_record(
@@ -213,7 +231,7 @@ def create_streaming_response(
     )
 
 
-def _invoke_message_storage(chat_id, responses, mysql: MysqlConnect):
+def _invoke_message_storage(chat_id, responses, mysql: MysqlConnect, temp_chat: bool = False):
     for response in responses["messages"]:
         if not isinstance(response, AIMessage):
             continue
@@ -225,6 +243,7 @@ def _invoke_message_storage(chat_id, responses, mysql: MysqlConnect):
                         "output_text",
                         content_blocks["text"],
                         mysql_conn=mysql,
+                        temp_chat=temp_chat,
                     )
                 elif content_blocks["type"] == "reasoning":
                     _save_chat_response(
@@ -232,6 +251,7 @@ def _invoke_message_storage(chat_id, responses, mysql: MysqlConnect):
                         "reasoning_summary",
                         content_blocks["reasoning"],
                         mysql_conn=mysql,
+                        temp_chat=temp_chat,
                     )
                 elif content_blocks["type"] == "tool_call":
                     _save_chat_response(
@@ -239,6 +259,7 @@ def _invoke_message_storage(chat_id, responses, mysql: MysqlConnect):
                         "tool_calls",
                         f"Tool Call: {content_blocks['name']} with args {content_blocks['args']}",
                         mysql_conn=mysql,
+                        temp_chat=temp_chat,
                         call_id=content_blocks.get("id", ""),
                         tool_name=content_blocks.get("name", ""),
                         tool_args=str(content_blocks.get("args", "")),
@@ -249,6 +270,7 @@ def _invoke_message_storage(chat_id, responses, mysql: MysqlConnect):
                         "tool_output",
                         content_blocks.get("content", ""),
                         mysql_conn=mysql,
+                        temp_chat=temp_chat,
                         call_id=content_blocks.get("call_id", ""),
                     )
         else:
@@ -262,8 +284,9 @@ async def chat_completions_handler(
         "debug",
     )
 
-    mysql = MysqlConnect()
-    prompt, chat_id = _generate_prompt_params(user_name, message, knowledge_base, image, chat_config, mysql)
+    if not chat_config.temp_chat:
+        mysql = MysqlConnect()
+        prompt, chat_id = _generate_prompt_params(user_name, message, knowledge_base, image, chat_config, mysql)
 
     agent = PengAgent(
         operater=chat_config.operator,
@@ -272,7 +295,11 @@ async def chat_completions_handler(
         user_name=user_name,
     )
     try:
-        responses = await agent.ainvoke(AgentState(messages=prompt))
+        with LLMObs.annotation_context(tags={
+            "feature": "chat_completions",
+            "temp_chat": chat_config.temp_chat
+        }):
+            responses = await agent.ainvoke(AgentState(messages=prompt))
     except Exception as e:
         output_log(f"Error during chat completion: {e}", "error")
         return [
@@ -285,7 +312,7 @@ async def chat_completions_handler(
                 ]
             )
         ]
-    _invoke_message_storage(chat_id, responses, mysql)
+    _invoke_message_storage(chat_id, responses, mysql, temp_chat=chat_config.temp_chat)
     return responses["messages"]
 
 

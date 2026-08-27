@@ -43,8 +43,15 @@ def phoenix_setup():
         auto_instrument=True,
     )
 
+
 def dd_setup():
-    from ddtrace.llmobs import LLMObs
+    from typing import Optional
+    from ddtrace.llmobs import LLMObs, LLMObsSpan
+    def filter_temp_chat(span: LLMObsSpan) -> Optional[LLMObsSpan]:
+        if span.get_tag("temp_chat") == "true":
+            return None
+        return span
+
     output_log("Setting up Datadog APM integration...", "info")
 
     LLMObs.enable(
@@ -53,4 +60,5 @@ def dd_setup():
         site=config.dd_site,
         service=config.dd_service,
         env=config.env,
+        span_processor=filter_temp_chat
     )
