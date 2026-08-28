@@ -21,19 +21,19 @@ def _get_ip_geo_info(ip_address):
         if response.status_code == 200:
             data = response.json()
             if data.get("success"):
-                return f"You get request from IP address {ip_address}. The location is {data.get('city')}, {data.get('region')}, {data.get('country')}."
+                return f"\n You get request from IP address {ip_address} The location is {data.get('city')}, {data.get('region')}, {data.get('country')}."
     except Exception:
-        return f"You get request from IP address {ip_address}."
+        return f"\n You get request from IP address {ip_address}"
 
 
 def system_prompt(user_name, mysql_conn, tool_names, ip_address):
     user_profile = mysql_conn.read_records("user", conditions={"user_name": user_name})
     system_prompt = str(user_profile[0]["system_prompt"]) if user_profile and "system_prompt" in user_profile[0] else "You are a helpful assistant."
     if tool_names != []:
-        system_prompt += "If you need to use any tools, you need to use it correctly. You need to call the exact tool name and provide the correct parameters with the correct parameter names. "
-        system_prompt += "You need to check the tools' description and parameter (including parameter name, type, and description) before using the tools. "
+        system_prompt += "\n If you need to use any tools, you need to use it correctly. You need to call the exact tool name and provide the correct parameters with the correct parameter names. "
+        system_prompt += "You need to check the tools' description and parameter (including parameter name, type, and description) before using the tools."
 
-    up_to_date_info = f" Today is {datetime.now().strftime('%Y-%m-%d')}. "
+    up_to_date_info = f"\n Today is {datetime.now().strftime('%Y-%m-%d')}. "
     up_to_date_info += _get_ip_geo_info(ip_address)
     current_dir = os.path.dirname(os.path.abspath(__file__))
     with open(os.path.join(current_dir, "prompts/markdown_format.md"), "r") as f:
@@ -41,7 +41,9 @@ def system_prompt(user_name, mysql_conn, tool_names, ip_address):
     lt_mem = json.loads(user_profile[0]["long_term_memory"]) if user_profile and "long_term_memory" in user_profile[0] and user_profile[0]["long_term_memory"] else []
     lt_mem_str = ";".join(lt_mem) if lt_mem != [] else "No background information about the user."
     return [
-        SystemMessage(system_prompt + markdown_format + up_to_date_info),
+        SystemMessage(system_prompt),
+        SystemMessage(markdown_format),
+        SystemMessage(up_to_date_info),
         SystemMessage(f"Here are the background information of the user {lt_mem_str}")
     ]
 

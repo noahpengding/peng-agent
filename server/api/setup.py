@@ -45,12 +45,52 @@ def phoenix_setup():
         auto_instrument=True,
     )
 
+def _mark_ips_in_span(span: LLMObsSpan) -> LLMObsSpan:
+    import ipaddress
+    import re
+
+    OCTET = r"(?:25[0-5]|2[0-4]\d|1\d{2}|[1-9]?\d)"
+    IP_CANDIDATE = re.compile(
+        rf"""
+        # IPv4
+        (?P<ipv4>
+            (?<![\w.:])
+            (?:{OCTET}\.){{3}}{OCTET}
+            (?![\w.])
+        )
+        |
+        # IPv6 candidate; ipaddress performs final validation
+        (?P<ipv6>
+            (?<![\w:])
+            (?=[0-9A-Fa-f:.]*:)
+            (?:
+                ::
+                |
+                (?:::|[0-9A-Fa-f])
+                [0-9A-Fa-f:.]*
+                (?:[0-9A-Fa-f]|::)
+            )
+            (?!\w)
+        )
+        """,
+        re.VERBOSE,
+    )
+    def replace_ip(match: re.Match) -> str:
+        ip = match.group(0)
+        try:
+            ipaddress.ip_address(ip)
+            return "[REDACTED_IP]"
+        except ValueError:
+            return ip
+    for message in span.input:
+        message["content"] = IP_CANDIDATE.sub(replace_ip, message["content"])
+    return span
 
 def _datadog_span_process(span: LLMObsSpan) -> Optional[LLMObsSpan]:
     output_log(f"Filtering span: {span.get_tag('temp_chat')}", "debug")
     if span.get_tag("temp_chat") == "True":
         return None
-    return span
+    return _mark_ips_in_span(span)
 
 def dd_setup():
     output_log("Setting up Datadog APM integration...", "info")
