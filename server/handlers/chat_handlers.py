@@ -51,6 +51,7 @@ def _generate_prompt_params(
     else:
         import random
         chat_id = f"temp_chat_{user_name}_{random.randint(1000, 9999)}"
+
     return prompt, chat_id
 
 
@@ -62,9 +63,8 @@ async def chat_handler(
         "debug",
     )
 
-    if not chat_config.temp_chat:
-        mysql = MysqlConnect()
-        prompt, chat_id = _generate_prompt_params(user_name, message, knowledge_base, image, chat_config, mysql)
+    mysql = MysqlConnect()
+    prompt, chat_id = _generate_prompt_params(user_name, message, knowledge_base, image, chat_config, mysql)
 
     agent = PengAgent(
         user_name,
@@ -284,9 +284,8 @@ async def chat_completions_handler(
         "debug",
     )
 
-    if not chat_config.temp_chat:
-        mysql = MysqlConnect()
-        prompt, chat_id = _generate_prompt_params(user_name, message, knowledge_base, image, chat_config, mysql)
+    mysql = MysqlConnect()
+    prompt, chat_id = _generate_prompt_params(user_name, message, knowledge_base, image, chat_config, mysql)
 
     agent = PengAgent(
         operater=chat_config.operator,

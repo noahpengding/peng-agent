@@ -12,6 +12,7 @@ import {
   setKnowledgeBase,
   setSelectedToolNames,
   setShortTermMemory,
+  setTempChat,
   setMessages,
   sendMessage,
   setError,
@@ -45,7 +46,7 @@ const ChatbotUI = () => {
   const dispatch = useDispatch<AppDispatch>();
 
   // Redux State
-  const { messages, input, isLoading, error, isSidebarHidden, uploadedImages, lastRequest, retryMessageId, baseModel, knowledgeBase, selectedToolNames, shortTermMemory } =
+  const { messages, input, isLoading, error, isSidebarHidden, uploadedImages, lastRequest, retryMessageId, baseModel, knowledgeBase, selectedToolNames, shortTermMemory, tempChat } =
     useSelector((state: RootState) => state.chat);
 
   const { availableBaseModels, loading: baseModelsLoading } = useSelector((state: RootState) => state.models);
@@ -312,6 +313,7 @@ const ChatbotUI = () => {
       base_model: baseModel,
       tools_name: selectedToolNames,
       short_term_memory: shortTermMemory,
+      temp_chat: tempChat,
     };
 
     const request = {
@@ -327,7 +329,7 @@ const ChatbotUI = () => {
     if (s3PathsInput.trim().length > 0) {
       setS3PathsInput('');
     }
-  }, [baseModel, dispatch, input, knowledgeBase, s3PathsInput, selectedToolNames, shortTermMemory, uploadedImages, username]);
+  }, [baseModel, dispatch, input, knowledgeBase, s3PathsInput, selectedToolNames, shortTermMemory, tempChat, uploadedImages, username]);
 
   const handleSetInput = useCallback((val: string) => dispatch(setInput(val)), [dispatch]);
   const handleSetUploadedImages = useCallback(
@@ -500,10 +502,7 @@ const ChatbotUI = () => {
 
         {/* Sidebar */}
         {!isSidebarHidden && (
-          <div
-            className="sidebar"
-            style={{ overflow: 'hidden' }}
-          >
+          <div className="sidebar">
             <div className="sidebar-header-row">
               <h2 className="sidebar-title">Configuration</h2>
               <button
@@ -533,6 +532,26 @@ const ChatbotUI = () => {
 
             {renderBaseModelSelection()}
             {renderKnowledgeBaseSelection()}
+
+            <div className="form-group">
+              <label className="form-label" htmlFor="temp-chat-toggle">Privacy</label>
+              <button
+                id="temp-chat-toggle"
+                type="button"
+                className={`temp-chat-toggle${tempChat ? ' temp-chat-toggle-active' : ''}`}
+                onClick={() => dispatch(setTempChat(!tempChat))}
+                role="switch"
+                aria-checked={tempChat}
+                disabled={isLoading}
+              >
+                <span className="temp-chat-copy">
+                  <span className="temp-chat-title">Temporary chat</span>
+                </span>
+                <span className="temp-chat-status" aria-hidden="true">
+                  {tempChat ? 'On' : 'Off'}
+                </span>
+              </button>
+            </div>
 
             {/* Tool Selection */}
             <div className="form-group">

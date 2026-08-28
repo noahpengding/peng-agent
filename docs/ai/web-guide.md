@@ -96,6 +96,11 @@ Currently, there is **no testing framework** (e.g., Vitest, Jest, Cypress) confi
 - Retrying removes only the final user turn and its streamed assistant/tool/reasoning rows, restores the original request's pre-turn short-term memory IDs, re-adds the user row, and sends the saved request again.
 - Configuration changes made after the original response do not affect its retry. Loading a different saved-memory transcript clears retry eligibility.
 
+## 19. Temporary Chat
+- The Configuration sidebar contains an accessible temporary-chat switch. It is off by default and disabled while a request is streaming.
+- The selected value is sent as `config.temp_chat` and is included in the completed-request snapshot.
+- Temporary responses receive no persisted chat ID, are not appended to short-term memory, and do not expose persisted feedback or retry controls.
+
 ## Route / API Responsibility Table
 | Route/Page | File paths | Responsibility | API/data used |
 |---|---|---|---|

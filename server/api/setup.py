@@ -3,6 +3,8 @@ from utils.log import output_log
 from config.config import config
 from services.redis_service import setup_redis_cache
 from handlers.tool_handlers import update_tools
+from typing import Optional
+from ddtrace.llmobs import LLMObs, LLMObsSpan
 
 
 def set_up():
@@ -27,7 +29,7 @@ def set_up():
         output_log(f"Error creating database tables: {e}", "error")
         raise
 
-    # phoenix_setup()
+    # datadog_setup()
     dd_setup()
 
 
@@ -44,14 +46,13 @@ def phoenix_setup():
     )
 
 
-def dd_setup():
-    from typing import Optional
-    from ddtrace.llmobs import LLMObs, LLMObsSpan
-    def filter_temp_chat(span: LLMObsSpan) -> Optional[LLMObsSpan]:
-        if span.get_tag("temp_chat") == "true":
-            return None
-        return span
+def _datadog_span_process(span: LLMObsSpan) -> Optional[LLMObsSpan]:
+    output_log(f"Filtering span: {span.get_tag('temp_chat')}", "debug")
+    if span.get_tag("temp_chat") == "True":
+        return None
+    return span
 
+def dd_setup():
     output_log("Setting up Datadog APM integration...", "info")
 
     LLMObs.enable(
@@ -60,5 +61,5 @@ def dd_setup():
         site=config.dd_site,
         service=config.dd_service,
         env=config.env,
-        span_processor=filter_temp_chat
+        span_processor=_datadog_span_process
     )

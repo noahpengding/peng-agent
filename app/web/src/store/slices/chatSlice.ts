@@ -17,6 +17,7 @@ interface SendMessageArgs {
     tools_name: string[];
     short_term_memory: number[];
     ip_address?: string;
+    temp_chat: boolean;
   };
 }
 
@@ -44,6 +45,7 @@ interface ChatState {
   knowledgeBase: string;
   selectedToolNames: string[];
   shortTermMemory: number[];
+  tempChat: boolean;
 }
 
 const initialState: ChatState = {
@@ -60,6 +62,7 @@ const initialState: ChatState = {
   knowledgeBase: 'default',
   selectedToolNames: [],
   shortTermMemory: [],
+  tempChat: false,
 };
 
 const SUPPORTED_CHUNK_TYPES: Array<NonNullable<Message['type']>> = [
@@ -132,7 +135,7 @@ export const sendMessage = createAsyncThunk('chat/sendMessage', async (args: Sen
       },
       () => {
         dispatch(finishMessage({ messageId }));
-        if (chatIdFromChunk !== null) {
+        if (!request.config.temp_chat && chatIdFromChunk !== null) {
           dispatch(attachChatIdToMessage({ messageId, chatId: chatIdFromChunk }));
           dispatch(updateMemoryWithChatId(chatIdFromChunk));
         }
@@ -184,10 +187,14 @@ const chatSlice = createSlice({
     setShortTermMemory: (state, action: PayloadAction<number[]>) => {
       state.shortTermMemory = action.payload;
     },
+    setTempChat: (state, action: PayloadAction<boolean>) => {
+      state.tempChat = action.payload;
+    },
     setMessages: (state, action: PayloadAction<Message[]>) => {
       state.messages = action.payload;
       state.lastRequest = null;
       state.retryMessageId = null;
+      state.tempChat = false;
     },
     resetState: (state) => {
       state.messages = [];
@@ -196,6 +203,7 @@ const chatSlice = createSlice({
       state.error = null;
       state.lastRequest = null;
       state.retryMessageId = null;
+      state.tempChat = false;
     },
     setError: (state, action: PayloadAction<string | null>) => {
       state.error = action.payload;
@@ -429,6 +437,7 @@ export const {
   setKnowledgeBase,
   setSelectedToolNames,
   setShortTermMemory,
+  setTempChat,
   setMessages,
   resetState,
   setError,

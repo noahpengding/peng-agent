@@ -13,6 +13,7 @@ interface ChatRequest {
     tools_name: string[];
     short_term_memory: number[];
     ip_address: string;
+    temp_chat: boolean;
   };
 }
 
