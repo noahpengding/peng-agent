@@ -3,7 +3,7 @@ export default {
     "name": "PengAgent",
     "owner": "noahpengding",
     "slug": "peng-agent",
-    "version": "2.4.2",
+    "version": "2.4.9",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
@@ -35,6 +35,11 @@ export default {
         "backgroundColor": "#ffffff"
       },
       "package": "com.noahpengding.pengagent",
+      "versionCode": Number(
+        process.env.ANDROID_VERSION_CODE ??
+          config.android?.versionCode ??
+          1
+      ),
       "permissions": [
         "CAMERA",
         "READ_EXTERNAL_STORAGE",

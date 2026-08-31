@@ -243,6 +243,8 @@ jobs:
     if: github.ref != 'refs/heads/main'
     needs: [mobile-lint, codeql-analysis, test-server-x64, test-web-x64]
     runs-on: ubuntu-latest
+    env:
+      EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -266,18 +268,34 @@ jobs:
 
       - name: Install dependencies
         run: |
-          cd app/mobile && bun install
+          cd app/mobile && bun install --frozen-lockfile
+
+      - name: Set Android version code
+        shell: bash
+        run: |
+          VERSION_CODE=$((100000 + GITHUB_RUN_NUMBER))
+          echo "ANDROID_VERSION_CODE=$VERSION_CODE" >> "$GITHUB_ENV"
+          echo "Building Android versionCode=$VERSION_CODE"
 
       - name: Build Mobile App (Preview)
-        run: cd app/mobile && eas build --platform android --profile preview --local --output=./${{ env.VERSION }}-android-preview.apk --non-interactive
+        run: cd app/mobile && bunx eas build --platform android --profile preview --local --output=./${{ env.VERSION }}-preview.aab --non-interactive
         env:
           EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
 
       - name: Upload build artifact
         uses: actions/upload-artifact@v4
         with:
-          name: ${{ env.VERSION }}-android-preview.apk
-          path: app/mobile/${{ env.VERSION }}-android-preview.apk
+          name: ${{ env.VERSION }}-review.aab
+          path: app/mobile/${{ env.VERSION }}-preview.aab
+
+      - name: Upload to Google Play internal testing
+        uses: r0adkll/upload-google-play@v1
+        with:
+          serviceAccountJsonPlainText: ${{ secrets.GOOGLE_PLAY_SERVICE_ACCOUNT_JSON }}
+          packageName: com.noahpengding.pengagent
+          releaseFiles: app/mobile/${{ env.VERSION }}-preview.aab
+          track: internal
+          status: completed
 
   # Production builds for main branch
   server:
