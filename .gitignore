@@ -393,3 +393,9 @@ $RECYCLE.BIN/
 *.sarif
 codeql-db/
 .codeql/
+
+# Android signing credentials
+*.jks
+*.keystore
+credentials.json
+android/keystore.properties
