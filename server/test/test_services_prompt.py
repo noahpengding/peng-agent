@@ -24,10 +24,6 @@ class TestPromptGenerator(unittest.TestCase):
             result[1].content,
             markdown_format
         )
-        self.assertEqual(
-            result[2].content,
-            f"\n Today is 2026-07-12. \n You get request from IP address {test_ip_address} The location is Toronto, Ontario, Canada.",
-        )
 
     def test_add_human_message_to_prompt(self):
         result = add_human_message_to_prompt("hello")

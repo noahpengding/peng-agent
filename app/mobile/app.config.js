@@ -36,9 +36,7 @@ export default {
       },
       "package": "com.noahpengding.pengagent",
       "versionCode": Number(
-        process.env.ANDROID_VERSION_CODE ??
-          config.android?.versionCode ??
-          1
+        process.env.ANDROID_VERSION_CODE ?? 1
       ),
       "permissions": [
         "CAMERA",
