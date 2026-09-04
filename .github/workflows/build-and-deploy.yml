@@ -396,18 +396,27 @@ jobs:
 
       - name: Install dependencies
         run: |
-          cd app/mobile && bun install
+          cd app/mobile && bun install --frozen-lockfile
 
       - name: Build Mobile App (Production)
-        run: cd app/mobile && eas build --platform android --profile production --local --output=./${{ env.VERSION }}-android.apk --non-interactive
-        env:
+        run: cd app/mobile && bunx eas build --platform android --profile production --local --output=./${{ env.VERSION }}.aab --non-interactive
+        env:  
           EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
 
       - name: Upload build artifact
         uses: actions/upload-artifact@v4
         with:
-          name: ${{ env.VERSION }}-android.apk
-          path: app/mobile/${{ env.VERSION }}-android.apk
+          name: ${{ env.VERSION }}.aab
+          path: app/mobile/${{ env.VERSION }}.aab
+
+      - name: Upload to Google Play internal testing
+        uses: r0adkll/upload-google-play@v1
+        with:
+          serviceAccountJsonPlainText: ${{ secrets.GOOGLE_PLAY_SERVICE_ACCOUNT_JSON }}
+          packageName: com.noahpengding.pengagent
+          releaseFiles: app/mobile/${{ env.VERSION }}.aab
+          track: internal
+          status: completed
 
   publish-release:
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
@@ -419,12 +428,6 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Download mobile build artifacts
-        uses: actions/download-artifact@v4
-        with:
-          name: ${{ env.VERSION }}-android.apk
-          path: ./artifacts
-
       - name: Publish GitHub release
         uses: softprops/action-gh-release@v2
         with:
@@ -433,4 +436,3 @@ jobs:
           target_commitish: ${{ github.sha }}
           generate_release_notes: true
           make_latest: true
-          files: ./artifacts/${{ env.VERSION }}-android.apk

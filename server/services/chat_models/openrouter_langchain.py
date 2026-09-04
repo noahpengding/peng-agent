@@ -26,6 +26,7 @@ from langchain_core.runnables import Runnable
 from langchain_core.language_models import LanguageModelInput
 
 import ast
+import json
 
 
 class CustomOpenRouterCompletion(BaseChatModel):
@@ -101,32 +102,23 @@ class CustomOpenRouterCompletion(BaseChatModel):
                 choice.finish_reason == "tool_calls"
                 or choice.finish_reason == "function_call"
             ):
-                if choice.finish_reason == "function_call":
-                    generate_message = AIMessage(
-                        content_blocks=[
-                            {
-                                "type": "tool_call",
-                                "name": choice.message.function_call[0].function.name,
-                                "args": ast.literal_eval(
-                                    choice.message.function_call[0].function.arguments
-                                ),
-                                "id": choice.message.function_call[0].id,
-                            }
-                        ]
-                    )
-                else:
-                    generate_message = AIMessage(
-                        content_blocks=[
-                            {
-                                "type": "tool_call",
-                                "name": choice.message.tool_calls[0].name,
-                                "args": ast.literal_eval(
-                                    choice.message.tool_calls[0].function.arguments
-                                ),
-                                "id": choice.message.tool_calls[0].id,
-                            }
-                        ]
-                    )
+                args = choice.message.function_call[0].function.arguments
+                args = args.split("}")[0] + "}"
+                try:
+                    ast.literal_eval(args)
+                except Exception as e:
+                    output_log(f"Error parsing function call arguments: {e}", "error")
+                    args = "{}"
+                generate_message = AIMessage(
+                    content_blocks=[
+                        {
+                            "type": "tool_call",
+                            "name": choice.message.function_call[0].function.name,
+                            "args": ast.literal_eval(args),
+                            "id": choice.message.function_call[0].id,
+                        }
+                    ]
+                )
         generation = ChatGeneration(message=generate_message)
         return ChatResult(generations=[generation])
 
@@ -157,6 +149,12 @@ class CustomOpenRouterCompletion(BaseChatModel):
                 if tool_call.function.arguments:
                     tool_calls_args += tool_call.function.arguments
             if choice.finish_reason == "tool_calls" and tool_calls_name != "":
+                tool_calls_args = tool_calls_args.split("}")[0] + "}"
+                try:
+                    ast.literal_eval(tool_calls_args)
+                except Exception as e:
+                    output_log(f"Error parsing function call arguments: {e}", "error")  
+                    tool_calls_args = "{}"
                 message_chunk = AIMessageChunk(
                     content_blocks=[
                         {
@@ -267,7 +265,7 @@ class CustomOpenRouterCompletion(BaseChatModel):
                                     "type": "function",
                                     "function": {
                                         "name": m["name"],
-                                        "arguments": str(m["args"]),
+                                        "arguments": json.dumps(m["args"]),
                                     },
                                 }]
                             }

@@ -26,6 +26,7 @@ from langchain_core.runnables import Runnable
 from langchain_core.language_models import LanguageModelInput
 
 import ast
+import json
 
 
 class CustomOpenAICompletion(BaseChatModel):
@@ -113,42 +114,23 @@ class CustomOpenAICompletion(BaseChatModel):
                 choice.finish_reason == "tool_calls"
                 or choice.finish_reason == "function_call"
             ):
-                if choice.finish_reason == "function_call":
-                    try:
-                        generate_message = AIMessage(
-                            content_blocks=[
-                                {
-                                    "type": "tool_call",
-                                    "name": choice.message.function_call[0].function.name,
-                                    "args": ast.literal_eval(
-                                        choice.message.function_call[0].function.arguments
-                                    ),
-                                    "id": choice.message.function_call[0].id,
-                                }
-                            ]
-                        )
-                    except Exception as e:
-                        generate_message = AIMessage(
-                            content_blocks=[
-                                {
-                                    "type": "text",
-                                    "text": f"Error parsing function call arguments: {e}",
-                                }
-                            ]
-                        )
-                else:
-                    generate_message = AIMessage(
-                        content_blocks=[
-                            {
-                                "type": "tool_call",
-                                "name": choice.message.tool_calls[0].name,
-                                "args": ast.literal_eval(
-                                    choice.message.tool_calls[0].function.arguments
-                                ),
-                                "id": choice.message.tool_calls[0].id,
-                            }
-                        ]
-                    )
+                args = choice.message.function_call[0].function.arguments
+                args = args.split("}")[0] + "}"
+                try:
+                    ast.literal_eval(args)
+                except Exception as e:
+                    output_log(f"Error parsing function call arguments: {e}", "error")
+                    args = "{}" 
+                generate_message = AIMessage(
+                    content_blocks=[
+                        {
+                            "type": "tool_call",
+                            "name": choice.message.function_call[0].function.name,
+                            "args": ast.literal_eval(args),
+                            "id": choice.message.function_call[0].id,
+                        }
+                    ]
+                )
         generation = ChatGeneration(message=generate_message)
         return ChatResult(generations=[generation])
 
@@ -176,27 +158,23 @@ class CustomOpenAICompletion(BaseChatModel):
                     tool_calls_name = tool_call.function.name
                 if tool_call.function.arguments:
                     tool_calls_args += tool_call.function.arguments
-            if choice.finish_reason == "tool_calls":
+            if choice.finish_reason in ["tool_calls", "function_call"]:
+                args = tool_calls_args.split("}")[0] + "}"
                 try:
-                    message_chunk = AIMessageChunk(
-                        content_blocks=[
-                            {
-                                "type": "tool_call",
-                                "name": tool_calls_name,
-                                "args": ast.literal_eval(tool_calls_args),
-                                "id": tool_calls_id,
-                            }
-                        ]
-                    )
+                    ast.literal_eval(args)
                 except Exception as e:
-                    message_chunk = AIMessageChunk(
-                        content_blocks=[
-                            {
-                                "type": "text",
-                                "text": f"Error parsing function call arguments: {e}",
-                            }
-                        ]
-                    )
+                    output_log(f"Error parsing function call arguments: {e}", "warning")  
+                    args = "{}"
+                message_chunk = AIMessageChunk(
+                    content_blocks=[
+                        {
+                            "type": "tool_call",
+                            "name": tool_calls_name,
+                            "args": ast.literal_eval(args),
+                            "id": tool_calls_id,
+                        }
+                    ]
+                )
                 yield ChatGenerationChunk(message=message_chunk)
                 tool_calls_id = ""
                 tool_calls_name = ""
@@ -286,7 +264,7 @@ class CustomOpenAICompletion(BaseChatModel):
             self.temperature = float(value)
             return f"Temperature set to {self.temperature}"
         else:
-            output_log(f"Invalid parameter: {name}", "error")
+            output_log(f"Invalid parameter: {name}", "warning")
             return f"Invalid parameter: {name}, {value}"
 
     def _prompt_translate(self, prompt: List[BaseMessage]) -> str:
@@ -306,7 +284,7 @@ class CustomOpenAICompletion(BaseChatModel):
                                     "type": "function",
                                     "function": {
                                         "name": m["name"],
-                                        "arguments": str(m["args"]),
+                                        "arguments": json.dumps(m["args"]),
                                     },
                                 }]
                             }
