@@ -38,7 +38,7 @@ class PengAgent:
         self._tools_ready = False
         self.graph = self.init_agent_graph()
         self.tool_call_history: list[ToolCall] = []
-        self.total_tool_calls = 25 if operater == "anthropic" else 10
+        self.total_tool_calls = 25 if operater in ("anthropic", "openai") else 10
         self._tool_return_direct = False
 
     def init_agent_graph(self) -> Any:
