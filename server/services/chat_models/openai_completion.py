@@ -110,10 +110,7 @@ class CustomOpenAICompletion(BaseChatModel):
                         }
                     ]
                 )
-            elif (
-                choice.finish_reason == "tool_calls"
-                or choice.finish_reason == "function_call"
-            ):
+            elif choice.finish_reason == "function_call":
                 args = choice.message.function_call[0].function.arguments
                 args = args.split("}")[0] + "}"
                 try:
@@ -128,6 +125,24 @@ class CustomOpenAICompletion(BaseChatModel):
                             "name": choice.message.function_call[0].function.name,
                             "args": ast.literal_eval(args),
                             "id": choice.message.function_call[0].id,
+                        }
+                    ]
+                )
+            elif choice.finish_reason == "tool_calls":
+                args = choice.message.tool_calls[0].function.arguments
+                args = args.split("}")[0] + "}"
+                try:
+                    ast.literal_eval(args)
+                except Exception as e:
+                    output_log(f"Error parsing function call arguments: {e}", "error")
+                    args = "{}" 
+                generate_message = AIMessage(
+                    content_blocks=[
+                        {
+                            "type": "tool_call",
+                            "name": choice.message.tool_calls[0].name,
+                            "args": ast.literal_eval(args),
+                            "id": choice.message.tool_calls[0].id,
                         }
                     ]
                 )
@@ -158,12 +173,12 @@ class CustomOpenAICompletion(BaseChatModel):
                     tool_calls_name = tool_call.function.name
                 if tool_call.function.arguments:
                     tool_calls_args += tool_call.function.arguments
-            if choice.finish_reason in ["tool_calls", "function_call"]:
+            if choice.finish_reason == "tool_calls":
                 args = tool_calls_args.split("}")[0] + "}"
                 try:
                     ast.literal_eval(args)
                 except Exception as e:
-                    output_log(f"Error parsing function call arguments: {e}", "warning")  
+                    output_log(f"Error parsing function call arguments: {e}", "error")  
                     args = "{}"
                 message_chunk = AIMessageChunk(
                     content_blocks=[
@@ -264,7 +279,7 @@ class CustomOpenAICompletion(BaseChatModel):
             self.temperature = float(value)
             return f"Temperature set to {self.temperature}"
         else:
-            output_log(f"Invalid parameter: {name}", "warning")
+            output_log(f"Invalid parameter: {name}", "error")
             return f"Invalid parameter: {name}, {value}"
 
     def _prompt_translate(self, prompt: List[BaseMessage]) -> str:

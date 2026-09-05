@@ -98,10 +98,7 @@ class CustomOpenRouterCompletion(BaseChatModel):
                         }
                     ]
                 )
-            elif (
-                choice.finish_reason == "tool_calls"
-                or choice.finish_reason == "function_call"
-            ):
+            elif choice.finish_reason == "function_call":
                 args = choice.message.function_call[0].function.arguments
                 args = args.split("}")[0] + "}"
                 try:
@@ -116,6 +113,24 @@ class CustomOpenRouterCompletion(BaseChatModel):
                             "name": choice.message.function_call[0].function.name,
                             "args": ast.literal_eval(args),
                             "id": choice.message.function_call[0].id,
+                        }
+                    ]
+                )
+            elif choice.finish_reason == "tool_calls":
+                args = choice.message.tool_calls[0].function.arguments
+                args = args.split("}")[0] + "}"
+                try:
+                    ast.literal_eval(args)
+                except Exception as e:
+                    output_log(f"Error parsing function call arguments: {e}", "error")
+                    args = "{}"
+                generate_message  = AIMessage(
+                    content_blocks=[
+                        {
+                            "type": "tool_call",
+                            "name": choice.message.tool_calls[0].name,
+                            "args": ast.literal_eval(args),
+                            "id": choice.message.tool_calls[0].id,
                         }
                     ]
                 )

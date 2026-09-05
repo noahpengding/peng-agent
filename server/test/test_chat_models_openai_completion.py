@@ -137,7 +137,7 @@ class TestCustomOpenAICompletion(unittest.TestCase):
         tool_call = namespace(
             id="call-1",
             name="weather",
-            function=namespace(arguments="{'city': 'Toronto'}"),
+            function=namespace(arguments='{"city": "Toronto"}'),
         )
         self.client.chat.completions.create.return_value = namespace(
             choices=[
@@ -174,9 +174,9 @@ class TestCustomOpenAICompletion(unittest.TestCase):
 
         for function_call, expected_type in (
             (valid_call, "tool_call"),
-            (invalid_call, "text"),
+            (invalid_call, "tool_call"),
         ):
-            with self.subTest(expected_type=expected_type):
+            with self.subTest(function_call_id=function_call.id):
                 self.client.chat.completions.create.return_value = namespace(
                     choices=[
                         namespace(
@@ -190,10 +190,10 @@ class TestCustomOpenAICompletion(unittest.TestCase):
                 block = result.generations[0].message.content_blocks[0]
 
                 self.assertEqual(block["type"], expected_type)
-                if expected_type == "tool_call":
+                if function_call.id == "call-valid":
                     self.assertEqual(block["args"], {"query": "peng"})
                 else:
-                    self.assertIn("Error parsing function call arguments", block["text"])
+                    self.assertEqual(block["args"], {})
 
     def test_stream_accumulates_tool_call_and_yields_content_types(self):
         first_tool_part = namespace(
@@ -301,8 +301,7 @@ class TestCustomOpenAICompletion(unittest.TestCase):
         chunks = list(self.model._stream([]))
 
         block = chunks[0].message.content_blocks[0]
-        self.assertEqual(block["type"], "text")
-        self.assertIn("Error parsing function call arguments", block["text"])
+        self.assertEqual(block["type"], "tool_call")
 
     def test_bind_tools_formats_and_binds_options(self):
         raw_tools = [
@@ -409,7 +408,7 @@ class TestCustomOpenAICompletion(unittest.TestCase):
         self.assertEqual(result[3]["tool_calls"][0]["id"], "call-3")
         self.assertEqual(
             result[3]["tool_calls"][0]["function"],
-            {"name": "weather", "arguments": "{'city': 'Toronto'}"},
+            {"name": "weather", "arguments": '{"city": "Toronto"}'},
         )
         self.assertEqual(result[4], {"role": "user", "content": "next question"})
         self.assertEqual(

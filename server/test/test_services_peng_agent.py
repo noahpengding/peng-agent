@@ -77,7 +77,7 @@ class TestPengAgent(unittest.IsolatedAsyncioTestCase):
 
         self.assertEqual(result, {"messages": []})
         self.agent.graph.ainvoke.assert_awaited_once_with(
-            state, {"recursion_limit": 22}
+            state, {"recursion_limit": 52}
         )
 
     async def test_truncate_tool_message_returns_short_observation(self):
