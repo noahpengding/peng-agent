@@ -19,6 +19,32 @@ interface ChatRequest {
 
 type FeedbackValue = 'upvote' | 'downvote' | 'no_response';
 
+const CHAT_RETRY_COUNT = 3;
+
+const fetchChatResponse = async (apiUrl: string, options: RequestInit): Promise<Response> => {
+  for (let attempt = 0; ; attempt++) {
+    let response: Response | undefined;
+    try {
+      response = await fetch(apiUrl, options);
+    } catch (error) {
+      if (attempt === CHAT_RETRY_COUNT) throw error;
+    }
+
+    if (response) {
+      if (response.ok) return response;
+
+      const retryable = response.status === 408 || response.status === 429 || response.status >= 500;
+      if (!retryable || attempt === CHAT_RETRY_COUNT) {
+        const errorText = await response.text();
+        throw new Error(`API error (${response.status}): ${errorText}`);
+      }
+      await response.body?.cancel().catch(() => undefined);
+    }
+
+    await new Promise<void>((resolve) => setTimeout(resolve, 500 * 2 ** attempt));
+  }
+};
+
 const createPayloadLineProcessor = (
   onChunk: (chunk: string, type: string, done: boolean) => void
 ) => {
@@ -67,7 +93,7 @@ export const ChatService = {
 
       const processPayloadLine = createPayloadLineProcessor(onChunk);
 
-      const response = await fetch(apiUrl, {
+      const response = await fetchChatResponse(apiUrl, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -76,11 +102,6 @@ export const ChatService = {
         body: JSON.stringify(request),
         credentials: 'include', // Include cookies
       });
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(`API error (${response.status}): ${errorText}`);
-      }
 
       if (response.body && typeof response.body.getReader === 'function') {
         const reader = response.body.getReader();

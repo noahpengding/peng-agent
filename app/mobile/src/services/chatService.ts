@@ -26,6 +26,13 @@ interface StreamPayload {
 }
 
 const STREAM_BATCH_WINDOW_MS = 100;
+const CHAT_RETRY_COUNT = 3;
+
+class ChatRequestError extends Error {
+  constructor(message: string, readonly retryable: boolean) {
+    super(message);
+  }
+}
 
 const parsePayloadLine = (line: string): StreamPayload | null => {
   const trimmed = line.trim();
@@ -52,14 +59,15 @@ const sendMessageWithXhr = (
   request: ChatRequest,
   token: string | null,
   onChunk: (chunk: string, type: string, done: boolean) => void,
-  onComplete: () => void,
-  onError: (error: Error) => void
+  onComplete: () => void
 ): Promise<void> => {
   return new Promise<void>((resolve, reject) => {
     const xhr = new XMLHttpRequest();
     let cursor = 0;
     let buffer = '';
     let completed = false;
+    let settled = false;
+    let responseStarted = false;
     let batchTimer: ReturnType<typeof setTimeout> | null = null;
     let queuedPayloads: StreamPayload[] = [];
 
@@ -82,6 +90,16 @@ const sendMessageWithXhr = (
       for (const payload of pendingPayloads) {
         onChunk(payload.chunk, payload.type, payload.done);
       }
+    };
+
+    const fail = (message: string) => {
+      if (settled) return;
+      settled = true;
+      flushQueuedPayloads();
+      const retryable = !responseStarted && (
+        xhr.status === 0 || xhr.status === 408 || xhr.status === 429 || xhr.status >= 500
+      );
+      reject(new ChatRequestError(message, retryable));
     };
 
     const scheduleBatchFlush = () => {
@@ -138,12 +156,22 @@ const sendMessageWithXhr = (
     };
 
     xhr.onreadystatechange = () => {
+      if (settled) return;
+      if (xhr.readyState >= XMLHttpRequest.HEADERS_RECEIVED && xhr.status >= 200 && xhr.status < 300) {
+        responseStarted = true;
+      }
+
       if (xhr.readyState === XMLHttpRequest.LOADING) {
-        processDelta();
+        if (xhr.status >= 200 && xhr.status < 300) processDelta();
         return;
       }
 
       if (xhr.readyState !== XMLHttpRequest.DONE) {
+        return;
+      }
+
+      if (xhr.status < 200 || xhr.status >= 300) {
+        fail(`API error (${xhr.status}): ${xhr.responseText || 'Request failed'}`);
         return;
       }
 
@@ -159,27 +187,16 @@ const sendMessageWithXhr = (
 
       flushQueuedPayloads();
 
-      if (xhr.status < 200 || xhr.status >= 300) {
-        clearBatchTimer();
-        queuedPayloads = [];
-        const error = new Error(`API error (${xhr.status}): ${xhr.responseText || 'Request failed'}`);
-        onError(error);
-        reject(error);
-        return;
-      }
-
       clearBatchTimer();
+      settled = true;
       onComplete();
       resolve();
     };
 
     xhr.onerror = () => {
-      clearBatchTimer();
-      queuedPayloads = [];
-      const error = new Error('Network request failed');
-      onError(error);
-      reject(error);
+      fail('Network request failed');
     };
+    xhr.ontimeout = () => fail('Request timed out');
 
     xhr.open('POST', apiUrl, true);
     xhr.setRequestHeader('Content-Type', 'application/json');
@@ -206,7 +223,17 @@ export const ChatService = {
 
       // React Native fetch buffers stream chunks until request completion.
       // We use XHR with LOADING events for incremental parsing and live rendering.
-      await sendMessageWithXhr(apiUrl, request, token, onChunk, onComplete, onError);
+      for (let attempt = 0; ; attempt++) {
+        try {
+          await sendMessageWithXhr(apiUrl, request, token, onChunk, onComplete);
+          return;
+        } catch (error) {
+          if (!(error instanceof ChatRequestError) || !error.retryable || attempt === CHAT_RETRY_COUNT) {
+            throw error;
+          }
+          await new Promise<void>((resolve) => setTimeout(resolve, 500 * 2 ** attempt));
+        }
+      }
     } catch (error) {
       if (error instanceof Error) {
         onError(error);

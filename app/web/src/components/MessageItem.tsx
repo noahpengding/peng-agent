@@ -251,7 +251,11 @@ export const MessageItem = React.memo(({ message, index, isFolded, onToggleFold,
           {selectedImage && (
             <ImageModal src={selectedImage} onClose={() => setSelectedImage(null)} />
           )}
-          <div className="message-text markdown-content">
+          <div
+            className="message-text markdown-content"
+            role={message.isError ? 'alert' : undefined}
+            aria-live={message.isError ? 'assertive' : undefined}
+          >
             <ReactMarkdown
               remarkPlugins={[remarkGfm, remarkMath]}
               rehypePlugins={[rehypeKatex]}
@@ -264,7 +268,7 @@ export const MessageItem = React.memo(({ message, index, isFolded, onToggleFold,
               {message.content}
             </ReactMarkdown>
           </div>
-          {canShowFeedback && (
+          {(canShowFeedback || canRetry) && (
             <div className="message-feedback-actions">
               {canRetry && (
                 <button
@@ -277,7 +281,7 @@ export const MessageItem = React.memo(({ message, index, isFolded, onToggleFold,
                   ↻
                 </button>
               )}
-              {isFeedbackLocked ? (
+              {canShowFeedback && (isFeedbackLocked ? (
                 <button
                   type="button"
                   className="feedback-button selected locked"
@@ -310,7 +314,7 @@ export const MessageItem = React.memo(({ message, index, isFolded, onToggleFold,
                     👎
                   </button>
                 </>
-              )}
+              ))}
             </div>
           )}
         </div>

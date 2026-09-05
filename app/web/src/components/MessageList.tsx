@@ -22,7 +22,7 @@ export const MessageList: React.FC<MessageListProps> = React.memo(({ messages, i
 
     for (let i = messages.length - 1; i >= 0; i--) {
       const message = messages[i];
-      if (message.type === 'output_text' && message.chatId && message.messageId === retryMessageId) {
+      if (message.type === 'output_text' && message.messageId === retryMessageId) {
         return i;
       }
     }

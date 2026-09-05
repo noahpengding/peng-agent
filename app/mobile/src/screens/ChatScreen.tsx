@@ -367,6 +367,7 @@ const MessageItem = React.memo(({
 }) => {
   const isFoldable = item.type === 'reasoning_summary' || item.type === 'tool_calls' || item.type === 'tool_output';
   const isUser = item.role === 'human' || item.role === 'user';
+  const canShowFeedback = !!item.chatId && !!item.messageId && item.type === 'output_text';
 
   const getFoldLabel = (type?: string) => {
     if (type === 'tool_calls') return 'Tool Call';
@@ -399,7 +400,10 @@ const MessageItem = React.memo(({
               </Pressable>
             )}
             {!isFolded && (
-              <View>
+              <View
+                accessibilityRole={item.isError ? 'alert' : undefined}
+                accessibilityLiveRegion={item.isError ? 'assertive' : undefined}
+              >
                 <MessageImages images={item.images} />
                 {item.content ? (
                   <MemoizedMarkdown
@@ -410,7 +414,7 @@ const MessageItem = React.memo(({
                     {item.content}
                   </MemoizedMarkdown>
                 ) : null}
-                {item.chatId && item.messageId && item.type === 'output_text' && (
+                {(canShowFeedback || canRetry) && (
                   <View style={styles.feedbackContainer}>
                     {canRetry && (
                       <TouchableOpacity
@@ -426,29 +430,33 @@ const MessageItem = React.memo(({
                         />
                       </TouchableOpacity>
                     )}
-                    <TouchableOpacity
-                      onPress={() => onFeedback(item.messageId!, item.chatId!, 'upvote')}
-                      disabled={item.feedbackUpdating}
-                      style={styles.feedbackButton}
-                    >
-                      <MaterialCommunityIcons
-                        name={item.feedback === 'upvote' ? 'thumb-up' : 'thumb-up-outline'}
-                        size={16}
-                        color={item.feedback === 'upvote' ? '#10B981' : '#9CA3AF'}
-                      />
-                    </TouchableOpacity>
-                    <TouchableOpacity
-                      onPress={() => onFeedback(item.messageId!, item.chatId!, 'downvote')}
-                      disabled={item.feedbackUpdating}
-                      style={styles.feedbackButton}
-                    >
-                      <MaterialCommunityIcons
-                        name={item.feedback === 'downvote' ? 'thumb-down' : 'thumb-down-outline'}
-                        size={16}
-                        color={item.feedback === 'downvote' ? '#EF4444' : '#9CA3AF'}
-                      />
-                    </TouchableOpacity>
-                    {item.feedbackUpdating && <ActivityIndicator size="small" color="#10B981" style={{ marginLeft: 5 }} />}
+                    {canShowFeedback && (
+                      <>
+                        <TouchableOpacity
+                          onPress={() => onFeedback(item.messageId!, item.chatId!, 'upvote')}
+                          disabled={item.feedbackUpdating}
+                          style={styles.feedbackButton}
+                        >
+                          <MaterialCommunityIcons
+                            name={item.feedback === 'upvote' ? 'thumb-up' : 'thumb-up-outline'}
+                            size={16}
+                            color={item.feedback === 'upvote' ? '#10B981' : '#9CA3AF'}
+                          />
+                        </TouchableOpacity>
+                        <TouchableOpacity
+                          onPress={() => onFeedback(item.messageId!, item.chatId!, 'downvote')}
+                          disabled={item.feedbackUpdating}
+                          style={styles.feedbackButton}
+                        >
+                          <MaterialCommunityIcons
+                            name={item.feedback === 'downvote' ? 'thumb-down' : 'thumb-down-outline'}
+                            size={16}
+                            color={item.feedback === 'downvote' ? '#EF4444' : '#9CA3AF'}
+                          />
+                        </TouchableOpacity>
+                        {item.feedbackUpdating && <ActivityIndicator size="small" color="#10B981" style={{ marginLeft: 5 }} />}
+                      </>
+                    )}
                   </View>
                 )}
               </View>
@@ -491,6 +499,7 @@ const MessageItem = React.memo(({
     prevItem.content === nextItem.content &&
     prevItem.role === nextItem.role &&
     prevItem.type === nextItem.type &&
+    prevItem.isError === nextItem.isError &&
     prevItem.messageId === nextItem.messageId &&
     prevItem.clientKey === nextItem.clientKey &&
     prevItem.chatId === nextItem.chatId &&
