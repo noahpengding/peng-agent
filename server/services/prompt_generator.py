@@ -32,6 +32,7 @@ def system_prompt(user_name, mysql_conn, tool_names, ip_address):
     if tool_names != []:
         system_prompt += "\n If you need to use any tools, you need to use it correctly. You need to call the exact tool name and provide the correct parameters with the correct parameter names. "
         system_prompt += "You need to check the tools' description and parameter (including parameter name, type, and description) before using the tools."
+        system_prompt += "\n During multi-round conversations, you can assume previous information is still valid and proven unless the user explicitly states otherwise. "
 
     up_to_date_info = f"\n Today is {datetime.now().strftime('%Y-%m-%d')}. "
     up_to_date_info += _get_ip_geo_info(ip_address)
