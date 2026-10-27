@@ -68,6 +68,8 @@ The app uses several Expo plugins for native device capabilities:
 ## 13. Build Variants/Flavors
 - Managed via Expo Application Services (EAS).
 - Defined in `eas.json` (Profiles for dev, preview, production) and configured with a specific `projectId` in `app.config.js`.
+- `.github/workflows/build-and-deploy.yml` uploads both preview and production Android bundles to Google Play's `internal` track with `status: completed`.
+- Both upload steps set `changesNotSentForReview: true` because Google Play rejects automatic review submission for this app. This allows the edit to be committed; changes requiring review must then be sent for review manually from the Google Play Console UI. The review-submission flag is separate from the release status.
 
 ## 14. Environment/Config
 - `app.config.js` reads `process.env.API_URL` during build time and embeds it into the app bundle under `expo.extra.apiUrl`.

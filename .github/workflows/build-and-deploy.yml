@@ -296,6 +296,8 @@ jobs:
           releaseFiles: app/mobile/${{ env.VERSION }}-preview.aab
           track: internal
           status: completed
+          # Google Play requires review submission through the Console UI.
+          changesNotSentForReview: true
 
   # Production builds for main branch
   server:
@@ -417,6 +419,8 @@ jobs:
           releaseFiles: app/mobile/${{ env.VERSION }}.aab
           track: internal
           status: completed
+          # Google Play requires review submission through the Console UI.
+          changesNotSentForReview: true
 
   publish-release:
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
