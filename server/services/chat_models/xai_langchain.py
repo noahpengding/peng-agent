@@ -14,9 +14,6 @@ from langchain_core.outputs import ChatGeneration, ChatGenerationChunk, ChatResu
 from langchain_core.utils.function_calling import convert_to_openai_tool
 from pydantic import Field
 from config.config import config
-from xai_sdk import Client
-from xai_sdk.chat import image, user, system, tool, tool_result, assistant
-from xai_sdk.tools import get_tool_call_type
 from utils.log import output_log
 
 from collections.abc import Sequence
@@ -27,6 +24,23 @@ from langchain_core.language_models import LanguageModelInput
 
 import ast
 
+_xai_import_error = None
+try:
+    from xai_sdk import Client
+    from xai_sdk.chat import image, user, system, tool, tool_result, assistant
+    from xai_sdk.tools import get_tool_call_type
+except ImportError as e:
+    _xai_import_error = e
+    Client = None
+
+    def _missing_xai_sdk(*args, **kwargs):
+        raise ImportError("xai_sdk dependencies are unavailable") from _xai_import_error
+
+    image = user = system = tool = tool_result = assistant = _missing_xai_sdk
+
+    def get_tool_call_type(*args, **kwargs):
+        raise ImportError("xai_sdk dependencies are unavailable") from _xai_import_error
+
 
 class CustomXAIResponse(BaseChatModel):
     model_name: str = Field(alias="model")
@@ -34,10 +48,12 @@ class CustomXAIResponse(BaseChatModel):
     temperature: Optional[float] = 1.0
     max_tokens: Optional[int] = config.output_max_length
     api_key: str
-    client: Optional[Client] = None
+    client: Optional[Any] = None
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
+        if Client is None:
+            raise ImportError("xai_sdk dependencies are unavailable") from _xai_import_error
         self.client = Client(
             api_key=self.api_key,
         )
