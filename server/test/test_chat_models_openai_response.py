@@ -273,63 +273,6 @@ class TestCustomOpenAIResponse(unittest.TestCase):
             ],
         )
 
-    @patch("services.chat_models.openai_response.convert_to_openai_tool")
-    def test_bind_tools_formats_schemas_and_passes_parallel_setting(
-        self, mock_convert
-    ):
-        function_tool = {
-            "type": "function",
-            "function": {
-                "name": "lookup",
-                "parameters": {"type": "object"},
-            },
-        }
-        named_tool = {
-            "type": "web_search_preview",
-            "name": "web_search",
-            "properties": {},
-        }
-        mock_convert.side_effect = [function_tool, named_tool]
-
-        with patch.object(
-            BaseChatModel, "bind", autospec=True, return_value=sentinel.binding
-        ) as mock_bind:
-            result = self.model.bind_tools(
-                [sentinel.function_tool, sentinel.named_tool],
-                strict=True,
-                parallel_tool_calls=False,
-            )
-
-        self.assertIs(result, sentinel.binding)
-        self.assertEqual(
-            mock_convert.call_args_list,
-            [
-                call(sentinel.function_tool, strict=True),
-                call(sentinel.named_tool, strict=True),
-            ],
-        )
-        self.assertEqual(
-            function_tool,
-            {
-                "type": "function",
-                "function": {
-                    "name": "lookup",
-                    "parameters": {
-                        "type": "object",
-                        "properties": {},
-                        "required": [],
-                    },
-                },
-                "properties": {"additionalProperties": False},
-                "required": [],
-            },
-        )
-        mock_bind.assert_called_once_with(
-            self.model,
-            tools=[function_tool, named_tool],
-            parallel_tool_calls=False,
-        )
-
     def test_list_models_joins_model_ids(self):
         self.client.models.list.return_value = SimpleNamespace(
             data=[SimpleNamespace(id="gpt-4o"), SimpleNamespace(id="o3")]

@@ -38,7 +38,7 @@ class PengAgent:
         self._tools_ready = False
         self.graph = self.init_agent_graph()
         self.tool_call_history: list[ToolCall] = []
-        self.total_tool_calls = 25 if operater == "anthropic" else 10
+        self.total_tool_calls = 25 if operater in ("anthropic", "openai") else 10
         self._tool_return_direct = False
 
     def init_agent_graph(self) -> Any:
@@ -79,10 +79,11 @@ class PengAgent:
         )
 
     async def truncate_tool_message(self, observation: str) -> str:
+        complete_tool_calls = max(self.total_tool_calls, 1)
         if self.operator in ["gemini", "grok", "openai_response", "anthropic"]:
-            max_length = 1000000 * 0.7 / self.total_tool_calls
+            max_length = 1000000 * 0.7 / complete_tool_calls
         else:
-            max_length = 200000 * 0.7 / self.total_tool_calls
+            max_length = 200000 * 0.7 / complete_tool_calls
         output_log(f"Truncating tool message if exceeds {int(max_length)} characters. Current length: {len(observation)} characters.", "DEBUG")
         if len(observation) > max_length:
             from handlers.chat_handlers import chat_completions_handler
@@ -162,7 +163,6 @@ class PengAgent:
     async def call_tools(self, state: AgentState):
         output_log(f"Node: Call Tools. Current state {state}", "DEBUG")
         writer = get_stream_writer()
-        self.total_tool_calls -= 1
         last_message = list(state["messages"])[-1]
         # Not an AI message
         if not isinstance(last_message, AIMessage):
@@ -219,6 +219,7 @@ class PengAgent:
                 )
             }
         tool = self.tools[name]
+        self.total_tool_calls -= 1
         try:
             observation = await tool.ainvoke(args)
         except Exception as e:

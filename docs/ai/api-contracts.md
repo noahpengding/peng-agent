@@ -68,7 +68,7 @@ Because types are handwritten and duplicated across three completely separate di
 | Contract | Request shape | Response shape | Validation | Consumers |
 |---|---|---|---|---|
 | **Login** | `{"username", "password"}` | `{"access_token", "token_type"}` | Pydantic `UserLogin` | Web & Mobile Auth Flow |
-| **Chat Stream** | `{"user_name", "message", "knowledge_base", "config": {"operator", "base_model", "tools_name", "short_term_memory", "ip_address"}}` | `text/event-stream` chunks | Pydantic `ChatRequest` | Web & Mobile Chat UI |
+| **Chat Stream** | `{"user_name", "message", "knowledge_base", "config": {"operator", "base_model", "tools_name", "short_term_memory", "ip_address", "temp_chat"}}` | `text/event-stream` chunks | Pydantic `ChatRequest` | Web & Mobile Chat UI |
 | **Feedback** | `{"chat_id", "user_name", "feedback"}` | `{"message", "chat_id", "feedback"}` | Pydantic `ChatFeedbackRequest` | Web & Mobile Message Items |
 | **Memory Page** | `{"user_name", "page", "search"}` | `{"memories", "page", "page_size", "total_count", "total_pages", "has_next", "has_previous", "search"}` | Dict body in `memory_router.py`; handler clamps page and uses fixed `page_size` 20 | Web & Mobile Memory Selection |
 
@@ -85,3 +85,10 @@ Because types are handwritten and duplicated across three completely separate di
 - Retry reuses the existing `POST /chat` contract; it does not require a separate backend route.
 - Each client snapshots the fully resolved request after a successful turn. A retry resends that snapshot, including its original `config.ip_address`.
 - Before replay, the client restores the saved pre-turn `short_term_memory` list. The completed chat ID being replaced therefore remains persisted server-side but is excluded from the active conversation context and replaced by the newly completed chat ID.
+
+### Temporary Chat Notes
+- `config.temp_chat` is an optional boolean with a backend and client default of `false`.
+- When `true`, the backend still reads explicitly selected memories and profile context to build the model prompt, but it does not insert the turn, response, reasoning, tool calls, or tool outputs into MySQL.
+- Temporary turns are tagged and removed by the Datadog LLM Observability span processor. Model providers and enabled external tools still receive the data required to answer the request.
+- The final streaming event has an empty `chunk` for a temporary turn instead of a persisted numeric chat ID. Web and mobile must not attach feedback metadata or add that turn to `short_term_memory`.
+- Uploaded files are handled before the chat request and are not deleted by temporary-chat mode.

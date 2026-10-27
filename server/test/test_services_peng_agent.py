@@ -77,7 +77,7 @@ class TestPengAgent(unittest.IsolatedAsyncioTestCase):
 
         self.assertEqual(result, {"messages": []})
         self.agent.graph.ainvoke.assert_awaited_once_with(
-            state, {"recursion_limit": 22}
+            state, {"recursion_limit": 52}
         )
 
     async def test_truncate_tool_message_returns_short_observation(self):
@@ -225,7 +225,7 @@ class TestPengAgent(unittest.IsolatedAsyncioTestCase):
         self.assertIn("Invalid tool call", result["messages"].text)
 
     async def test_call_tools_stops_at_limit(self):
-        self.agent.total_tool_calls = 1
+        self.agent.total_tool_calls = 0
         self.agent.tools = {"search": "tool"}
         message = ai_message(
             {
@@ -237,7 +237,6 @@ class TestPengAgent(unittest.IsolatedAsyncioTestCase):
         )
 
         result = await self.agent.call_tools({"messages": [message]})
-
         self.assertIn("Tool call limit reached", result["messages"].text)
         self.assertEqual(self.agent.tools, {})
 

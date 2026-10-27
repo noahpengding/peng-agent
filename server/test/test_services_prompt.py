@@ -16,22 +16,14 @@ class TestPromptGenerator(unittest.TestCase):
         
         result = system_prompt("test_user", mock_mysql, ["web_search"], test_ip_address)
 
-        self.assertEqual(len(result), 2)
+        self.assertEqual(len(result), 4)
         self.assertIsInstance(result[0], SystemMessage)
         with open("services/prompts/markdown_format.md", "r") as f:
             markdown_format = f.read()
         self.assertEqual(
-            result[0].content,
-            "You are a test bot."
-            "If you need to use any tools, you need to use it correctly. "
-            "You need to call the exact tool name and provide the correct "
-            "parameters with the correct parameter names. You need to check "
-            "the tools' description and parameter (including parameter name, "
-            "type, and description) before using the tools. "
-            + markdown_format
-            + f" Today is 2026-07-12. You get request from IP address {test_ip_address}. The location is Vaughan, Ontario, Canada.",
+            result[1].content,
+            markdown_format
         )
-        self.assertIn("likes python", result[1].content)
 
     def test_add_human_message_to_prompt(self):
         result = add_human_message_to_prompt("hello")

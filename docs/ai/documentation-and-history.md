@@ -17,6 +17,7 @@
 - **V2.4.0:** Implementation of Long-Term Memory and Redis layer.
 - **V2.4.2:** Complete front UI remake prioritizing a "Technical & Moody" dark-mode aesthetic and introduction of the Mobile App.
 - **V2.4.3:** Redux chat streaming optimization. Transitioned to direct array mutation via Immer to prevent $O(n)$ array allocations during high-frequency text streaming.
+- **V2.4.9:** Added temporary-chat configuration across the backend, web, and mobile. Temporary turns skip chat persistence and Datadog LLM Observability export and do not enter short-term memory.
 
 ## 4. Commit Hashes for Major Relevant Changes
 - `0470a92`: V2.4.0 - User Profile, Feedback, Long-Term Memory, Redis Implements.

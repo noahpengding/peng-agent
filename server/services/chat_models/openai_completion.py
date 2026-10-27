@@ -26,6 +26,7 @@ from langchain_core.runnables import Runnable
 from langchain_core.language_models import LanguageModelInput
 
 import ast
+import json
 
 
 class CustomOpenAICompletion(BaseChatModel):
@@ -109,46 +110,42 @@ class CustomOpenAICompletion(BaseChatModel):
                         }
                     ]
                 )
-            elif (
-                choice.finish_reason == "tool_calls"
-                or choice.finish_reason == "function_call"
-            ):
-                if choice.finish_reason == "function_call":
-                    try:
-                        generate_message = AIMessage(
-                            content_blocks=[
-                                {
-                                    "type": "tool_call",
-                                    "name": choice.message.function_call[0].function.name,
-                                    "args": ast.literal_eval(
-                                        choice.message.function_call[0].function.arguments
-                                    ),
-                                    "id": choice.message.function_call[0].id,
-                                }
-                            ]
-                        )
-                    except Exception as e:
-                        generate_message = AIMessage(
-                            content_blocks=[
-                                {
-                                    "type": "text",
-                                    "text": f"Error parsing function call arguments: {e}",
-                                }
-                            ]
-                        )
-                else:
-                    generate_message = AIMessage(
-                        content_blocks=[
-                            {
-                                "type": "tool_call",
-                                "name": choice.message.tool_calls[0].name,
-                                "args": ast.literal_eval(
-                                    choice.message.tool_calls[0].function.arguments
-                                ),
-                                "id": choice.message.tool_calls[0].id,
-                            }
-                        ]
-                    )
+            elif choice.finish_reason == "function_call":
+                args = choice.message.function_call[0].function.arguments
+                args = args.split("}")[0] + "}"
+                try:
+                    ast.literal_eval(args)
+                except Exception as e:
+                    output_log(f"Error parsing function call arguments: {e}", "error")
+                    args = "{}" 
+                generate_message = AIMessage(
+                    content_blocks=[
+                        {
+                            "type": "tool_call",
+                            "name": choice.message.function_call[0].function.name,
+                            "args": ast.literal_eval(args),
+                            "id": choice.message.function_call[0].id,
+                        }
+                    ]
+                )
+            elif choice.finish_reason == "tool_calls":
+                args = choice.message.tool_calls[0].function.arguments
+                args = args.split("}")[0] + "}"
+                try:
+                    ast.literal_eval(args)
+                except Exception as e:
+                    output_log(f"Error parsing function call arguments: {e}", "error")
+                    args = "{}" 
+                generate_message = AIMessage(
+                    content_blocks=[
+                        {
+                            "type": "tool_call",
+                            "name": choice.message.tool_calls[0].name,
+                            "args": ast.literal_eval(args),
+                            "id": choice.message.tool_calls[0].id,
+                        }
+                    ]
+                )
         generation = ChatGeneration(message=generate_message)
         return ChatResult(generations=[generation])
 
@@ -177,26 +174,22 @@ class CustomOpenAICompletion(BaseChatModel):
                 if tool_call.function.arguments:
                     tool_calls_args += tool_call.function.arguments
             if choice.finish_reason == "tool_calls":
+                args = tool_calls_args.split("}")[0] + "}"
                 try:
-                    message_chunk = AIMessageChunk(
-                        content_blocks=[
-                            {
-                                "type": "tool_call",
-                                "name": tool_calls_name,
-                                "args": ast.literal_eval(tool_calls_args),
-                                "id": tool_calls_id,
-                            }
-                        ]
-                    )
+                    ast.literal_eval(args)
                 except Exception as e:
-                    message_chunk = AIMessageChunk(
-                        content_blocks=[
-                            {
-                                "type": "text",
-                                "text": f"Error parsing function call arguments: {e}",
-                            }
-                        ]
-                    )
+                    output_log(f"Error parsing function call arguments: {e}", "error")  
+                    args = "{}"
+                message_chunk = AIMessageChunk(
+                    content_blocks=[
+                        {
+                            "type": "tool_call",
+                            "name": tool_calls_name,
+                            "args": ast.literal_eval(args),
+                            "id": tool_calls_id,
+                        }
+                    ]
+                )
                 yield ChatGenerationChunk(message=message_chunk)
                 tool_calls_id = ""
                 tool_calls_name = ""
@@ -306,7 +299,7 @@ class CustomOpenAICompletion(BaseChatModel):
                                     "type": "function",
                                     "function": {
                                         "name": m["name"],
-                                        "arguments": str(m["args"]),
+                                        "arguments": json.dumps(m["args"]),
                                     },
                                 }]
                             }

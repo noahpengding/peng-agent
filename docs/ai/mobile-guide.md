@@ -68,6 +68,8 @@ The app uses several Expo plugins for native device capabilities:
 ## 13. Build Variants/Flavors
 - Managed via Expo Application Services (EAS).
 - Defined in `eas.json` (Profiles for dev, preview, production) and configured with a specific `projectId` in `app.config.js`.
+- `.github/workflows/build-and-deploy.yml` uploads both preview and production Android bundles to Google Play's `internal` track with `status: completed`.
+- Both upload steps set `changesNotSentForReview: true` because Google Play rejects automatic review submission for this app. This allows the edit to be committed; changes requiring review must then be sent for review manually from the Google Play Console UI. The review-submission flag is separate from the release status.
 
 ## 14. Environment/Config
 - `app.config.js` reads `process.env.API_URL` during build time and embeds it into the app bundle under `expo.extra.apiUrl`.
@@ -98,6 +100,11 @@ The app uses several Expo plugins for native device capabilities:
 - `chatSlice.ts` keeps a cloned snapshot of the completed `POST /chat` request, including the message, attachments, knowledge base, model/operator, tools, short-term memory IDs, and resolved IP address.
 - Retrying removes only the final user turn and its streamed assistant/tool/reasoning rows, restores the original request's pre-turn short-term memory IDs, re-adds the user row, and sends the saved request again.
 - Configuration changes made after the original response do not affect its retry. Loading a different saved-memory transcript clears retry eligibility.
+
+## 20. Temporary Chat
+- The expanded Chat Configuration panel contains an accessible temporary-chat switch. It is off by default and disabled while a request is streaming.
+- The selected value is sent as `config.temp_chat` and is included in the completed-request snapshot.
+- Temporary responses receive no persisted chat ID, are not appended to short-term memory, and do not expose persisted feedback or retry controls.
 
 ## Screen / Responsibility Table
 | Screen/Flow | File paths | Responsibility | API/data used |

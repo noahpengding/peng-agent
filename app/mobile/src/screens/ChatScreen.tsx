@@ -37,6 +37,7 @@ import {
   setInput,
   setKnowledgeBase,
   setSelectedToolNames,
+  setTempChat,
   submitMessageFeedback,
   setUploadedImages,
 } from '@/store/slices/chatSlice';
@@ -366,6 +367,7 @@ const MessageItem = React.memo(({
 }) => {
   const isFoldable = item.type === 'reasoning_summary' || item.type === 'tool_calls' || item.type === 'tool_output';
   const isUser = item.role === 'human' || item.role === 'user';
+  const canShowFeedback = !!item.chatId && !!item.messageId && item.type === 'output_text';
 
   const getFoldLabel = (type?: string) => {
     if (type === 'tool_calls') return 'Tool Call';
@@ -398,7 +400,10 @@ const MessageItem = React.memo(({
               </Pressable>
             )}
             {!isFolded && (
-              <View>
+              <View
+                accessibilityRole={item.isError ? 'alert' : undefined}
+                accessibilityLiveRegion={item.isError ? 'assertive' : undefined}
+              >
                 <MessageImages images={item.images} />
                 {item.content ? (
                   <MemoizedMarkdown
@@ -409,7 +414,7 @@ const MessageItem = React.memo(({
                     {item.content}
                   </MemoizedMarkdown>
                 ) : null}
-                {item.chatId && item.messageId && item.type === 'output_text' && (
+                {(canShowFeedback || canRetry) && (
                   <View style={styles.feedbackContainer}>
                     {canRetry && (
                       <TouchableOpacity
@@ -425,29 +430,33 @@ const MessageItem = React.memo(({
                         />
                       </TouchableOpacity>
                     )}
-                    <TouchableOpacity
-                      onPress={() => onFeedback(item.messageId!, item.chatId!, 'upvote')}
-                      disabled={item.feedbackUpdating}
-                      style={styles.feedbackButton}
-                    >
-                      <MaterialCommunityIcons
-                        name={item.feedback === 'upvote' ? 'thumb-up' : 'thumb-up-outline'}
-                        size={16}
-                        color={item.feedback === 'upvote' ? '#10B981' : '#9CA3AF'}
-                      />
-                    </TouchableOpacity>
-                    <TouchableOpacity
-                      onPress={() => onFeedback(item.messageId!, item.chatId!, 'downvote')}
-                      disabled={item.feedbackUpdating}
-                      style={styles.feedbackButton}
-                    >
-                      <MaterialCommunityIcons
-                        name={item.feedback === 'downvote' ? 'thumb-down' : 'thumb-down-outline'}
-                        size={16}
-                        color={item.feedback === 'downvote' ? '#EF4444' : '#9CA3AF'}
-                      />
-                    </TouchableOpacity>
-                    {item.feedbackUpdating && <ActivityIndicator size="small" color="#10B981" style={{ marginLeft: 5 }} />}
+                    {canShowFeedback && (
+                      <>
+                        <TouchableOpacity
+                          onPress={() => onFeedback(item.messageId!, item.chatId!, 'upvote')}
+                          disabled={item.feedbackUpdating}
+                          style={styles.feedbackButton}
+                        >
+                          <MaterialCommunityIcons
+                            name={item.feedback === 'upvote' ? 'thumb-up' : 'thumb-up-outline'}
+                            size={16}
+                            color={item.feedback === 'upvote' ? '#10B981' : '#9CA3AF'}
+                          />
+                        </TouchableOpacity>
+                        <TouchableOpacity
+                          onPress={() => onFeedback(item.messageId!, item.chatId!, 'downvote')}
+                          disabled={item.feedbackUpdating}
+                          style={styles.feedbackButton}
+                        >
+                          <MaterialCommunityIcons
+                            name={item.feedback === 'downvote' ? 'thumb-down' : 'thumb-down-outline'}
+                            size={16}
+                            color={item.feedback === 'downvote' ? '#EF4444' : '#9CA3AF'}
+                          />
+                        </TouchableOpacity>
+                        {item.feedbackUpdating && <ActivityIndicator size="small" color="#10B981" style={{ marginLeft: 5 }} />}
+                      </>
+                    )}
                   </View>
                 )}
               </View>
@@ -490,6 +499,7 @@ const MessageItem = React.memo(({
     prevItem.content === nextItem.content &&
     prevItem.role === nextItem.role &&
     prevItem.type === nextItem.type &&
+    prevItem.isError === nextItem.isError &&
     prevItem.messageId === nextItem.messageId &&
     prevItem.clientKey === nextItem.clientKey &&
     prevItem.chatId === nextItem.chatId &&
@@ -516,6 +526,7 @@ export default function ChatScreen() {
   const knowledgeBase = useSelector((state: RootState) => state.chat.knowledgeBase);
   const selectedToolNames = useSelector((state: RootState) => state.chat.selectedToolNames);
   const shortTermMemory = useSelector((state: RootState) => state.chat.shortTermMemory);
+  const tempChat = useSelector((state: RootState) => state.chat.tempChat);
   const uploadedImages = useSelector((state: RootState) => state.chat.uploadedImages);
   const lastRequest = useSelector((state: RootState) => state.chat.lastRequest);
   const retryMessageId = useSelector((state: RootState) => state.chat.retryMessageId);
@@ -631,6 +642,7 @@ export default function ChatScreen() {
         base_model: baseModel,
         tools_name: selectedToolNames,
         short_term_memory: shortTermMemory,
+        temp_chat: tempChat,
       },
     };
 
@@ -856,6 +868,33 @@ export default function ChatScreen() {
                   <Text style={styles.selectorValue} numberOfLines={1}>{knowledgeBase}</Text>
                 </Pressable>
               </View>
+
+              <Pressable
+                style={[styles.tempChatButton, tempChat && styles.tempChatButtonActive]}
+                onPress={() => dispatch(setTempChat(!tempChat))}
+                disabled={isLoading}
+                accessibilityRole="switch"
+                accessibilityState={{ checked: tempChat, disabled: isLoading }}
+                accessibilityLabel="Temporary chat"
+                accessibilityHint="Prevents this turn from being saved to chat history or sent to Datadog LLM Observability"
+              >
+                <MaterialCommunityIcons
+                  name="incognito"
+                  size={22}
+                  color={tempChat ? Colors.primary : Colors.textMuted}
+                />
+                <View style={styles.tempChatCopy}>
+                  <Text style={styles.tempChatTitle}>Temporary chat</Text>
+                  <Text style={styles.tempChatDescription}>
+                    Not saved to chat history or Datadog. Model providers still process it.
+                  </Text>
+                </View>
+                <View style={[styles.tempChatStatus, tempChat && styles.tempChatStatusActive]}>
+                  <Text style={[styles.tempChatStatusText, tempChat && styles.tempChatStatusTextActive]}>
+                    {tempChat ? 'On' : 'Off'}
+                  </Text>
+                </View>
+              </Pressable>
 
               <View style={styles.toolRowHeader}>
                 <Text style={styles.toolRowTitle}>Tools</Text>
@@ -1156,6 +1195,55 @@ const styles = StyleSheet.create({
     color: Colors.textMain,
     fontSize: Typography.sizes.sm,
     fontWeight: Typography.weights.bold,
+  },
+  tempChatButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Typography.spacing['2xs'],
+    backgroundColor: Colors.bgDeep,
+    borderColor: Colors.border,
+    borderWidth: 1,
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+  },
+  tempChatButtonActive: {
+    borderColor: Colors.primary,
+    backgroundColor: Colors.primarySoft,
+  },
+  tempChatCopy: {
+    flex: 1,
+    gap: Typography.spacing['3xs'],
+  },
+  tempChatTitle: {
+    color: Colors.textMain,
+    fontSize: Typography.sizes.sm,
+    fontWeight: '700',
+  },
+  tempChatDescription: {
+    color: Colors.textMuted,
+    fontSize: Typography.sizes.xs,
+    lineHeight: 16,
+  },
+  tempChatStatus: {
+    minWidth: 42,
+    borderRadius: 999,
+    backgroundColor: Colors.bgCard,
+    paddingHorizontal: 8,
+    paddingVertical: 5,
+    alignItems: 'center',
+  },
+  tempChatStatusActive: {
+    backgroundColor: Colors.primary,
+  },
+  tempChatStatusText: {
+    color: Colors.textMuted,
+    fontSize: Typography.sizes.xs,
+    fontWeight: '900',
+    textTransform: 'uppercase',
+  },
+  tempChatStatusTextActive: {
+    color: Colors.white,
   },
   toolRowHeader: {
     flexDirection: 'row',

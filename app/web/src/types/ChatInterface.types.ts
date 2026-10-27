@@ -1,6 +1,7 @@
 export interface Message {
   role: string;
   content: string;
+  isError?: boolean;
   images?: string[]; // Changed from image to images array for multiple image support
   // type distinguishes different message types: tool_calls, reasoning_summary, output_text
   type?: 'tool_calls' | 'tool_output' | 'reasoning_summary' | 'output_text' | 'user' | 'assistant';

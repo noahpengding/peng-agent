@@ -79,6 +79,13 @@ Centralized in `server/config/config.py`. It uses a `pydantic.BaseModel` named `
 3. `server/api/api.py` (Routing)
 4. `server/models/db_models.py` (Domain Data)
 
+## 19. Temporary Chat
+- `ChatConfig.temp_chat` defaults to `False`.
+- Prompt construction continues to read the user/profile and explicitly selected short-term memories, but temporary turns skip all chat-related MySQL inserts.
+- Streaming temporary turns finish without a numeric chat ID, preventing clients from treating the turn as persisted memory or enabling feedback against a nonexistent record.
+- Both streaming and completion model calls use a lowercase `temp_chat` LLMObs tag. `api.setup._filter_temp_chat_span` drops tagged spans before Datadog LLM Observability export.
+- Temporary request/prompt/chunk payloads should not be added to handler-level debug logs. Lower model-adapter and agent debug logs remain a separate privacy risk when debug logging is enabled.
+
 ## Quick Reference Table
 | Area | File paths | Notes |
 |---|---|---|

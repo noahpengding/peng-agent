@@ -8,3 +8,4 @@ class ChatConfig(BaseModel):
     tools_name: List[str] = Field(default=[])
     short_term_memory: List[int] = Field(default=[])
     ip_address: str = Field(default="")
+    temp_chat: bool = Field(default=False)

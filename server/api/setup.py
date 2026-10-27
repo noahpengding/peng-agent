@@ -3,6 +3,8 @@ from utils.log import output_log
 from config.config import config
 from services.redis_service import setup_redis_cache
 from handlers.tool_handlers import update_tools
+from typing import Optional
+from ddtrace.llmobs import LLMObs, LLMObsSpan
 
 
 def set_up():
@@ -27,7 +29,7 @@ def set_up():
         output_log(f"Error creating database tables: {e}", "error")
         raise
 
-    # phoenix_setup()
+    # datadog_setup()
     dd_setup()
 
 
@@ -43,15 +45,61 @@ def phoenix_setup():
         auto_instrument=True,
     )
 
+def _mark_ips_in_span(span: LLMObsSpan) -> LLMObsSpan:
+    import ipaddress
+    import re
+
+    OCTET = r"(?:25[0-5]|2[0-4]\d|1\d{2}|[1-9]?\d)"
+    IP_CANDIDATE = re.compile(
+        rf"""
+        # IPv4
+        (?P<ipv4>
+            (?<![\w.:])
+            (?:{OCTET}\.){{3}}{OCTET}
+            (?![\w.])
+        )
+        |
+        # IPv6 candidate; ipaddress performs final validation
+        (?P<ipv6>
+            (?<![\w:])
+            (?=[0-9A-Fa-f:.]*:)
+            (?:
+                ::
+                |
+                (?:::|[0-9A-Fa-f])
+                [0-9A-Fa-f:.]*
+                (?:[0-9A-Fa-f]|::)
+            )
+            (?!\w)
+        )
+        """,
+        re.VERBOSE,
+    )
+    def replace_ip(match: re.Match) -> str:
+        ip = match.group(0)
+        try:
+            ipaddress.ip_address(ip)
+            return "[REDACTED_IP]"
+        except ValueError:
+            return ip
+    for message in span.input:
+        message["content"] = IP_CANDIDATE.sub(replace_ip, message["content"])
+    return span
+
+def _datadog_span_process(span: LLMObsSpan) -> Optional[LLMObsSpan]:
+    output_log(f"Filtering span: {span.get_tag('temp_chat')}", "debug")
+    if span.get_tag("temp_chat") == "True":
+        return None
+    return _mark_ips_in_span(span)
+
 def dd_setup():
-    from ddtrace.llmobs import LLMObs
     output_log("Setting up Datadog APM integration...", "info")
 
     LLMObs.enable(
         ml_app=config.app_name,
         api_key=config.dd_api_key,
         site=config.dd_site,
-        agentless_enabled=True,
         service=config.dd_service,
         env=config.env,
+        span_processor=_datadog_span_process
     )

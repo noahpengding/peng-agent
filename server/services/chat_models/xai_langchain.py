@@ -14,11 +14,10 @@ from langchain_core.outputs import ChatGeneration, ChatGenerationChunk, ChatResu
 from langchain_core.utils.function_calling import convert_to_openai_tool
 from pydantic import Field
 from config.config import config
+from utils.log import output_log
 from xai_sdk import Client
 from xai_sdk.chat import image, user, system, tool, tool_result, assistant
 from xai_sdk.tools import get_tool_call_type
-from utils.log import output_log
-
 from collections.abc import Sequence
 from typing import Any, Callable, Dict, Optional, Union, List, Iterator
 from langchain_core.tools import BaseTool
@@ -28,13 +27,14 @@ from langchain_core.language_models import LanguageModelInput
 import ast
 
 
+
 class CustomXAIResponse(BaseChatModel):
     model_name: str = Field(alias="model")
     reasoning_effect: str = Field(default="not a reasoning model")
     temperature: Optional[float] = 1.0
     max_tokens: Optional[int] = config.output_max_length
     api_key: str
-    client: Optional[Client] = None
+    client: Optional[Any] = None
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)

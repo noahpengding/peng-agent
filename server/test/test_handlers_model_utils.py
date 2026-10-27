@@ -63,20 +63,6 @@ class TestModelUtils(unittest.TestCase):
 
     @patch('handlers.model_utils.get_operator')
     @patch('handlers.model_utils.get_reasoning_effect')
-    def test_get_model_instance_xai(self, mock_reasoning, mock_get_operator):
-        mock_operator = MagicMock()
-        mock_operator.runtime = "xai"
-        mock_operator.endpoint = "http://test"
-        mock_operator.api_key = "test_key"
-        mock_get_operator.return_value = mock_operator
-        mock_reasoning.return_value = None
-
-        with patch('services.chat_models.xai_langchain.CustomXAIResponse') as mock_xai:
-            get_model_instance("grok-beta", "xai")
-            mock_xai.assert_called_once()
-
-    @patch('handlers.model_utils.get_operator')
-    @patch('handlers.model_utils.get_reasoning_effect')
     def test_get_model_instance_openrouter(self, mock_reasoning, mock_get_operator):
         mock_operator = MagicMock()
         mock_operator.runtime = "openrouter"

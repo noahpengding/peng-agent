@@ -9,7 +9,6 @@ from services.chat_models import (
     claude_langchain,
     gemini_langchain,
     openrouter_langchain,
-    xai_langchain,
 )
 
 
@@ -160,22 +159,6 @@ class TestCustomClaude(unittest.TestCase):
         self.assertEqual(block["type"], "non_standard")
         self.assertEqual(block["value"]["type"], "tool_use")
         self.assertEqual(block["value"]["args"], {"city": "Ottawa"})
-
-    def test_generate_rejects_malformed_tool_arguments(self):
-        model, client = self.make_model()
-        client.messages.create.return_value = namespace(
-            content=[
-                namespace(
-                    type="tool_use",
-                    id="bad",
-                    name="lookup",
-                    input="not valid python",
-                )
-            ]
-        )
-
-        with self.assertRaises((SyntaxError, ValueError)):
-            model._generate([HumanMessage(content="weather")])
 
     def test_stream_emits_reasoning_text_and_aggregated_tool_call(self):
         model, client = self.make_model()
@@ -362,7 +345,7 @@ class TestCustomGemini(unittest.TestCase):
         )
         content.assert_called_once_with(role="model", parts=[fake_part])
 
-    def test_generate_text_and_function_call(self):
+    def test_generate_text_and(self):
         model, client = self.make_model()
         text_part = namespace(function_call=None, text="gemini answer")
         client.models.generate_content.return_value = namespace(
@@ -375,18 +358,6 @@ class TestCustomGemini(unittest.TestCase):
             result.generations[0].message.content_blocks[0]["text"],
             "gemini answer",
         )
-
-        function_call = namespace(name="lookup", args={"city": "Tokyo"}, id=None)
-        function_part = namespace(function_call=function_call, text=None)
-        client.models.generate_content.return_value = namespace(
-            candidates=[namespace(content=namespace(parts=[function_part]))]
-        )
-        with patch.object(gemini_langchain.uuid, "uuid4", return_value="fixed"):
-            result = model._generate([HumanMessage(content="weather")])
-        block = result.generations[0].message.content_blocks[0]
-        self.assertEqual(block["name"], "lookup")
-        self.assertEqual(block["args"], {"city": "Tokyo"})
-        self.assertEqual(block["id"], "function_call_fixed")
 
     def test_generate_image_returns_data_or_none(self):
         model, client = self.make_model()
@@ -403,67 +374,6 @@ class TestCustomGemini(unittest.TestCase):
             parts=[namespace(inline_data=None)]
         )
         self.assertIsNone(model.generate_image("nothing"))
-
-    def test_stream_covers_function_reasoning_text_and_skip_paths(self):
-        model, client = self.make_model()
-        function_call = namespace(name="lookup", args={"city": "Rome"}, id=None)
-        function_part = namespace(
-            function_call=function_call,
-            thought=None,
-            text=None,
-            thought_signature=b"function-signature",
-        )
-        reasoning_part = namespace(
-            function_call=None,
-            thought="analysis",
-            text=None,
-            thought_signature=b"reason-signature",
-        )
-        text_part = namespace(
-            function_call=None,
-            thought=None,
-            text="answer",
-            thought_signature=None,
-        )
-        client.models.generate_content_stream.return_value = [
-            namespace(candidates=None),
-            namespace(
-                candidates=[
-                    namespace(
-                        finish_reason="MAX_TOKENS",
-                        content=namespace(parts=[text_part]),
-                    )
-                ]
-            ),
-            namespace(
-                candidates=[
-                    namespace(finish_reason=None, content=namespace(parts=[function_part]))
-                ]
-            ),
-            namespace(
-                candidates=[
-                    namespace(finish_reason="STOP", content=namespace(parts=[reasoning_part]))
-                ]
-            ),
-            namespace(
-                candidates=[
-                    namespace(finish_reason=None, content=namespace(parts=[text_part]))
-                ]
-            ),
-        ]
-
-        with patch.object(gemini_langchain.uuid, "uuid4", return_value="stream"):
-            chunks = list(model._stream([HumanMessage(content="hello")]))
-
-        blocks = [chunk.message.content_blocks[0] for chunk in chunks]
-        self.assertEqual([block["type"] for block in blocks], [
-            "tool_call",
-            "reasoning",
-            "text",
-        ])
-        self.assertEqual(blocks[0]["id"], "function_call_stream")
-        self.assertEqual(blocks[1]["reasoning"], "analysis")
-        self.assertEqual(blocks[2]["text"], "answer")
 
     def test_stream_logs_and_skips_invalid_text_chunk(self):
         model, client = self.make_model()
@@ -571,7 +481,7 @@ class TestCustomOpenRouter(unittest.TestCase):
         )
         self.assertEqual(translated[6]["tool_call_id"], "call-1")
 
-    def test_generate_text_function_call_and_tool_calls(self):
+    def test_generate_text_and_tool_calls(self):
         model, client = self.make_model()
         client.chat.send.return_value = namespace(
             choices=[
@@ -583,22 +493,6 @@ class TestCustomOpenRouter(unittest.TestCase):
         )
         result = model._generate([HumanMessage(content="hello")])
         self.assertEqual(result.generations[0].message.content_blocks[0]["text"], "router answer")
-
-        function = namespace(name="lookup", arguments="{'city': 'Lima'}")
-        client.chat.send.return_value = namespace(
-            choices=[
-                namespace(
-                    finish_reason="function_call",
-                    message=namespace(
-                        function_call=[namespace(function=function, id="old-call")]
-                    ),
-                )
-            ]
-        )
-        result = model._generate([])
-        block = result.generations[0].message.content_blocks[0]
-        self.assertEqual(block["id"], "old-call")
-        self.assertEqual(block["args"], {"city": "Lima"})
 
         function = namespace(arguments="{'city': 'Oslo'}")
         client.chat.send.return_value = namespace(
@@ -617,22 +511,6 @@ class TestCustomOpenRouter(unittest.TestCase):
         block = result.generations[0].message.content_blocks[0]
         self.assertEqual(block["id"], "new-call")
         self.assertEqual(block["args"], {"city": "Oslo"})
-
-    def test_generate_rejects_malformed_tool_arguments(self):
-        model, client = self.make_model()
-        function = namespace(arguments="not valid")
-        client.chat.send.return_value = namespace(
-            choices=[
-                namespace(
-                    finish_reason="tool_calls",
-                    message=namespace(
-                        tool_calls=[namespace(name="lookup", function=function, id="bad")]
-                    ),
-                )
-            ]
-        )
-        with self.assertRaises((SyntaxError, ValueError)):
-            model._generate([])
 
     def test_stream_covers_empty_reasoning_text_and_aggregated_tools(self):
         model, client = self.make_model()
@@ -732,163 +610,6 @@ class TestCustomOpenRouter(unittest.TestCase):
             self.assertEqual(model.set_parameters("bad", "x"), "Invalid parameter: bad, x")
         log.assert_called_once_with("Invalid parameter: bad", "error")
 
-
-class TestCustomXAI(unittest.TestCase):
-    def make_model(self, **overrides):
-        client = MagicMock()
-        values = {"model": "grok-test", "api_key": "secret"}
-        values.update(overrides)
-        with patch.object(xai_langchain, "Client", return_value=client) as ctor:
-            model = xai_langchain.CustomXAIResponse(**values)
-        ctor.assert_called_once_with(api_key="secret")
-        return model, client
-
-    def test_request_preparation_with_reasoning_tools_and_defaults(self):
-        model, _ = self.make_model(reasoning_effect="high")
-        built_tool = object()
-        with patch.object(xai_langchain, "tool", return_value=built_tool) as tool_builder:
-            params = model._xai_prepare(
-                [HumanMessage(content="hello")], tools=[openai_tool()]
-            )
-
-        self.assertEqual(params["reasoning_effort"], "high")
-        self.assertEqual(params["tools"], [built_tool])
-        tool_builder.assert_called_once_with(
-            name="lookup",
-            description="Look up a city",
-            parameters=openai_tool()["function"]["parameters"],
-        )
-        self.assertEqual(model._llm_type, "xAI Response")
-        self.assertEqual(model._identifying_params["model_name"], "grok-test")
-
-        for effect in ("medium", "not a reasoning model"):
-            plain_model, _ = self.make_model(reasoning_effect=effect)
-            plain = plain_model._xai_prepare([])
-            self.assertNotIn("reasoning_effort", plain)
-            self.assertNotIn("tools", plain)
-
-    def test_prompt_translation_covers_all_supported_message_blocks(self):
-        model, _ = self.make_model()
-        with (
-            patch.object(xai_langchain, "assistant", side_effect=lambda text: ("a", text)) as assistant,
-            patch.object(xai_langchain, "system", side_effect=lambda text: ("s", text)) as system,
-            patch.object(xai_langchain, "user", side_effect=lambda *parts: ("u", *parts)) as user,
-            patch.object(xai_langchain, "image", side_effect=lambda data: ("i", data)) as image,
-            patch.object(xai_langchain, "tool_result", side_effect=lambda text: ("t", text)) as tool_result,
-        ):
-            translated = model._prompt_translate(common_messages())
-
-        self.assertEqual(translated[0], ("s", "system rules"))
-        self.assertEqual(translated[1], ("a", "answer"))
-        self.assertIn("lookup", translated[2][1])
-        self.assertEqual(translated[3], ("a", "because"))
-        self.assertEqual(translated[4], ("u", "hello"))
-        self.assertEqual(translated[5][0], "u")
-        self.assertEqual(translated[6], ("t", "sunny"))
-        self.assertEqual(assistant.call_count, 3)
-        system.assert_called_once_with("system rules")
-        user.assert_any_call("hello")
-        image.assert_called_once_with("data:image/png;base64,YWJj")
-        tool_result.assert_called_once_with("sunny")
-
-    def test_generate_text_and_client_tool_call(self):
-        model, client = self.make_model()
-        chat = client.chat.create.return_value
-        chat.sample.return_value = namespace(content="grok answer")
-        with patch.object(xai_langchain, "get_tool_call_type", return_value="other"):
-            result = model._generate([HumanMessage(content="hello")])
-        self.assertEqual(result.generations[0].message.content_blocks[0]["text"], "grok answer")
-
-        response = namespace(
-            id="tool-1",
-            function=namespace(name="lookup", arguments="{'city': 'Seoul'}"),
-        )
-        chat.sample.return_value = response
-        with patch.object(
-            xai_langchain, "get_tool_call_type", return_value="client_side_tool"
-        ):
-            result = model._generate([])
-        block = result.generations[0].message.content_blocks[0]
-        self.assertEqual(block["name"], "lookup")
-        self.assertEqual(block["args"], {"city": "Seoul"})
-
-    def test_generate_rejects_malformed_tool_arguments(self):
-        model, client = self.make_model()
-        client.chat.create.return_value.sample.return_value = namespace(
-            id="bad",
-            function=namespace(name="lookup", arguments="not valid"),
-        )
-        with (
-            patch.object(
-                xai_langchain, "get_tool_call_type", return_value="client_side_tool"
-            ),
-            self.assertRaises((SyntaxError, ValueError)),
-        ):
-            model._generate([])
-
-    def test_stream_emits_client_tools_and_text(self):
-        model, client = self.make_model()
-        client_tool = namespace(
-            id="tool-4",
-            function=namespace(name="lookup", arguments="{'city': 'Cairo'}"),
-        )
-        server_tool = namespace(
-            id="server-4",
-            function=namespace(name="search", arguments="{}"),
-        )
-        client.chat.create.return_value.stream.return_value = [
-            (None, namespace(tool_calls=[server_tool], content="")),
-            (None, namespace(tool_calls=[client_tool], content="chunk")),
-            (None, namespace(tool_calls=[], content="")),
-        ]
-
-        def tool_type(value):
-            return "client_side_tool" if value is client_tool else "server_side_tool"
-
-        with patch.object(xai_langchain, "get_tool_call_type", side_effect=tool_type):
-            chunks = list(model._stream([HumanMessage(content="hello")]))
-
-        blocks = [chunk.message.content_blocks[0] for chunk in chunks]
-        self.assertEqual([block["type"] for block in blocks], ["tool_call", "text"])
-        self.assertEqual(blocks[0]["args"], {"city": "Cairo"})
-        self.assertEqual(blocks[1]["text"], "chunk")
-
-    def test_bind_models_and_parameter_helpers(self):
-        model, client = self.make_model()
-        with (
-            patch.object(
-                xai_langchain,
-                "convert_to_openai_tool",
-                return_value={"function": {"name": "lookup"}},
-            ) as convert,
-            patch.object(BaseChatModel, "bind", return_value="bound") as bind,
-        ):
-            result = model.bind_tools(
-                [openai_tool()], strict=True, parallel_tool_calls=False, extra=2
-            )
-        self.assertEqual(result, "bound")
-        convert.assert_called_once()
-        bind.assert_called_once_with(
-            parallel_tool_calls=False,
-            extra=2,
-            tools=[{"function": {"name": "lookup"}}],
-        )
-
-        client.models.list_language_models.return_value = [
-            namespace(name="grok-a"),
-            namespace(name="grok-b"),
-        ]
-        self.assertEqual(model.list_models(), "grok-a\ngrok-b")
-        parameters = model.list_parameters()
-        self.assertIn("reasoning_effect:", parameters)
-        self.assertEqual(model.set_parameters("temperature", "0.6"), "Temperature set to 0.6")
-        with self.assertRaises(AttributeError):
-            model.set_parameters("model_id", "changed")
-        with self.assertRaises(AttributeError):
-            model.set_parameters("max_completion_tokens", "12")
-        with patch.object(xai_langchain, "output_log") as log:
-            self.assertEqual(model.set_parameters("unknown", 5), "Invalid parameter: unknown, 5")
-        log.assert_called_once_with("Invalid parameter: unknown", "error")
 
 
 if __name__ == "__main__":

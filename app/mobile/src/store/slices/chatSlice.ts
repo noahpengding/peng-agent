@@ -16,6 +16,7 @@ interface SendMessageArgs {
     tools_name: string[];
     short_term_memory: number[];
     ip_address?: string;
+    temp_chat: boolean;
   };
 }
 
@@ -43,6 +44,7 @@ interface ChatState {
   knowledgeBase: string;
   selectedToolNames: string[];
   shortTermMemory: number[];
+  tempChat: boolean;
 }
 
 const initialState: ChatState = {
@@ -59,6 +61,7 @@ const initialState: ChatState = {
   knowledgeBase: 'default',
   selectedToolNames: [],
   shortTermMemory: [],
+  tempChat: false,
 };
 
 const SUPPORTED_CHUNK_TYPES: Array<NonNullable<Message['type']>> = [
@@ -100,22 +103,28 @@ const cloneSendMessageArgs = (args: SendMessageArgs): SendMessageArgs => ({
 });
 
 // Async thunk for sending message
-export const sendMessage = createAsyncThunk('chat/sendMessage', async (args: SendMessageArgs, { dispatch, rejectWithValue }) => {
+export const sendMessage = createAsyncThunk<
+  SendMessageArgs,
+  SendMessageArgs,
+  { rejectValue: { message: string; request: SendMessageArgs } }
+>('chat/sendMessage', async (args, { dispatch, rejectWithValue }) => {
   // Generate a messageId for this turn
   const messageId = Math.random().toString(36).substring(2) + Date.now().toString(36);
 
+  const request = {
+    ...args,
+    image: args.image ? [...args.image] : undefined,
+    config: {
+      ...args.config,
+      tools_name: [...args.config.tools_name],
+      short_term_memory: [...args.config.short_term_memory],
+      ip_address: args.config.ip_address ?? '',
+    },
+  };
+
   try {
     let chatIdFromChunk: number | null = null;
-    const request = {
-      ...args,
-      image: args.image ? [...args.image] : undefined,
-      config: {
-        ...args.config,
-        tools_name: [...args.config.tools_name],
-        short_term_memory: [...args.config.short_term_memory],
-        ip_address: args.config.ip_address ?? await getCurrentIpAddress(),
-      },
-    };
+    request.config.ip_address = args.config.ip_address ?? await getCurrentIpAddress();
 
     await ChatService.sendMessage(
       request,
@@ -131,7 +140,7 @@ export const sendMessage = createAsyncThunk('chat/sendMessage', async (args: Sen
       },
       () => {
         dispatch(finishMessage({ messageId }));
-        if (chatIdFromChunk !== null) {
+        if (!request.config.temp_chat && chatIdFromChunk !== null) {
           dispatch(attachChatIdToMessage({ messageId, chatId: chatIdFromChunk }));
           dispatch(updateMemoryWithChatId(chatIdFromChunk));
         }
@@ -142,7 +151,7 @@ export const sendMessage = createAsyncThunk('chat/sendMessage', async (args: Sen
     );
     return request;
   } catch (error) {
-    return rejectWithValue((error as Error).message);
+    return rejectWithValue({ message: (error as Error).message, request });
   }
 });
 
@@ -186,10 +195,14 @@ const chatSlice = createSlice({
     setShortTermMemory: (state, action: PayloadAction<number[]>) => {
       state.shortTermMemory = action.payload;
     },
+    setTempChat: (state, action: PayloadAction<boolean>) => {
+      state.tempChat = action.payload;
+    },
     setMessages: (state, action: PayloadAction<Message[]>) => {
       state.messages = action.payload;
       state.lastRequest = null;
       state.retryMessageId = null;
+      state.tempChat = false;
     },
     resetState: (state) => {
       state.messages = [];
@@ -198,6 +211,7 @@ const chatSlice = createSlice({
       state.error = null;
       state.lastRequest = null;
       state.retryMessageId = null;
+      state.tempChat = false;
     },
     setError: (state, action: PayloadAction<string | null>) => {
       state.error = action.payload;
@@ -354,13 +368,17 @@ const chatSlice = createSlice({
       })
       .addCase(sendMessage.rejected, (state, action) => {
         state.isLoading = false;
-        state.error = action.payload as string;
-        state.lastRequest = null;
+        // Keep chat failures in the transcript instead of the separate error banner.
+        state.error = null;
+        state.lastRequest = cloneSendMessageArgs(action.payload?.request ?? action.meta.arg);
+        state.retryMessageId = action.meta.requestId;
         state.messages.push({
           role: 'assistant',
-          content: 'Sorry, I encountered an error.',
+          content: 'Sorry, the request failed. Please retry.',
           type: 'output_text',
-          clientKey: `error:${state.messages.length}`,
+          isError: true,
+          messageId: action.meta.requestId,
+          clientKey: `error:${action.meta.requestId}`,
         });
       })
       .addCase(submitMessageFeedback.pending, (state, action) => {
@@ -415,6 +433,7 @@ export const {
   setKnowledgeBase,
   setSelectedToolNames,
   setShortTermMemory,
+  setTempChat,
   setMessages,
   resetState,
   setError,
