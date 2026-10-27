@@ -8,6 +8,7 @@ The web frontend is a Single Page Application (SPA) providing the user interface
 - **Framework**: React 19
 - **Build Tool**: Vite
 - **Language**: TypeScript
+- **Vite config paths**: Use `import.meta.dirname` in `vite.config.ts` for aliases relative to the config file, so they work with Vite's native config loader.
 
 ## 3. Entry Points
 - `src/index.tsx`: Sets up routing (`react-router-dom`), initializes Datadog Real User Monitoring (RUM), and mounts the React root.

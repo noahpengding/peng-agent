@@ -79,10 +79,11 @@ class PengAgent:
         )
 
     async def truncate_tool_message(self, observation: str) -> str:
+        complete_tool_calls = max(self.total_tool_calls, 1)
         if self.operator in ["gemini", "grok", "openai_response", "anthropic"]:
-            max_length = 1000000 * 0.7 / self.total_tool_calls
+            max_length = 1000000 * 0.7 / complete_tool_calls
         else:
-            max_length = 200000 * 0.7 / self.total_tool_calls
+            max_length = 200000 * 0.7 / complete_tool_calls
         output_log(f"Truncating tool message if exceeds {int(max_length)} characters. Current length: {len(observation)} characters.", "DEBUG")
         if len(observation) > max_length:
             from handlers.chat_handlers import chat_completions_handler
