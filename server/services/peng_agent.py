@@ -162,7 +162,6 @@ class PengAgent:
     async def call_tools(self, state: AgentState):
         output_log(f"Node: Call Tools. Current state {state}", "DEBUG")
         writer = get_stream_writer()
-        self.total_tool_calls -= 1
         last_message = list(state["messages"])[-1]
         # Not an AI message
         if not isinstance(last_message, AIMessage):
@@ -219,6 +218,7 @@ class PengAgent:
                 )
             }
         tool = self.tools[name]
+        self.total_tool_calls -= 1
         try:
             observation = await tool.ainvoke(args)
         except Exception as e:
