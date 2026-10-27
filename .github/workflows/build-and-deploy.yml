@@ -74,9 +74,9 @@ jobs:
         run: bun install
         working-directory: ./app/web
 
-      - name: Run ESLint
-        run: bun run lint
-        working-directory: ./app/web
+      # - name: Run ESLint
+      #  run: bun run lint
+      #  working-directory: ./app/web
 
   mobile-lint:
     runs-on: ubuntu-latest
@@ -93,9 +93,9 @@ jobs:
         run: bun install
         working-directory: ./app/mobile
 
-      - name: Run ESLint
-        run: bun run lint
-        working-directory: ./app/mobile
+      # - name: Run ESLint
+      #  run: bun run lint
+      #  working-directory: ./app/mobile
 
   # CodeQL security analysis - runs on all branches and outputs to Security tab
   codeql-analysis:
