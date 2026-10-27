@@ -9,7 +9,6 @@ from services.chat_models import (
     claude_langchain,
     gemini_langchain,
     openrouter_langchain,
-    xai_langchain,
 )
 
 
